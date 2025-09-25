@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.resume import Resume
 from app.models.job_comparison import JobComparison
 from app.celery.tasks.job_analysis import analyze_job_posting
+from app.services.enhanced_comparison_service import enhanced_comparison_service
 
 logger = logging.getLogger(__name__)
 
@@ -469,4 +470,125 @@ async def reanalyze_job_comparison(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to queue reanalysis"
+        )
+
+
+@router.post("/analyze-enhanced", status_code=status.HTTP_200_OK)
+@rate_limit(max_calls=10, window_minutes=60)  # Limited due to computational intensity
+async def analyze_job_enhanced(
+    request: Request,
+    analysis_request: ComparisonAnalysisRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Perform enhanced job-resume comparison with advanced algorithms.
+    
+    - **resume_id**: UUID of the resume to analyze
+    - **job_posting**: Job posting details for comparison
+    
+    This enhanced analysis includes:
+    - Advanced skill matching with synonyms and fuzzy logic
+    - Industry-specific scoring algorithms
+    - Role level alignment analysis
+    - ATS compatibility scoring
+    - Context-aware recommendations
+    - Detailed analytics and insights
+    """
+    try:
+        logger.info(f"Enhanced job analysis initiated by user: {current_user.email}")
+        
+        # Verify resume exists and belongs to user
+        resume = await db.get(Resume, analysis_request.resume_id)
+        if not resume:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume not found"
+            )
+        
+        if resume.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+        
+        if not resume.is_processed or not resume.extracted_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Resume must be processed before analysis"
+            )
+        
+        # Create job comparison record
+        job_comparison = JobComparison(
+            user_id=current_user.id,
+            resume_id=resume.id,
+            job_title=analysis_request.job_posting.job_title,
+            company_name=analysis_request.job_posting.company_name,
+            job_description=analysis_request.job_posting.job_description,
+            job_url=str(analysis_request.job_posting.job_url) if analysis_request.job_posting.job_url else None,
+            location=analysis_request.job_posting.location,
+            salary_range=analysis_request.job_posting.salary_range,
+            processing_status="processing"
+        )
+        
+        db.add(job_comparison)
+        await db.commit()
+        await db.refresh(job_comparison)
+        
+        # Perform enhanced comparison
+        enhanced_results = await enhanced_comparison_service.perform_enhanced_comparison(
+            resume=resume,
+            job_comparison=job_comparison,
+            db=db
+        )
+        
+        # Update job comparison with enhanced results
+        job_comparison.overall_match_score = enhanced_results["enhanced_metrics"]["overall_score"]
+        job_comparison.skills_match_score = enhanced_results["enhanced_metrics"]["skill_coverage"]
+        job_comparison.experience_match_score = enhanced_results["enhanced_metrics"]["experience_alignment"]
+        job_comparison.education_match_score = enhanced_results["enhanced_metrics"]["education_match"]
+        job_comparison.is_processed = True
+        job_comparison.processing_status = "completed"
+        
+        # Store enhanced analysis results
+        job_comparison.analysis_results = enhanced_results
+        
+        await db.commit()
+        await db.refresh(job_comparison)
+        
+        logger.info(f"Enhanced analysis completed for comparison: {job_comparison.id}")
+        
+        # Return comprehensive results
+        return {
+            "comparison_id": str(job_comparison.id),
+            "resume_id": str(job_comparison.resume_id),
+            "job_details": {
+                "title": job_comparison.job_title,
+                "company": job_comparison.company_name,
+                "location": job_comparison.location,
+                "salary_range": job_comparison.salary_range,
+                "url": job_comparison.job_url
+            },
+            "enhanced_analysis": enhanced_results,
+            "quick_summary": {
+                "overall_score": enhanced_results["enhanced_metrics"]["overall_score"],
+                "match_level": "excellent" if enhanced_results["enhanced_metrics"]["overall_score"] > 0.8 
+                             else "good" if enhanced_results["enhanced_metrics"]["overall_score"] > 0.6 
+                             else "fair" if enhanced_results["enhanced_metrics"]["overall_score"] > 0.4 
+                             else "poor",
+                "top_strengths": enhanced_results["skill_analysis"]["exact_matches"][:3],
+                "key_gaps": enhanced_results["skill_analysis"]["missing_critical"][:3],
+                "recommendation_count": len(enhanced_results["enhanced_recommendations"])
+            },
+            "created_at": job_comparison.created_at.isoformat(),
+            "processed_at": job_comparison.processed_at.isoformat() if job_comparison.processed_at else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Enhanced job analysis error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Enhanced analysis failed: {str(e)}"
         )

@@ -17,10 +17,10 @@ RezGenie is an intelligent resume analysis and optimization platform that levera
 
 ## 👯 Team
 
-- **Backend Lead**: [@salihelfatih](https://github.com/salihelfatih) - API architecture, AI integration, database design
-- **Frontend Lead**: [@AndyPham2341](https://github.com/AndyPham2341) - User interface, user experience, responsive design  
-- **AI/ML Engineer**: [@yalbirawi](https://github.com/yalbirawi) - Machine learning models, natural language processing
-- **DevOps Engineer**: [@dle519](https://github.com/dle519) - Cloud infrastructure, CI/CD, deployment automation
+- **Backend Lead**: Salih [(@salihelfatih)](https://github.com/salihelfatih) - API architecture, AI integration, database design
+- **Frontend Lead**: Andy [(@AndyPham2341)](https://github.com/AndyPham2341) - User interface, user experience, responsive design
+- **AI/ML Engineer**: Yaqin [(@yalbirawi)](https://github.com/yalbirawi) - Machine learning models, natural language processing
+- **DevOps Engineer**: David [(@dle519)](https://github.com/dle519) - Cloud infrastructure, CI/CD, deployment automation
 
 ## 🛠️ Technology Stack
 
@@ -108,8 +108,8 @@ python -m pytest tests/ -v
 
 ## 📚 Documentation
 
-- **[Backend Documentation](backend/README.md)** - Detailed technical documentation
-- **[Changelog](docs/CHANGELOG.md)** - Project progress and completed features
+- [Backend Documentation](backend/README.md) - Detailed technical documentation
+- [Changelog](docs/CHANGELOG.md) - Project progress and completed features
 - [Design Document](docs/design.md) - System architecture
 - [Requirements](docs/requirements.md) - Functional requirements  
 - [Task Tracking](docs/tasks.md) - Development progress
