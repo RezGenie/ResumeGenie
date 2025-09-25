@@ -5,7 +5,7 @@ Combines all API endpoint routers for the application.
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, resumes, jobs, job_analytics, genie
+from app.api.v1 import auth, resumes, jobs, job_analytics, genie, reports
 
 # Create main API router
 api_router = APIRouter()
@@ -39,6 +39,12 @@ api_router.include_router(
     genie.router,
     prefix="/genie",
     tags=["AI Genie Wishes"]
+)
+
+api_router.include_router(
+    reports.router,
+    prefix="/reports",
+    tags=["Reports & Analytics"]
 )
 
 

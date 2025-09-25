@@ -2,6 +2,44 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.5.0] - 2025-09-25
+
+### CP-13 Comprehensive Text Report Generation System
+
+- **Advanced Report Service**
+  - Professional-grade missing skills analysis reports
+  - Multiple report formats: Detailed, Summary, Executive, Action-Oriented
+  - Comprehensive skill gap analysis with priority rankings
+  - Industry-specific insights and learning recommendations
+  - Personalized 30/60/90-day learning roadmaps
+
+- **Intelligent Analysis Engine**
+  - Skill priority calculation (Critical, High, Medium, Low)
+  - Industry demand scoring for strategic skill development
+  - Learning time estimation with resource recommendations
+  - Impact assessment for potential match score improvements
+  - Trend analysis across multiple job applications
+
+- **Report Features**
+  - **Detailed Reports**: 2500-4000 word comprehensive analysis
+  - **Summary Reports**: 300-500 word quick overview with key insights
+  - **Executive Reports**: Strategic overview for decision makers
+  - **Action-Oriented**: Daily habits and weekly review schedules
+  - Exportable text format with plans for PDF/DOCX support
+
+- **New API Endpoints**
+  - `/api/v1/reports/missing-skills` - Generate comprehensive skills reports
+  - `/api/v1/reports/skills-comparison` - Comparative analysis across applications
+  - `/api/v1/reports/export/{format}` - Export reports in various formats
+  - `/api/v1/reports/preview` - Preview available report types and capacity
+
+- **Smart Recommendations**
+  - Quick wins identification (high impact, low effort skills)
+  - Long-term investment strategies for career advancement
+  - Industry-specific skill development paths
+  - Learning resource recommendations with time estimates
+  - Career progression guidance based on market analysis
+
 ## [0.4.0] - 2025-09-25
 
 ### CP-12 Enhanced Job Comparison System
