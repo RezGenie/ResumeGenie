@@ -34,9 +34,16 @@ docker-compose up --build
 
 # run frontend
 cd frontend && npm install && npm run dev
+```
 
 ---
 
 ## 👩‍💻 Team
 
-Andy Pham ([\@AndyPham2341](https://github.com/AndyPham2341))  • David Le ([\@dle519](https://github.com/dle519)) • Salih Elfatih ([salihelfatih](https://github.com/salihelfatih)) • Yaqin Albirawi ([\@yalbirawi](https://github.com/yalbirawi))
+• Andy Pham ([\@AndyPham2341](https://github.com/AndyPham2341))
+
+• David Le ([\@dle519](https://github.com/dle519))
+
+• Salih Elfatih ([salihelfatih](https://github.com/salihelfatih))
+
+• Yaqin Albirawi ([\@yalbirawi](https://github.com/yalbirawi))
