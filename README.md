@@ -1,4 +1,4 @@
-# RezGenie 🧞‍♂️✨
+# 🧞‍♂️ RezGenie
 
 > AI-powered resume optimization platform that helps job seekers land their dream jobs
 
@@ -137,4 +137,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Built with ❤️ by the RezGenie team
+Built with 💖 by the RezGenie team
