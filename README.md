@@ -1,6 +1,6 @@
 # 🧞 RezGenie  
 
-an AI-powered resume genie, making job hunting smarter and less stressful.  
+An AI-powered resume genie, making job hunting smarter and less stressful.  
 
 ---
 
@@ -40,10 +40,10 @@ cd frontend && npm install && npm run dev
 
 ## 👩‍💻 Team
 
-• Andy Pham ([\@AndyPham2341](https://github.com/AndyPham2341))
+• Andy Pham ([@AndyPham2341](https://github.com/AndyPham2341))
 
-• David Le ([\@dle519](https://github.com/dle519))
+• David Le ([@dle519](https://github.com/dle519))
 
-• Salih Elfatih ([salihelfatih](https://github.com/salihelfatih))
+• Salih Elfatih ([@salihelfatih](https://github.com/salihelfatih))
 
-• Yaqin Albirawi ([\@yalbirawi](https://github.com/yalbirawi))
+• Yaqin Albirawi ([@yalbirawi](https://github.com/yalbirawi))
