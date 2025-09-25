@@ -1,4 +1,4 @@
-# RezGenie Backend
+# 🍑 RezGenie Backend
 
 FastAPI-based backend for the RezGenie AI-powered resume optimization platform.
 
@@ -22,30 +22,34 @@ FastAPI-based backend for the RezGenie AI-powered resume optimization platform.
 ## 🚀 Quick Start with Docker
 
 1. **Clone the repository and navigate to backend:**
+
    ```bash
    cd backend
    ```
 
 2. **Copy environment variables:**
+
    ```bash
    cp .env.example .env
    ```
 
 3. **Update your `.env` file with your OpenAI API key:**
+
    ```bash
    OPENAI_API_KEY=your-openai-api-key-here
    ```
 
 4. **Start all services with Docker Compose:**
+
    ```bash
    cd ..  # Back to project root
    docker-compose up --build
    ```
 
 5. **The API will be available at:**
-   - API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
-   - Flower (Celery monitoring): http://localhost:5555
+   - API: <http://localhost:8000>
+   - API Docs: <http://localhost:8000/docs>
+   - Flower (Celery monitoring): <http://localhost:5555>
 
 ## 🛠️ Local Development Setup
 
@@ -53,6 +57,7 @@ FastAPI-based backend for the RezGenie AI-powered resume optimization platform.
 
 1. **Install Python 3.11+**
 2. **Install PostgreSQL with pgvector:**
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install postgresql postgresql-contrib
@@ -65,6 +70,7 @@ FastAPI-based backend for the RezGenie AI-powered resume optimization platform.
    ```
 
 3. **Install Redis:**
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install redis-server
@@ -78,6 +84,7 @@ FastAPI-based backend for the RezGenie AI-powered resume optimization platform.
 ### Setup Steps
 
 1. **Create and activate virtual environment:**
+
    ```bash
    python -m venv venv
    
@@ -89,37 +96,44 @@ FastAPI-based backend for the RezGenie AI-powered resume optimization platform.
    ```
 
 2. **Install dependencies:**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. **Set up environment variables:**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 4. **Initialize database:**
+
    ```bash
    python setup_db.py
    ```
 
 5. **Run database migrations:**
+
    ```bash
    alembic upgrade head
    ```
 
 6. **Start the development server:**
+
    ```bash
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 7. **Start Celery worker (in another terminal):**
+
    ```bash
    celery -A app.celery.celery_app worker --loglevel=info
    ```
 
 8. **Start Flower for monitoring (optional):**
+
    ```bash
    celery -A app.celery.celery_app flower
    ```
@@ -191,8 +205,9 @@ pytest -v
 ## 📝 API Documentation
 
 When running in development mode, visit:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+
+- **Swagger UI**: <http://localhost:8000/docs>
+- **ReDoc**: <http://localhost:8000/redoc>
 
 ## 🚀 Deployment
 
@@ -243,14 +258,14 @@ docker run -p 8000:8000 --env-file .env.production rezgenie-backend:latest
 
 ## 📚 Project Structure
 
-```
+```plaintext
 backend/
-├── app/
-│   ├── api/           # API routes
-│   ├── celery/        # Background tasks
-│   ├── core/          # Core configuration
+├── app/               # Main application code
+│   ├── api/           # API endpoints (auth, resumes, jobs, genie)
+│   ├── celery/        # Background tasks processing
+│   ├── core/          # Core functionality (config, database, security)
 │   ├── models/        # Database models
-│   └── services/      # Business logic
+│   └── services/      # Business logic services
 ├── alembic/           # Database migrations
 ├── tests/             # Test files
 ├── main.py            # FastAPI application
