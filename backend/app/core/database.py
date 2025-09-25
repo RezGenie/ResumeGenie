@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.pool import NullPool
 import logging
+from typing import AsyncGenerator
 from .config import settings
 
 # Configure logging
@@ -29,8 +30,7 @@ AsyncSessionLocal = async_sessionmaker(
 # Create declarative base
 Base = declarative_base()
 
-
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency to get database session.
     """

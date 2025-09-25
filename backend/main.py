@@ -7,6 +7,7 @@ import time
 
 from app.core.config import settings
 from app.core.database import init_db, close_db
+from app.api.v1 import api_router
 
 # Configure logging
 logging.basicConfig(
@@ -112,9 +113,8 @@ async def shutdown_event():
         logger.error(f"Error during shutdown: {e}")
 
 
-# Include API routers (will be added later)
-# from app.api.v1.api import api_router
-# app.include_router(api_router, prefix="/api/v1")
+# Include API routers
+app.include_router(api_router, prefix="/api/v1")
 
 
 if __name__ == "__main__":
