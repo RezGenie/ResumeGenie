@@ -2,6 +2,42 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.6.0] - 2025-09-26
+
+### CP-14 Basic UI for Uploading Resume & Job Posting
+
+- **Complete Frontend Application**
+  - Next.js 14 application with TypeScript and App Router
+  - Professional purple-themed UI with shadcn/ui component library
+  - Responsive design with dark/light mode and smooth Framer Motion animations
+  - JWT-based authentication with protected routes and middleware
+
+- **Core User Interface**
+  - Landing page with hero section and feature showcase
+  - AI Genie interface with drag-and-drop resume upload and job posting analysis
+  - User dashboard with personalized stats and activity tracking
+  - Job opportunities page with matching and filtering capabilities
+
+- **Career Guidance System**
+  - Comprehensive guides hub with detailed career advice
+  - Resume optimization strategies and interview preparation tips
+  - AI recommendation usage guides and best practices
+  - Professional content with consistent branding and navigation
+
+- **Complete Application Pages**
+  - Authentication pages (login/register) with form validation
+  - User profile management with editable settings
+  - Contact page with team information and GitHub integration
+  - Legal pages (privacy policy, terms of service) with academic project details
+  - Pricing page with subscription plans and feature comparison
+
+- **Technical Implementation**
+  - Consistent typography and spacing across all 15+ routes
+  - Route protection with authentication middleware
+  - API integration with React Query for state management
+  - Professional 404 error handling with helpful navigation
+  - Mobile-first responsive design optimized for all devices
+
 ## [0.5.0] - 2025-09-25
 
 ### CP-13 Comprehensive Text Report Generation System

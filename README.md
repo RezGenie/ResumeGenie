@@ -17,10 +17,10 @@ RezGenie is an intelligent resume analysis and optimization platform that levera
 
 ## 👯 Team
 
-- **Backend Lead**: Salih [(@salihelfatih)](https://github.com/salihelfatih) - API architecture, AI integration, database design
-- **Frontend Lead**: Andy [(@AndyPham2341)](https://github.com/AndyPham2341) - User interface, user experience, responsive design
-- **AI/ML Engineer**: Yaqin [(@yalbirawi)](https://github.com/yalbirawi) - Machine learning models, natural language processing
-- **DevOps Engineer**: David [(@dle519)](https://github.com/dle519) - Cloud infrastructure, CI/CD, deployment automation
+- **AI/ML Engineer**: Yaqin Albirawi [(@yalbirawi)](https://github.com/yalbirawi) - Machine learning models, natural language processing
+- **Backend Lead**: Salih Elfatih [(@salihelfatih)](https://github.com/salihelfatih) - API architecture, AI integration, database design
+- **DevOps Engineer**: David Lee [(@dle519)](https://github.com/dle519) - Cloud infrastructure, CI/CD, deployment automation
+- **Frontend Lead**: Andy Pham [(@AndyPham2341)](https://github.com/AndyPham2341) - User interface, user experience, responsive design
 
 ## 🛠️ Technology Stack
 
@@ -35,10 +35,12 @@ RezGenie is an intelligent resume analysis and optimization platform that levera
 
 ### Frontend
 
-- **Framework**: Next.js (React & TypeScript)
-- **Styling**: Tailwind CSS
-- **State Management**: Redux Toolkit
-- **UI Components**: Headless UI, Heroicons
+- **Framework**: Next.js 14 with App Router & TypeScript
+- **Styling**: Tailwind CSS with dark/light mode, purple theme
+- **UI Components**: shadcn/ui component library
+- **Animations**: Framer Motion for smooth transitions
+- **State Management**: React Query for API state management
+- **Form Handling**: React Hook Form with Zod validation
 
 ### Infrastructure
 
@@ -96,7 +98,28 @@ RezGenie/
    - **Frontend**: <http://localhost:3000>
    - **MinIO Console**: <http://localhost:9001>
 
-For detailed setup instructions and API documentation, see **[Backend README](backend/README.md)**
+For backend technical details and API documentation, see **[Backend README](backend/README.md)**
+
+## 🗺️ Application Structure
+
+### Frontend (Next.js 14)
+
+Modern, responsive web application with comprehensive UI/UX:
+
+- **Landing & Auth**: Hero page, login/signup with secure authentication
+- **Core Features**: AI genie interface, opportunities matching, user dashboard  
+- **Career Hub**: Comprehensive guides for resume optimization and job search
+- **User Management**: Profile settings, preferences, and account management
+- **Legal Pages**: Privacy policy, terms of service, contact information
+
+### Design System
+
+- **Purple Theme**: Professional gradient color scheme with dark/light mode
+- **Responsive Design**: Mobile-first approach optimized for all devices
+- **Smooth Animations**: Framer Motion powered transitions and micro-interactions
+- **Component Library**: shadcn/ui components with consistent design patterns
+
+For detailed frontend documentation, see **[Frontend README](frontend/README.md)**
 
 ## 🧪 Testing
 
@@ -111,6 +134,7 @@ python -m pytest tests/ -v
 - [Backend Documentation](backend/README.md) - Detailed technical documentation
 - [Changelog](docs/CHANGELOG.md) - Project progress and completed features
 - [Design Document](docs/design.md) - System architecture
+- [Frontend Documentation](frontend/README.md) - UI/UX and design system
 - [Requirements](docs/requirements.md) - Functional requirements  
 - [Task Tracking](docs/tasks.md) - Development progress
 
