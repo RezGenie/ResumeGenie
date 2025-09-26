@@ -1,4 +1,4 @@
-# 🧞 RezGenie Frontend
+# 🖼️ RezGenie Frontend
 
 Next.js-based frontend for the RezGenie AI-powered resume optimization platform.
 
@@ -73,39 +73,39 @@ RezGenie uses a custom purple-themed design system with:
 - **Animations**: Subtle Framer Motion effects
 - **Responsive**: Mobile-first approach
 
-## �️ Application Routes
+## 🧭 Application Routes
 
 ### ✅ Completed Pages
 
 - **`/`** - Landing page with hero section, features overview, and call-to-action
 - **`/auth`** - Authentication page with login/signup forms
-- **`/dashboard`** - ✅ User dashboard with stats, activity, and personalized content
-- **`/genie`** - ✅ AI genie wishes interface with resume upload and job posting analysis
-- **`/opportunities`** - ✅ Job opportunities page with matching and filtering (renamed from `/compare`)
-- **`/guides`** - ✅ Career guidance hub with comprehensive resources
-  - **`/guides/optimizing-resume`** - ✅ Resume optimization strategies and tips
-  - **`/guides/genie-wishes`** - ✅ How to maximize AI recommendations
-  - **`/guides/get-more-interviews`** - ✅ Interview acquisition tactics
-- **`/contact`** - ✅ Contact information and team details
-- **`/pricing`** - ✅ Pricing plans and subscription options
-- **`/privacy`** - ✅ Privacy policy and data handling information
-- **`/terms`** - ✅ Terms of service and user agreements
-- **`/profile`** - ✅ User profile management and settings
+- **`/dashboard`** - User dashboard with stats, activity, and personalized content
+- **`/genie`** - AI genie wishes interface with resume upload and job posting analysis
+- **`/opportunities`** - Job opportunities page with matching and filtering (renamed from `/compare`)
+- **`/guides`** - Career guidance hub with comprehensive resources
+  - **`/guides/optimizing-resume`** - Resume optimization strategies and tips
+  - **`/guides/genie-wishes`** - How to maximize AI recommendations
+  - **`/guides/get-more-interviews`** - Interview acquisition tactics
+- **`/contact`** - Contact information and team details
+- **`/pricing`** - Pricing plans and subscription options
+- **`/privacy`** - Privacy policy and data handling information
+- **`/terms`** - Terms of service and user agreements
+- **`/profile`** - User profile management and settings
 
 ### 🎨 Design System Features
 
-- **✅ Consistent Typography** - Unified title sizing across all pages (`text-3xl md:text-4xl lg:text-5xl`)
-- **✅ Professional Color Scheme** - Purple gradient theme with proper dark/light mode support
-- **✅ Responsive Navigation** - Mobile-friendly header with authentication state handling
-- **✅ Smooth Animations** - Framer Motion transitions throughout the application
-- **✅ Component Library** - Full shadcn/ui integration with custom theming
-- **✅ Protected Routes** - Middleware-based authentication for sensitive pages
+- **Consistent Typography** - Unified title sizing across all pages (`text-3xl md:text-4xl lg:text-5xl`)
+- **Professional Color Scheme** - Purple gradient theme with proper dark/light mode support
+- **Responsive Navigation** - Mobile-friendly header with authentication state handling
+- **Smooth Animations** - Framer Motion transitions throughout the application
+- **Component Library** - Full shadcn/ui integration with custom theming
+- **Protected Routes** - Middleware-based authentication for sensitive pages
 
-## �📁 Project Structure
+## 📁 Project Structure
 
 ```plaintext
 src/
-├── app/                    # Next.js app directory
+├── app/                   # Next.js app directory
 │   ├── auth/              # Authentication pages
 │   ├── contact/           # Contact and team information
 │   ├── dashboard/         # User dashboard
@@ -145,10 +145,10 @@ src/
 ├── contexts/
 │   └── AuthContext.tsx    # Authentication context provider
 ├── lib/
-│   ├── api.ts            # API client and types
-│   └── utils.ts          # Utility functions
+│   ├── api.ts             # API client and types
+│   └── utils.ts           # Utility functions
 └── types/
-    └── index.ts          # TypeScript type definitions
+    └── index.ts           # TypeScript type definitions
 ```
 
 ## 🔧 Available Scripts
@@ -163,53 +163,53 @@ src/
 
 ### ✅ Header Navigation
 
-- **✅ Responsive Design** - Mobile-friendly navigation with hamburger menu
-- **✅ Authentication Integration** - Dynamic user state with login/logout functionality
-- **✅ Theme Toggle** - Seamless dark/light mode switching
-- **✅ Professional Branding** - RezGenie logo with genie emoji
-- **✅ Route Protection** - Authenticated vs public navigation states
+- **Responsive Design** - Mobile-friendly navigation with hamburger menu
+- **Authentication Integration** - Dynamic user state with login/logout functionality
+- **Theme Toggle** - Seamless dark/light mode switching
+- **Professional Branding** - RezGenie logo with genie emoji
+- **Route Protection** - Authenticated vs public navigation states
 
 ### ✅ Landing Page
 
-- **✅ Hero Section** - Engaging introduction with animated genie emoji
-- **✅ Features Grid** - Interactive cards showcasing AI capabilities
-- **✅ Responsive Layout** - Optimized spacing and typography across devices
-- **✅ Call-to-Action** - Clear user journey to main application
+- **Hero Section** - Engaging introduction with animated genie emoji
+- **Features Grid** - Interactive cards showcasing AI capabilities
+- **Responsive Layout** - Optimized spacing and typography across devices
+- **Call-to-Action** - Clear user journey to main application
 
 ### ✅ Authentication System
 
-- **✅ Login/Register Forms** - Clean forms with validation
-- **✅ JWT Token Management** - Secure authentication flow
-- **✅ Protected Routes** - Middleware-based route protection
-- **✅ User Context** - Global authentication state management
+- **Login/Register Forms** - Clean forms with validation
+- **JWT Token Management** - Secure authentication flow
+- **Protected Routes** - Middleware-based route protection
+- **User Context** - Global authentication state management
 
 ### ✅ AI Genie Interface
 
-- **✅ File Upload** - Drag & drop resume upload with validation
-- **✅ Job Posting Input** - Textarea for job description analysis
-- **✅ Wish Counter** - Daily usage tracking with visual feedback
-- **✅ Analysis Results** - Comprehensive AI insights display
+- **File Upload** - Drag & drop resume upload with validation
+- **Job Posting Input** - Textarea for job description analysis
+- **Wish Counter** - Daily usage tracking with visual feedback
+- **Analysis Results** - Comprehensive AI insights display
 
 ### ✅ Career Guides Hub
 
-- **✅ Guide Categories** - Organized career guidance content
-- **✅ Interactive Cards** - Colorful, engaging guide previews
-- **✅ Detailed Content** - Comprehensive guides with actionable tips
-- **✅ Cross-linking** - Internal navigation between related guides
+- **Guide Categories** - Organized career guidance content
+- **Interactive Cards** - Colorful, engaging guide previews
+- **Detailed Content** - Comprehensive guides with actionable tips
+- **Cross-linking** - Internal navigation between related guides
 
 ### ✅ User Dashboard
 
-- **✅ Personal Stats** - Profile completion and activity tracking
-- **✅ Recent Activity** - Timeline of user interactions
-- **✅ Quick Actions** - Easy access to main features
-- **✅ Personalized Content** - User-specific recommendations
+- **Personal Stats** - Profile completion and activity tracking
+- **Recent Activity** - Timeline of user interactions
+- **Quick Actions** - Easy access to main features
+- **Personalized Content** - User-specific recommendations
 
 ### ✅ Theme System
 
-- **✅ Dark/Light Mode** - Complete theme switching with system preference detection
-- **✅ Purple Color Palette** - Professional gradient color scheme
-- **✅ Consistent Typography** - Unified text sizing and spacing
-- **✅ No Flash Effect** - Smooth theme transitions without content flash
+- **Dark/Light Mode** - Complete theme switching with system preference detection
+- **Purple Color Palette** - Professional gradient color scheme
+- **Consistent Typography** - Unified text sizing and spacing
+- **✅No Flash Effect** - Smooth theme transitions without content flash
 
 ## 📱 Responsive Design
 
