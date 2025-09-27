@@ -2,6 +2,28 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.7.0] - 2025-01-07
+
+### CP-15 Development Environment & Bug Fixes
+
+- **Environment Setup & Documentation**
+  - Complete development environment with conda and Docker infrastructure
+  - PostgreSQL 16 with pgvector, Redis 7, and MinIO services fully operational
+  - Streamlined team onboarding with unified documentation and testing guides
+  - Comprehensive integration planning for frontend-backend connectivity
+
+- **Critical Bug Fixes**
+  - Fixed wish history display in Genie interface - completed wishes now appear in history list
+  - Resolved backend import issues with proper dependency module structure
+  - Updated requirements.txt with missing packages (pypdf, python-magic-bin, aiofiles)
+  - Enhanced Windows compatibility and development workflow stability
+
+- **Infrastructure Improvements**
+  - Reliable PowerShell scripts for backend startup and health checks
+  - Docker compose infrastructure with persistent data volumes
+  - Complete dependency resolution for async database operations
+  - Professional testing workflow with API endpoint validation
+
 ## [0.6.0] - 2025-09-26
 
 ### CP-14 Basic UI for Uploading Resume & Job Posting

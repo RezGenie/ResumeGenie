@@ -44,6 +44,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
+# Alias for compatibility
+get_async_db = get_db
+
 
 async def init_db():
     """

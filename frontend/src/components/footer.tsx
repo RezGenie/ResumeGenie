@@ -115,8 +115,8 @@ export function Footer() {
           transition={{ duration: 0.5, delay: 0.6 }}
           className="border-t pt-8 mt-8 flex flex-col md:flex-row justify-between items-center"
         >
-          <p className="text-muted-foreground text-sm">
-            © 2024 RezGenie. All rights reserved.
+          <p className="text-muted-foreground text-sm">          
+            © {new Date().getFullYear()} RezGenie. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors text-sm">

@@ -19,7 +19,7 @@ from sqlalchemy import select
 import aiofiles
 from minio import Minio
 from minio.error import S3Error
-import pypdf2
+from pypdf import PdfReader
 from docx import Document
 import spacy
 from io import BytesIO
@@ -190,7 +190,7 @@ class FileService:
         """
         try:
             pdf_file = BytesIO(file_content)
-            pdf_reader = pypdf2.PdfReader(pdf_file)
+            pdf_reader = PdfReader(pdf_file)
             
             text_content = []
             metadata = {
