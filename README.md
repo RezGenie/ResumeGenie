@@ -10,8 +10,8 @@ RezGenie is an intelligent resume analysis and optimization platform that levera
 
 ```powershell
 # 1. Clone and setup (one-time setup)
-git clone [repository-url]
-cd RezGenie
+git clone <https://github.com/RezGenie/ResumeGenie.git>
+cd ResumeGenie
 .\infra\setup_dev_env.ps1
 
 # 2. Start services
@@ -24,7 +24,8 @@ cd backend && conda activate rezgenie && uvicorn main:app --reload  # Backend (p
 ```
 
 **📚 New Developer Resources:**
-- 📖 [Complete Setup Guide](docs/DEVELOPER_SETUP.md) - Detailed setup instructions
+
+- 📖 [Complete Setup Guide](docs/DEV_SETUP.md) - Detailed setup instructions
 - 🧪 [Testing Guide](docs/TESTING_GUIDE.md) - Comprehensive testing procedures  
 - ⚡ [Quick Reference](docs/QUICK_REFERENCE.md) - Daily workflow commands
 
@@ -76,6 +77,7 @@ cd backend && conda activate rezgenie && uvicorn main:app --reload  # Backend (p
 RezGenie/
 ├── backend/                # FastAPI backend application
 ├── frontend/               # React frontend
+├── infra/                  # Infrastructure as code
 ├── docker-compose.yml      # Development environment setup
 ├── docs/                   # Project documentation
 └── README.md
