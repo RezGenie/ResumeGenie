@@ -2,7 +2,7 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
-## [0.7.0] - 2025-01-07
+## [0.7.0] - 2025-09-27
 
 ### CP-15 Development Environment & Bug Fixes
 
