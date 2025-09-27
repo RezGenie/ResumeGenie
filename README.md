@@ -6,7 +6,29 @@
 
 RezGenie is an intelligent resume analysis and optimization platform that leverages AI to help job seekers improve their resumes and increase their chances of landing interviews. Our AI genie provides personalized recommendations, skill gap analysis, and job matching insights.
 
-## 🚀 Key Features
+## 🚀 Quick Start for Developers
+
+```powershell
+# 1. Clone and setup (one-time setup)
+git clone [repository-url]
+cd RezGenie
+.\infra\setup_dev_env.ps1
+
+# 2. Start services
+docker-compose up -d                          # Infrastructure
+cd frontend && npm run dev                    # Frontend (port 3000/3001)
+cd backend && conda activate rezgenie && uvicorn main:app --reload  # Backend (port 8000)
+
+# 3. Test everything
+.\infra\test-application.ps1 -TestType all
+```
+
+**📚 New Developer Resources:**
+- 📖 [Complete Setup Guide](docs/DEVELOPER_SETUP.md) - Detailed setup instructions
+- 🧪 [Testing Guide](docs/TESTING_GUIDE.md) - Comprehensive testing procedures  
+- ⚡ [Quick Reference](docs/QUICK_REFERENCE.md) - Daily workflow commands
+
+## 🌟 Key Features
 
 - **Smart Resume Analysis**: AI-powered parsing and analysis of resume content
 - **Job Matching**: Intelligent matching between resumes and job postings

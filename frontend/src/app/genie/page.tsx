@@ -197,6 +197,19 @@ export default function StudioPage() {
     
     setIsAnalyzing(true)
     
+    // Create a new wish entry
+    const newWish: Wish = {
+      id: crypto.randomUUID(),
+      type: 'resume_analysis',
+      title: 'Resume & Job Match Analysis',
+      description: `Analysis of ${resumeFile.name} against job posting`,
+      timestamp: new Date(),
+      status: 'processing'
+    }
+    
+    // Add wish to history immediately
+    setWishes(prev => [newWish, ...prev])
+    
     // Simulate API call - replace with real backend integration
     setTimeout(() => {
       const mockResults: AnalysisResults = {
@@ -215,6 +228,21 @@ export default function StudioPage() {
           'Consider adding a technical skills section with proficiency levels'
         ]
       }
+      
+      // Update the wish with results
+      setWishes(prev => prev.map(wish => 
+        wish.id === newWish.id 
+          ? { 
+              ...wish, 
+              status: 'completed' as const, 
+              results: {
+                score: mockResults.resumeScore,
+                insights: mockResults.insights,
+                recommendations: mockResults.recommendations
+              }
+            }
+          : wish
+      ))
       
       setAnalysisResults(mockResults)
       setIsAnalyzing(false)
