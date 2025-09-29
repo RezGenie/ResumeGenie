@@ -47,28 +47,113 @@ export default function Home() {
             Your AI-powered career genie. Transform your resume and unlock your dream job with personalized insights and recommendations.
           </motion.p>
           
+          {/* Announcement Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="max-w-4xl mx-auto"
           >
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button size="lg" className="text-lg px-8 py-6" asChild>
-                <Link href="/genie">
-                  Make a Wish ✨
-                </Link>
-              </Button>
-            </motion.div>
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+                {/* Left Content */}
+                <div className="flex-1 text-center lg:text-left">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    ✨ Tailor your resume like a pro
+                  </h2>
+                  <p className="text-muted-foreground text-lg mb-6 max-w-md">
+                    Ask for tailored resume fixes and instant job-match nudges.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button 
+                        size="lg" 
+                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-none shadow-lg"
+                        asChild
+                      >
+                        <Link href="/genie">
+                          Make a Wish ✨
+                        </Link>
+                      </Button>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button 
+                        size="lg" 
+                        variant="outline"
+                        className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-950/50 dark:hover:text-purple-300"
+                        asChild
+                      >
+                        <Link href="/guides">
+                          See what&apos;s new
+                        </Link>
+                      </Button>
+                    </motion.div>
+                  </div>
+                </div>
+                
+                {/* Right Content - Ticket Card */}
+                <div className="flex-shrink-0">
+                  <motion.div
+                    whileHover={{ rotate: 2, scale: 1.02 }}
+                    className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 shadow-lg transform rotate-1 w-48"
+                  >
+                    <div className="text-center">
+                      <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2 tracking-wider">
+                        CAREER FLIGHT ✈️
+                      </div>
+                      <div className="text-lg font-bold text-foreground mb-3">
+                        CV → JOB
+                      </div>
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        <div className="flex justify-between">
+                          <span className="font-medium">From:</span>
+                          <span>Resume</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">To:</span>
+                          <span>Dream Job</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Departure:</span>
+                          <span>Anytime</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Flight Date:</span>
+                          <span>Today</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-border">
+                        <div className="text-xs text-purple-600 dark:text-purple-400 font-semibold">
+                          BOARDING NOW
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
       <section className="container mx-auto px-4 pt-4 pb-8 max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="text-center mb-12"
+        >
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Your wish is my command. Here’s what your genie can do for you:
+          </p>
+        </motion.div>
 
         <div className="grid md:grid-cols-3 gap-8">
           <motion.div
