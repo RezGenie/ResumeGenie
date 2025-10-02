@@ -6,13 +6,13 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres123@localhost:5432/rezgenie"
+    database_url: str = "postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie"
     
     # Redis
-    redis_url: str = "redis://:redis123@localhost:6379/0"
+    redis_url: str = "redis://:redis123@redis:6379/0"
     
     # MinIO/S3
-    minio_endpoint: str = "localhost:9000"
+    minio_endpoint: str = "minio:9000"
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin123"
     minio_secure: bool = False
@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 60
     
     # Celery
-    celery_broker_url: str = "redis://:redis123@localhost:6379/0"
-    celery_result_backend: str = "redis://:redis123@localhost:6379/0"
+    celery_broker_url: str = "redis://:redis123@redis:6379/0"
+    celery_result_backend: str = "redis://:redis123@redis:6379/0"
 
     class Config:
         env_file = ".env"
