@@ -76,6 +76,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-change-in-production}
       - ENVIRONMENT=development
+      - CELERY_BROKER_URL=redis://:redis123@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis123@redis:6379/0
     ports:
       - "8000:8000"
     volumes:
@@ -107,6 +109,8 @@ services:
       - MINIO_SECRET_KEY=minioadmin123
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ENVIRONMENT=development
+      - CELERY_BROKER_URL=redis://:redis123@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis123@redis:6379/0
     volumes:
       - ./backend:/app
       - uploaded_files:/app/uploads
@@ -124,16 +128,19 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: rezgenie_flower
-    command: celery -A app.celery.celery_app flower --port=5555
+    command: celery -A app.celery.celery_app --broker=redis://:redis123@redis:6379/0 flower --port=5555
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie
       - REDIS_URL=redis://:redis123@redis:6379/0
+      - CELERY_BROKER_URL=redis://:redis123@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis123@redis:6379/0
     ports:
       - "5555:5555"
     volumes:
       - ./backend:/app
     depends_on:
       - redis
+      - celery-worker
     networks:
       - rezgenie-network
     restart: unless-stopped
@@ -152,6 +159,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next
     depends_on:
       - backend
     networks:
