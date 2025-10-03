@@ -58,7 +58,7 @@ export default function Home() {
               <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
                 {/* Left Content */}
                 <div className="flex-1 text-center lg:text-left">
-                  <h2 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
                     ✨ Tailor your resume like a pro
                   </h2>
                   <p className="text-muted-foreground text-lg mb-6 max-w-md">
@@ -71,7 +71,7 @@ export default function Home() {
                     >
                       <Button 
                         size="lg" 
-                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-none shadow-lg"
+                        className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white border-none shadow-lg"
                         asChild
                       >
                         <Link href="/genie">
@@ -151,8 +151,8 @@ export default function Home() {
           className="text-center mb-12"
         >
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Your wish is my command. Here’s what your genie can do for you:
-          </p>
+            For job seekers at all levels, from fresh graduates to seasoned professionals.
+            </p>
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -160,9 +160,9 @@ export default function Home() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-8 hover:shadow-lg transition-shadow"
+            className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-8 hover:shadow-lg transition-shadow"
           >
-            <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/50 dark:via-purple-900/50 dark:to-pink-900/50 rounded-xl flex items-center justify-center mb-6">
               <span className="text-2xl">📄</span>
             </div>
             <h3 className="text-xl font-semibold mb-4">Smart Resume Analysis</h3>
@@ -175,9 +175,9 @@ export default function Home() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-8 hover:shadow-lg transition-shadow"
+            className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-8 hover:shadow-lg transition-shadow"
           >
-            <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/50 dark:via-purple-900/50 dark:to-pink-900/50 rounded-xl flex items-center justify-center mb-6">
               <span className="text-2xl">🎯</span>
             </div>
             <h3 className="text-xl font-semibold mb-4">Job Match Scoring</h3>
@@ -190,9 +190,9 @@ export default function Home() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-2xl p-8 hover:shadow-lg transition-shadow"
+            className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-8 hover:shadow-lg transition-shadow"
           >
-            <div className="w-14 h-14 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/50 dark:via-purple-900/50 dark:to-pink-900/50 rounded-xl flex items-center justify-center mb-6">
               <span className="text-2xl">✨</span>
             </div>
             <h3 className="text-xl font-semibold mb-4">AI-Powered Insights</h3>

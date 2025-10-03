@@ -20,6 +20,7 @@ cd frontend; npm run dev                 # Frontend (port 3000/3001)
 **Prerequisites:** Anaconda/Miniconda, Docker Desktop, Node.js 18+, Git
 
 **Setup Steps:**
+
 1. Clone repo: `git clone [repo-url] && cd RezGenie`
 2. Run setup: `.\infra\setup_dev_env.ps1`
 3. Test setup: `.\infra\quick-test.ps1 -TestType all`
