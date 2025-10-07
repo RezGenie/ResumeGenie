@@ -15,7 +15,9 @@ RUN apt-get update && apt-get install -y \
     g++ \
     libpq-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    libmagic1 \
+    file \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
