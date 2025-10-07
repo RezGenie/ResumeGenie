@@ -12,7 +12,8 @@ RezGenie is an intelligent resume analysis and optimization platform that levera
 # 1. Clone and setup (one-time setup)
 git clone <https://github.com/RezGenie/ResumeGenie.git>
 cd ResumeGenie
-.\infra\setup_dev_env.ps1
+.\infra\setup_dev_env.ps1 # Windows Users
+.\infra\setup.sh # MacOS Users
 
 # 2. Start services
 docker-compose up -d                          # Infrastructure
