@@ -40,7 +40,7 @@ cd backend && conda activate rezgenie && uvicorn main:app --reload  # Backend (p
 
 ## 👯 Team
 
-- **AI/ML Engineer**: Yaqin Albirawi [(@yalbirawi)](https://github.com/yalbirawi) - Machine learning models, natural language processing
+- **Frontend Developer and QA**: Yaqin Albirawi [(@yalbirawi)](https://github.com/yalbirawi) - Machine learning models, natural language processing
 - **Backend Lead**: Salih Elfatih [(@salihelfatih)](https://github.com/salihelfatih) - API architecture, AI integration, database design
 - **DevOps Engineer**: David Lee [(@dle519)](https://github.com/dle519) - Cloud infrastructure, CI/CD, deployment automation
 - **Frontend Lead**: Andy Pham [(@AndyPham2341)](https://github.com/AndyPham2341) - User interface, user experience, responsive design
