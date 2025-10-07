@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL with pgvector extension
   postgres:
     image: pgvector/pgvector:pg16
     container_name: rezgenie_postgres
@@ -14,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data/pgdata
-      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ${PWD}/backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d rezgenie"]
       interval: 30s
@@ -23,7 +22,6 @@ services:
     networks:
       - rezgenie-network
 
-  # Redis for Celery message broker and caching
   redis:
     image: redis:7-alpine
     container_name: rezgenie_redis
@@ -40,7 +38,6 @@ services:
     networks:
       - rezgenie-network
 
-  # MinIO for file storage (S3 compatible)
   minio:
     image: minio/minio:latest
     container_name: rezgenie_minio
@@ -54,14 +51,13 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
       - rezgenie-network
 
-  # FastAPI backend application
   backend:
     build:
       context: ./backend
@@ -92,7 +88,6 @@ services:
       - rezgenie-network
     restart: unless-stopped
 
-  # Celery worker for background tasks
   celery-worker:
     build:
       context: ./backend
@@ -118,7 +113,6 @@ services:
       - rezgenie-network
     restart: unless-stopped
 
-  # Celery Flower for monitoring tasks
   flower:
     build:
       context: ./backend
@@ -138,7 +132,6 @@ services:
       - rezgenie-network
     restart: unless-stopped
 
-  # Next.js frontend application
   frontend:
     build:
       context: ./frontend
@@ -151,7 +144,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - node_modules:/app/node_modules
     depends_on:
       - backend
     networks:
@@ -163,6 +156,7 @@ volumes:
   redis_data:
   minio_data:
   uploaded_files:
+  node_modules:
 
 networks:
   rezgenie-network:
