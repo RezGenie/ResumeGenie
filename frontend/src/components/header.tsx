@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, logout } = useAuth()
 
   const handleLogout = async () => {
     await logout()
@@ -76,7 +76,7 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center space-x-8 flex-1 justify-center">
-          {isAuthenticated ? (
+          {user ? (
             <>
               <Link
                 href="/dashboard"
@@ -125,8 +125,16 @@ export function Header() {
         <div className="flex items-center space-x-3 flex-shrink-0">
           <ThemeToggle />
           
-          {isAuthenticated ? (
+          {user ? (
             <>
+              {/* Quick Upload Button for Desktop */}
+              <Button variant="outline" size="sm" asChild className="hidden md:flex">
+                <Link href="/genie">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Resume
+                </Link>
+              </Button>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -135,22 +143,37 @@ export function Header() {
                         {user?.email?.charAt(0).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
+                    {/* Online indicator */}
+                    <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border border-background"></div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">{user?.email}</p>
+                      <p className="font-medium">
+                        {user?.email ? 
+                          user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) 
+                          : 'User'}
+                      </p>
                       <p className="w-[200px] truncate text-sm text-muted-foreground">
                         {user?.email}
                       </p>
+                      {user?.is_verified && (
+                        <p className="text-xs text-green-600 font-medium">✓ Verified</p>
+                      )}
                     </div>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/profile" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
-                      Profile
+                      Profile Settings
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -160,9 +183,9 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/analytics" className="cursor-pointer">
+                    <Link href="/opportunities" className="cursor-pointer">
                       <BarChart3 className="mr-2 h-4 w-4" />
-                      Analytics
+                      Job Opportunities
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -211,7 +234,7 @@ export function Header() {
           className="border-t bg-background/95 backdrop-blur lg:hidden"
         >
           <div className="container mx-auto px-4 py-6 space-y-1 max-w-7xl">
-            {isAuthenticated ? (
+            {user ? (
               <>
                 <Link
                   href="/dashboard"
@@ -234,18 +257,32 @@ export function Header() {
                 >
                   Job Opportunities
                 </Link>
+                <Link
+                  href="/opportunities"
+                  className="block px-4 py-3 text-base font-medium text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Job Opportunities
+                </Link>
 
                 <div className="border-t pt-4 mt-4">
                   <div className="px-4 py-2">
-                    <p className="text-sm font-medium text-foreground">{user?.email}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {user?.email ? 
+                        user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) 
+                        : 'User'}
+                    </p>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    {user?.is_verified && (
+                      <p className="text-xs text-green-600 font-medium">✓ Verified</p>
+                    )}
                   </div>
                   <Link
                     href="/profile"
                     className="block px-4 py-3 text-base font-medium text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Profile
+                    Profile Settings
                   </Link>
                   <button
                     onClick={() => {

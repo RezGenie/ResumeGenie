@@ -2,6 +2,69 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.9.0] - 2025-10-08
+
+### CP-18 Complete Authentication Flow
+
+- **Frontend-Backend Authentication Integration**
+  - Connected AuthContext to real FastAPI backend endpoints (/api/v1/auth/login, /api/v1/auth/register)
+  - Implemented proper JWT token management with localStorage and cookie storage
+  - Added automatic token refresh logic and session persistence
+  - Created working test user credentials with proper password validation
+
+- **Advanced Toast Notification System**
+  - Replaced harsh error popups with user-friendly toast notifications using Sonner
+  - Specific error messages for authentication failures (invalid credentials, rate limiting)
+  - Detailed password requirement validation with helpful hints
+  - Success toasts for login/registration with personalized welcome messages
+  - Smart error parsing for FastAPI/Pydantic validation responses
+
+- **Enhanced User Experience**
+  - Password requirements hint automatically shows when switching to register mode
+  - Comprehensive error handling for network issues, validation errors, and edge cases
+  - Loading states and proper form behavior during authentication processes
+  - Non-blocking error handling that keeps users in the flow
+
+- **Backend Password Security**
+  - Enforced strong password requirements (8+ chars, uppercase, lowercase, number, special character)
+  - Proper bcrypt password hashing with secure salt rounds
+  - Rate limiting protection against brute force attacks
+  - Comprehensive input validation with detailed error responses
+
+- **Developer Experience**
+  - Enhanced debugging with detailed console logging throughout auth flow
+  - TypeScript-safe error handling with proper type checking
+  - Modular authentication architecture ready for additional features
+  - Complete authentication workflow testing and validation
+
+## [0.8.0] - 2025-10-03
+
+### CP-16 Production-Ready Infrastructure & UI Enhancements
+
+- **Complete Docker Development Environment**
+  - Full 7-service Docker Compose setup with operational health checks
+  - PostgreSQL 16 + pgvector, Redis 7, MinIO, Celery worker, and Flower monitoring
+  - All services networking properly with persistent data volumes
+  - Development environment ready for team collaboration
+
+- **Professional Purple UI Theme**
+  - Modern color scheme with #F8F6FB main background and #EDE7F6 card backgrounds
+  - Beautiful gradient system (#7B2CBF → #9D4EDD) for headers and hero sections
+  - Consistent purple branding across light/dark modes
+  - Advanced CSS architecture with oklch color space and custom properties
+
+- **Background Processing Infrastructure**
+  - Celery worker fully operational with Redis message broker
+  - Flower monitoring dashboard accessible at localhost:5555
+  - Async task processing ready for AI analysis jobs
+  - Scalable architecture for production workloads
+
+- **Developer Experience Improvements**
+  - Resolved all Docker networking and dependency issues
+  - Enhanced documentation with integration planning
+  - Professional CSS theming system with utility classes
+  - Ready for frontend-backend API integration
+
 ## [0.7.0] - 2025-09-27
 
 ### CP-15 Development Environment & Bug Fixes

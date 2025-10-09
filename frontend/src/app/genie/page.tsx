@@ -12,12 +12,15 @@ import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useAuth } from "@/contexts/AuthContext"
+import { resumeService, ResumeResponse } from "@/lib/api/resumes"
 
 interface UploadedFile {
   id: string
   name: string
   size: number
   type: string
+  isUploaded?: boolean
+  resumeData?: ResumeResponse
 }
 
 interface Wish {
@@ -102,6 +105,7 @@ export default function StudioPage() {
   const [resumeFile, setResumeFile] = useState<UploadedFile | null>(null)
   const [jobPosting, setJobPosting] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [dailyWishes, setDailyWishes] = useState(0)
   const [wishes, setWishes] = useState<Wish[]>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null)
@@ -133,21 +137,46 @@ export default function StudioPage() {
     return null
   }
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     const error = validateFile(file)
     if (error) {
       alert(error)
       return
     }
 
-    const uploadedFile: UploadedFile = {
+    // Create a temporary file object for UI feedback
+    const tempFile: UploadedFile = {
       id: Date.now().toString(),
       name: file.name,
       size: file.size,
-      type: file.type
+      type: file.type,
+      isUploaded: false
     }
 
-    setResumeFile(uploadedFile)
+    setResumeFile(tempFile)
+    setIsLoading(true)
+
+    try {
+      // Upload the file to backend
+      const resumeData = await resumeService.uploadResume(file)
+      
+      // Update with successful upload data
+      const uploadedFile: UploadedFile = {
+        ...tempFile,
+        id: resumeData.id,
+        isUploaded: true,
+        resumeData
+      }
+
+      setResumeFile(uploadedFile)
+      console.log('Resume uploaded successfully:', resumeData)
+    } catch (error) {
+      console.error('Resume upload failed:', error)
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setResumeFile(null)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {

@@ -15,19 +15,28 @@ export function ProtectedRoute({
   requireAuth = true, 
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
+
+  // More accurate authentication check
+  const isAuthenticated = !!user;
+
+  console.log('ProtectedRoute - requireAuth:', requireAuth, 'isAuthenticated:', isAuthenticated, 'isLoading:', isLoading, 'user:', !!user);
 
   useEffect(() => {
     if (!isLoading) {
+      console.log('ProtectedRoute useEffect - requireAuth:', requireAuth, 'isAuthenticated:', isAuthenticated);
+      
       if (requireAuth && !isAuthenticated) {
+        console.log('ProtectedRoute: Redirecting to', redirectTo, 'because auth required but not authenticated');
         router.push(redirectTo);
       } else if (!requireAuth && isAuthenticated) {
         // If user is authenticated but trying to access auth page, redirect to dashboard
+        console.log('ProtectedRoute: Redirecting to dashboard because user is authenticated');
         router.push('/dashboard');
       }
     }
-  }, [isAuthenticated, isLoading, requireAuth, redirectTo, router]);
+  }, [isAuthenticated, isLoading, requireAuth, redirectTo, router, user]);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
