@@ -45,19 +45,19 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #F8F6FB; /* Light purple background */
+  --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
-  --card: #EDE7F6; /* Light purple card background */
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: #EDE7F6;
+  --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: #7B2CBF; /* Primary purple */
+  --primary: oklch(0.456 0.165 285.1);
   --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: #EDE7F6;
+  --secondary: oklch(0.928 0.044 287.72);
   --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: #EDE7F6;
+  --muted: oklch(0.968 0.007 247.896);
   --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: #EDE7F6;
+  --accent: oklch(0.968 0.007 247.896);
   --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.929 0.013 255.508);
@@ -79,19 +79,19 @@
 }
 
 .dark {
-  --background: #1a0d24; /* Dark purple background */
+  --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
-  --card: #2d1b3d; /* Dark purple card background */
+  --card: oklch(0.208 0.042 265.755);
   --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: #2d1b3d;
+  --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: #9D4EDD; /* Lighter purple for dark mode */
+  --primary: oklch(0.676 0.171 282.88);
   --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: #2d1b3d;
+  --secondary: oklch(0.279 0.041 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: #2d1b3d;
+  --muted: oklch(0.279 0.041 260.031);
   --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: #2d1b3d;
+  --accent: oklch(0.279 0.041 260.031);
   --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
@@ -164,24 +164,4 @@
 /* Focus outline improvements */
 [tabindex]:focus-visible {
   @apply outline-2 outline-ring outline-offset-2;
-}
-
-/* Purple gradient utilities for headers and hero sections */
-.gradient-header {
-  background: linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);
-}
-
-.gradient-hero {
-  background: linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);
-}
-
-/* Purple gradient hover variants */
-.gradient-header-hover:hover {
-  background: linear-gradient(135deg, #6A1B99 0%, #8A3FD1 100%);
-  transition: background 0.3s ease;
-}
-
-.gradient-hero-hover:hover {
-  background: linear-gradient(135deg, #6A1B99 0%, #8A3FD1 100%);
-  transition: background 0.3s ease;
 }

@@ -16,7 +16,7 @@ export default function Guides() {
       icon: <FileText className="h-6 w-6" />,
       title: "Optimizing Your Resume",
       description: "Learn how to create a compelling resume that stands out to recruiters and passes ATS systems.",
-      color: "bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500",
+      color: "bg-blue-500/10 text-blue-500",
       readTime: "5 min read"
     },
     {
@@ -24,7 +24,7 @@ export default function Guides() {
       icon: <Sparkles className="h-6 w-6" />,
       title: "Making the Most of Genie Wishes",
       description: "Discover how to leverage RezGenie's AI recommendations to accelerate your career growth.",
-      color: "bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500",
+      color: "bg-purple-500/10 text-purple-500",
       readTime: "3 min read"
     },
     {
@@ -32,7 +32,7 @@ export default function Guides() {
       icon: <Target className="h-6 w-6" />,
       title: "Getting More Interviews",
       description: "Strategic tips and tactics to increase your interview callbacks and land your dream job.",
-      color: "bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500",
+      color: "bg-green-500/10 text-green-500",
       readTime: "7 min read"
     }
   ]
@@ -68,8 +68,8 @@ export default function Guides() {
               transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
             >
               <Link href={guide.href}>
-                <div className={`h-full rounded-2xl p-8 hover:shadow-lg transition-all duration-300 group cursor-pointer border ${guide.color.includes('blue') && !guide.color.includes('gradient') ? 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-blue-200 dark:border-blue-800' : guide.color.includes('purple') && !guide.color.includes('gradient') ? 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800' : guide.color.includes('gradient') ? 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800' : 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800'}`}>
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${guide.color.includes('blue') && !guide.color.includes('gradient') ? 'bg-blue-100 dark:bg-blue-900/50' : guide.color.includes('purple') && !guide.color.includes('gradient') ? 'bg-purple-100 dark:bg-purple-900/50' : guide.color.includes('gradient') ? 'bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/50 dark:via-purple-900/50 dark:to-pink-900/50' : 'bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-blue-900/50 dark:via-purple-900/50 dark:to-pink-900/50'}`}>
+                <div className={`h-full rounded-2xl p-8 hover:shadow-lg transition-all duration-300 group cursor-pointer border ${guide.color.includes('blue') ? 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-blue-200 dark:border-blue-800' : guide.color.includes('purple') ? 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800' : 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800'}`}>
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${guide.color.includes('blue') ? 'bg-blue-100 dark:bg-blue-900/50' : guide.color.includes('purple') ? 'bg-purple-100 dark:bg-purple-900/50' : 'bg-green-100 dark:bg-green-900/50'}`}>
                     {guide.icon}
                   </div>
                   <h3 className="text-xl font-semibold mb-4 group-hover:text-primary transition-colors">

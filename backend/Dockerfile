@@ -14,10 +14,10 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libpq-dev \
-    libmagic1 \
-    libffi-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    libmagic1 \
+    file \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .

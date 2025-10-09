@@ -1,11 +1,10 @@
 # 🧪 RezGenie Testing Guide
 
-## Comprehensive testing procedures for frontend routes and API endpoints
+**Comprehensive testing procedures for frontend routes and API endpoints**
 
 ## 🎯 Testing Overview
 
 This guide covers:
-
 - **Frontend Route Testing**: All 15+ pages and user flows
 - **API Endpoint Testing**: Backend REST API validation
 - **Integration Testing**: Full-stack functionality
@@ -15,8 +14,7 @@ This guide covers:
 
 ## 🌐 Frontend Route Testing
 
-### Frontend Testing Prerequisites
-
+### Prerequisites
 ```bash
 # Ensure frontend is running
 cd frontend
@@ -27,7 +25,6 @@ npm run dev
 ### 1. Public Routes (No Authentication Required)
 
 #### Landing Page
-
 ```bash
 URL: http://localhost:3000/
 Tests:
@@ -40,7 +37,6 @@ Tests:
 ```
 
 #### Authentication Page
-
 ```bash
 URL: http://localhost:3000/auth
 Tests:
@@ -52,7 +48,6 @@ Tests:
 ```
 
 #### Legal Pages
-
 ```bash
 URLs:
 - http://localhost:3000/privacy
@@ -67,7 +62,6 @@ Tests:
 ```
 
 #### Pricing Page
-
 ```bash
 URL: http://localhost:3000/pricing
 Tests:
@@ -80,7 +74,6 @@ Tests:
 ### 2. Protected Routes (Authentication Required)
 
 #### Dashboard
-
 ```bash
 URL: http://localhost:3000/dashboard
 Tests:
@@ -92,7 +85,6 @@ Tests:
 ```
 
 #### AI Genie
-
 ```bash
 URL: http://localhost:3000/genie
 Tests:  
@@ -105,7 +97,6 @@ Tests:
 ```
 
 #### Job Opportunities
-
 ```bash
 URL: http://localhost:3000/opportunities
 Tests:
@@ -117,7 +108,6 @@ Tests:
 ```
 
 #### User Profile
-
 ```bash
 URL: http://localhost:3000/profile
 Tests:
@@ -131,7 +121,6 @@ Tests:
 ### 3. Career Guides Section
 
 #### Guides Hub
-
 ```bash
 URL: http://localhost:3000/guides
 Tests:
@@ -142,7 +131,6 @@ Tests:
 ```
 
 #### Individual Guide Pages
-
 ```bash
 URLs:
 - http://localhost:3000/guides/optimizing-resume
@@ -159,7 +147,6 @@ Tests:
 ### 4. Error Handling
 
 #### 404 Page
-
 ```bash
 URL: http://localhost:3000/nonexistent-page
 Tests:
@@ -172,8 +159,7 @@ Tests:
 
 ## 🔌 API Endpoint Testing
 
-### API Testing Prerequisites
-
+### Prerequisites
 ```bash
 # Ensure backend is running
 cd backend
@@ -185,14 +171,12 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ### 1. Health Check Endpoints
 
 #### Basic Health Check
-
 ```bash
 curl -X GET http://localhost:8000/health
 # Expected: {"status": "healthy", "timestamp": "..."}
 ```
 
 #### Detailed Health Check
-
 ```bash
 curl -X GET http://localhost:8000/api/v1/health
 # Expected: Detailed service status including database, redis, etc.
@@ -201,7 +185,6 @@ curl -X GET http://localhost:8000/api/v1/health
 ### 2. Authentication Endpoints
 
 #### User Registration
-
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -218,7 +201,6 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 ```
 
 #### User Login
-
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -232,7 +214,6 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 ```
 
 #### Token Validation
-
 ```bash
 # Get token from login response, then:
 curl -X GET http://localhost:8000/api/v1/auth/me \
@@ -244,7 +225,6 @@ curl -X GET http://localhost:8000/api/v1/auth/me \
 ### 3. Resume Management Endpoints
 
 #### Upload Resume
-
 ```bash
 curl -X POST http://localhost:8000/api/v1/resumes/upload \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -255,7 +235,6 @@ curl -X POST http://localhost:8000/api/v1/resumes/upload \
 ```
 
 #### List User Resumes
-
 ```bash
 curl -X GET http://localhost:8000/api/v1/resumes/ \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -264,7 +243,6 @@ curl -X GET http://localhost:8000/api/v1/resumes/ \
 ```
 
 #### Get Resume Details
-
 ```bash
 curl -X GET http://localhost:8000/api/v1/resumes/{resume_id} \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -273,7 +251,6 @@ curl -X GET http://localhost:8000/api/v1/resumes/{resume_id} \
 ```
 
 #### Delete Resume
-
 ```bash
 curl -X DELETE http://localhost:8000/api/v1/resumes/{resume_id} \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -284,7 +261,6 @@ curl -X DELETE http://localhost:8000/api/v1/resumes/{resume_id} \
 ### 4. Job Analysis Endpoints
 
 #### Analyze Job Posting
-
 ```bash
 curl -X POST http://localhost:8000/api/v1/jobs/analyze \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -300,7 +276,6 @@ curl -X POST http://localhost:8000/api/v1/jobs/analyze \
 ```
 
 #### Get Job Comparisons
-
 ```bash
 curl -X GET http://localhost:8000/api/v1/jobs/comparisons \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -311,7 +286,6 @@ curl -X GET http://localhost:8000/api/v1/jobs/comparisons \
 ### 5. Genie Wishes Endpoints
 
 #### Create Genie Wish
-
 ```bash
 curl -X POST http://localhost:8000/api/v1/genie/wishes \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -325,7 +299,6 @@ curl -X POST http://localhost:8000/api/v1/genie/wishes \
 ```
 
 #### Get Wish Status
-
 ```bash
 curl -X GET http://localhost:8000/api/v1/genie/wishes/{wish_id} \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -336,7 +309,6 @@ curl -X GET http://localhost:8000/api/v1/genie/wishes/{wish_id} \
 ### 6. Analytics Endpoints
 
 #### Get Dashboard Analytics
-
 ```bash
 curl -X GET http://localhost:8000/api/v1/analytics/dashboard \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -345,7 +317,6 @@ curl -X GET http://localhost:8000/api/v1/analytics/dashboard \
 ```
 
 #### Get Skills Analysis
-
 ```bash
 curl -X GET http://localhost:8000/api/v1/analytics/skills \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -360,7 +331,6 @@ curl -X GET http://localhost:8000/api/v1/analytics/skills \
 ### End-to-End User Flows
 
 #### 1. Complete Registration to Job Analysis
-
 ```bash
 1. Register new user via API
 2. Login and get JWT token
@@ -371,7 +341,6 @@ curl -X GET http://localhost:8000/api/v1/analytics/skills \
 ```
 
 #### 2. Full Frontend Navigation Flow
-
 ```bash
 1. Visit landing page (/)
 2. Navigate to auth page (/auth)
@@ -384,7 +353,6 @@ curl -X GET http://localhost:8000/api/v1/analytics/skills \
 ### Cross-Service Integration
 
 #### Database + API Testing
-
 ```bash
 # Test data persistence
 1. Create user via API
@@ -395,7 +363,6 @@ curl -X GET http://localhost:8000/api/v1/analytics/skills \
 ```
 
 #### Cache Testing
-
 ```bash
 # Test Redis integration
 1. Make API call that should cache results
@@ -411,7 +378,6 @@ curl -X GET http://localhost:8000/api/v1/analytics/skills \
 ### Frontend Performance
 
 #### Page Load Times
-
 ```bash
 # Use browser dev tools or:
 curl -w "@curl-format.txt" -o /dev/null -s http://localhost:3000/
@@ -428,7 +394,6 @@ echo "     time_namelookup:  %{time_namelookup}\n\
 ```
 
 #### API Response Times
-
 ```bash
 # Test API endpoint performance
 for i in {1..10}; do
@@ -440,7 +405,6 @@ done
 ### Load Testing
 
 #### Simple Load Test
-
 ```bash
 # Install Apache Bench (ab) or use:
 npm install -g loadtest
@@ -457,7 +421,6 @@ loadtest -n 100 -c 10 http://localhost:8000/api/v1/health
 ## 🐛 Testing Scripts
 
 ### Automated Frontend Testing
-
 ```bash
 # Create test script: test-frontend.js
 cd frontend
@@ -470,7 +433,6 @@ npm run test:e2e
 ```
 
 ### Automated API Testing
-
 ```bash
 # Create test script: test-api.py
 cd backend
@@ -484,7 +446,6 @@ pytest tests/test_resumes.py
 ```
 
 ### Integration Test Script
-
 ```bash
 # Create comprehensive test script: test-integration.sh
 #!/bin/bash
@@ -520,7 +481,6 @@ echo "✅ Integration tests complete!"
 ## 📊 Test Reporting
 
 ### Create Test Reports
-
 ```bash
 # Frontend test coverage
 cd frontend

@@ -132,7 +132,7 @@ git push -u origin CP-15-fix-wish-history-display
 ### 5. Create Pull Request
 
 1. Go to GitHub repository
-2. Click "Compare & pull request"
+2. Click "Compare & pull request" 
 3. Fill out PR template:
 
 ```markdown
