@@ -4,7 +4,23 @@ All notable changes to the RezGenie project will be documented in this file.
 
 ## [0.10.0] - 2025-10-09
 
-### CP-19 UI Polish & Bug Fixes
+### CP-20 File Upload Service Improvements
+
+- **Backend Guest Upload Infrastructure**
+  - Created new GuestSession and GuestDailyUpload models for tracking guest users
+  - Implemented guest session management with unique session ID generation based on IP and User-Agent
+  - Added guest upload endpoint (/api/v1/resumes/upload/guest) with 3 uploads per day limit
+  - Enhanced guest user creation with proper UUID generation and database session handling
+  - Fixed foreign key constraint issues by using db.add() and await db.flush() for guest users
+  - Added rate limiting protection (3 uploads per 24 hours) for guest users
+  - Implemented comprehensive error handling for guest upload workflows
+
+- **Backend API & Security Enhancements**
+  - Added get_current_user_optional dependency for handling both authenticated and guest users
+  - Enhanced file upload service with better error handling and status reporting
+  - Improved guest session tracking with IP address and user agent logging
+  - Added proper async database operations for guest upload counting and limits
+  - Enhanced resume processing pipeline to support both authenticated and guest workflows
 
 - **Modal Animations & Accessibility**
   - Enhanced modal animations with smooth spring-based transitions and proper AnimatePresence
@@ -27,8 +43,8 @@ All notable changes to the RezGenie project will be documented in this file.
 - **Frontend Bug Fixes**
   - Fixed hydration mismatch issues by replacing Math.random with deterministic sparkle positions
   - Resolved Docker service issues with MinIO connectivity for file uploads
-  - Updated guest user creation in backend to properly generate UUIDs and handle DB sessions
   - Improved error handling and logging throughout the upload workflow
+  - Enhanced authentication context with proper JWT token management
 
 ## [0.9.0] - 2025-10-08
 
