@@ -265,18 +265,18 @@ export default function Dashboard() {
             variants={itemVariants}
             className="mb-8"
           >
-            <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border border-purple-200/50 dark:border-purple-700/50 rounded-lg p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     Dashboard Under Development
                   </h3>
-                  <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                  <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                     <p>
                       We&apos;re actively building your personalized dashboard. Some features are still being developed and will be available soon!
                     </p>
@@ -296,7 +296,7 @@ export default function Dashboard() {
                       <h3 className="font-semibold text-purple-900 dark:text-purple-100">
                         Complete Your Profile
                       </h3>
-                      <p className="text-sm text-purple-700 dark:text-purple-300">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         A complete profile gets 3x more visibility
                       </p>
                     </div>

@@ -37,13 +37,41 @@ export default function PricingPage() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
           className="text-center mb-12"
         >
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-foreground">Pricing Plans</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Choose the plan that fits your career goals. All plans include access to Genie guides and resume analysis.
           </p>
+        </motion.div>
+
+        {/* Development Notice */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-8"
+        >
+          <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border border-purple-200/50 dark:border-purple-700/50 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Pricing Under Development
+                </h3>
+                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                  <p>
+                    All features are currently free during the development phase. Payment processing will be available soon!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </motion.div>
         <div className="grid md:grid-cols-3 gap-8">
           {plans.map((plan, i) => (
