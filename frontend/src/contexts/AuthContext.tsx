@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No refresh token available');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/refresh`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('CheckAuth: Verifying token with backend...');
       // Verify token with backend
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/me`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       formData.append('username', email); // Backend expects 'username' field
       formData.append('password', password);
 
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/login`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/login`;
       console.log('Login: Attempting login to:', apiUrl);
       console.log('Login: Environment API URL:', process.env.NEXT_PUBLIC_API_URL);
       console.log('Login: Form data:', { username: email, password: '***' });
@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Register: Starting registration process...');
       console.log('Register: Email:', email);
       
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/register`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/register`;
       console.log('Register: API URL:', apiUrl);
       
       const requestBody = { email, password };
@@ -366,7 +366,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         console.log('Logout: Calling backend logout...');
         // Call logout endpoint
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/logout`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

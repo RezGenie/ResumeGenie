@@ -2,6 +2,34 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.10.0] - 2025-10-09
+
+### CP-19 UI Polish & Bug Fixes
+
+- **Modal Animations & Accessibility**
+  - Enhanced modal animations with smooth spring-based transitions and proper AnimatePresence
+  - Added expand/close functionality for AI recommendations with keyboard accessibility
+  - Improved modal visual design with enhanced shadows and backdrop blur effects
+  - Implemented focus trap and ESC key handling for better user experience
+
+- **Design System Consistency**
+  - Updated all warning card text colors from purple accent to app-consistent muted colors
+  - Fixed "Unlimited Magic Unlocked!" text to use standard foreground color instead of green
+  - Unified warning card styling across Dashboard, Opportunities, Pricing, and Genie pages
+  - Enhanced accessibility with proper ARIA labels and color contrast improvements
+
+- **Guest User Experience**
+  - Added expand functionality to guest user recommendations preview
+  - Ensured feature parity between authenticated and guest users for AI recommendations
+  - Improved recommendations display with proper icons and professional styling
+  - Enhanced upload error handling with better status codes and user feedback
+
+- **Frontend Bug Fixes**
+  - Fixed hydration mismatch issues by replacing Math.random with deterministic sparkle positions
+  - Resolved Docker service issues with MinIO connectivity for file uploads
+  - Updated guest user creation in backend to properly generate UUIDs and handle DB sessions
+  - Improved error handling and logging throughout the upload workflow
+
 ## [0.9.0] - 2025-10-08
 
 ### CP-18 Complete Authentication Flow

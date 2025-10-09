@@ -9,9 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from pydantic import BaseModel
 import logging
+import uuid
 
 from app.core.database import get_db
 from app.core.security import get_current_user, rate_limit
+from app.core.deps import get_current_user_optional, get_or_create_guest_session, check_guest_daily_limit, increment_guest_upload_count
 from app.models.user import User
 from app.models.resume import Resume
 from app.services.file_service import file_service, FileValidationError, FileStorageError
@@ -120,6 +122,89 @@ async def upload_resume(
     
     except Exception as e:
         logger.error(f"Resume upload error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resume upload failed"
+        )
+
+
+@router.post("/upload/guest", response_model=ResumeResponse, status_code=status.HTTP_201_CREATED)
+@rate_limit(max_calls=3, window_minutes=1440)  # 3 uploads per day for guests
+async def upload_resume_guest(
+    request: Request,
+    file: UploadFile = File(..., description="Resume file (PDF or DOCX, max 10MB)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Upload and process a resume file as a guest user.
+    
+    - **file**: Resume file in PDF or DOCX format (max 10MB)
+    - **X-Guest-Session-ID**: Optional header with guest session ID
+    
+    Guest users are limited to 3 uploads per day.
+    The file will be processed asynchronously for text extraction.
+    """
+    try:
+        # Get or create guest session
+        session_id = await get_or_create_guest_session(request, db)
+        
+        # Check daily upload limit
+        can_upload, current_count = await check_guest_daily_limit(session_id, db, max_uploads=3)
+        
+        if not can_upload:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Daily upload limit exceeded. You can upload up to 3 files per day as a guest. Current count: {current_count}/3"
+            )
+        
+        logger.info(f"Guest resume upload initiated. Session: {session_id[:8]}...")
+        
+        # Create a temporary guest user for file processing
+        guest_user_id = uuid.uuid4()
+        guest_user = User(id=guest_user_id, email=f"guest_{session_id[:8]}@temporary.com")
+        
+        # Add guest user to database session (required for foreign key constraint)
+        db.add(guest_user)
+        await db.flush()  # Flush to get the ID without committing
+        
+        # Process the resume file
+        resume = await file_service.process_resume_file(file, guest_user, db)
+        
+        # Increment guest upload count
+        await increment_guest_upload_count(session_id, db)
+        
+        # Queue background task for embedding generation (optional for guests)
+        task = process_resume_embeddings.delay(str(resume.id))
+        logger.info(f"Queued embedding generation task: {task.id} for guest resume: {resume.id}")
+        
+        # Create response with guest session ID
+        response = ResumeResponse(
+            id=str(resume.id),
+            filename=resume.filename,
+            original_filename=resume.original_filename,
+            file_size=resume.file_size,
+            mime_type=resume.mime_type,
+            is_processed=resume.is_processed,
+            processing_status=resume.processing_status,
+            processing_error=resume.processing_error,
+            created_at=resume.created_at.isoformat(),
+            processed_at=resume.processed_at.isoformat() if resume.processed_at else None,
+            word_count=len(resume.extracted_text.split()) if resume.extracted_text else None
+        )
+        
+        logger.info(f"Guest resume uploaded successfully: {resume.id}")
+        return response
+        
+    except FileValidationError as e:
+        logger.warning(f"Guest file validation error: {e.detail}")
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    
+    except FileStorageError as e:
+        logger.error(f"Guest file storage error: {e.detail}")
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    
+    except Exception as e:
+        logger.error(f"Guest resume upload error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Resume upload failed"

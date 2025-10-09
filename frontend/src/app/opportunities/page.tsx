@@ -203,18 +203,18 @@ export default function JobDiscoveryPage() {
 
           {/* Under Development Notice */}
           <motion.div variants={itemVariants} className="max-w-4xl mx-auto">
-            <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border border-purple-200/50 dark:border-purple-700/50 rounded-lg p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     Job Discovery Under Development
                   </h3>
-                  <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                  <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                     <p>
                       We&apos;re currently building job scraping and real-time job data integration. The jobs shown below are demo data to showcase the interface and functionality.
                     </p>
@@ -226,16 +226,16 @@ export default function JobDiscoveryPage() {
 
           {/* Search and Filters */}
           <motion.div variants={itemVariants} className="max-w-4xl mx-auto">
-            <Card>
+            <Card className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border-purple-200/50 dark:border-purple-700/50 shadow-lg">
               <div className="flex flex-col md:flex-row gap-4 p-6">
                 <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5" />
                     <Input
                       placeholder="Search jobs by title, skills, or company..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                      className="pl-12 bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-sm focus:shadow-md placeholder:text-purple-400 dark:placeholder:text-purple-500 h-12 text-base"
                     />
                   </div>
                 </div>

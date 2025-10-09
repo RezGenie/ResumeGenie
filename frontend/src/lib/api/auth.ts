@@ -47,7 +47,7 @@ class AuthService {
     formData.append('username', credentials.email); // Note: backend expects 'username'
     formData.append('password', credentials.password);
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/auth/login`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/login`, {
       method: 'POST',
       body: formData,
     });
@@ -61,7 +61,7 @@ class AuthService {
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/auth/register`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ class AuthService {
   }
 
   async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/auth/refresh`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ class AuthService {
     if (!token) return;
 
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/auth/logout`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/logout`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -112,7 +112,7 @@ class AuthService {
   }
 
   async getCurrentUser() {
-    return this.client.get('/v1/auth/me');
+    return this.client.get('/auth/me');
   }
 
   // Token management utilities

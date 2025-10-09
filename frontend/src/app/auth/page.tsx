@@ -90,7 +90,7 @@ export default function AuthPage() {
                 damping: 30
               }}
             >
-                            <Card className="relative rounded-2xl shadow-lg border bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-muted-foreground/20">
+                            <Card className="relative rounded-2xl shadow-lg border bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border-purple-200/50 dark:border-purple-700/50">
                 {/* Close Button */}
                 <motion.button
                   onClick={handleClose}
