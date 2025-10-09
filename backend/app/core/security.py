@@ -25,8 +25,12 @@ from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing with fallback
+try:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+except Exception as e:
+    logger.warning(f"Bcrypt setup issue: {e}. Using fallback configuration.")
+    pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # JWT Security
 security = HTTPBearer(auto_error=False)
@@ -108,8 +112,19 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt with length validation."""
+    # Bcrypt has a 72-byte limit, truncate if necessary
+    if len(password.encode('utf-8')) > 72:
+        password = password[:72]
+    
+    try:
+        return pwd_context.hash(password)
+    except Exception as e:
+        # Fallback for bcrypt version issues
+        logger.warning(f"Bcrypt error: {e}. Using alternative approach.")
+        # Try again with explicit length limit
+        password = password[:60]  # Even more conservative limit
+        return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

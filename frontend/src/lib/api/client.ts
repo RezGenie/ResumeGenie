@@ -1,6 +1,6 @@
 // API Configuration and Base Client
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export class APIClient {
   private baseURL: string;
@@ -13,9 +13,8 @@ export class APIClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    // Use mock data in development when no backend is available
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const useMockData = isDevelopment && this.baseURL.includes('localhost:8000');
+    // Check if backend is available, fall back to mock data if not
+    const useMockData = false; // Disabled for Sprint 2 - using real backend
     
     if (useMockData) {
       console.log('Using mock data for endpoint:', endpoint);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { 
   FileText, 
@@ -28,9 +29,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Header } from "@/components/header";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Footer } from "@/components/footer";
-import { User as UserType, DashboardStats, RecentActivity, Job } from "@/lib/api";
+import { DashboardUser, DashboardStats, RecentActivity, Job } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -56,66 +57,105 @@ const itemVariants = {
 } as const;
 
 export default function Dashboard() {
-  const [user, setUser] = useState<UserType | null>(null);
+  console.log('Dashboard component rendering...');
+  const router = useRouter();
+  const { user: authUser, isLoading: authLoading, isAuthenticated } = useAuth();
+  const [dashboardUser, setDashboardUser] = useState<DashboardUser | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
+  console.log('Dashboard - Auth state:', { authUser, authLoading, isAuthenticated });
+
+  // Immediate redirect if not authenticated and not loading
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      console.log('No user and not loading - redirecting immediately to login');
+      router.replace('/auth');
+      return;
+    }
+  }, [authUser, authLoading, router]);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
+        console.log('Dashboard useEffect - authUser:', authUser, 'authLoading:', authLoading);
+        
+        // Don't proceed if auth is still loading
+        if (authLoading) {
+          console.log('Auth still loading, waiting...');
+          return;
+        }
+        
+        // Don't proceed if no user (redirect is handled in separate useEffect)
+        if (!authUser) {
+          console.log('No authUser - skipping dashboard setup');
+          return;
+        }
+        
+        // If we have a user, set up the dashboard
         setLoading(true);
         
-        // Import services inside the component to ensure they're only used client-side
-        const { dashboardService } = await import('@/lib/api/dashboard');
-        const { jobService } = await import('@/lib/api/jobs');
+        // Convert real user data to dashboard user format
+        console.log('Creating dashboard user from:', authUser);
+        const memberSince = new Date(authUser.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long'
+        });
         
-        // Make API calls in parallel
-        const results = await Promise.allSettled([
-          dashboardService.getUserProfile(),
-          dashboardService.getDashboardStats(),
-          dashboardService.getRecentActivities(8),
-          jobService.getRecommendedJobs(4)
+        // Create display name from email (until we add profile fields)
+        const displayName = authUser.email.split('@')[0].charAt(0).toUpperCase() + 
+                           authUser.email.split('@')[0].slice(1);
+        
+        setDashboardUser({
+          ...authUser,
+          name: displayName,
+          memberSince,
+          profileCompleteness: authUser.is_verified ? 75 : 25, // Basic completion based on verification
+          title: 'Job Seeker',
+          location: 'Getting Started',
+          bio: 'Welcome to RezGenie! Complete your profile to get better job matches.',
+          skills: [],
+          experience: [],
+          education: []
+        });
+
+        // Set basic stats with WIP message
+        setStats({
+          totalApplications: 0,
+          pendingApplications: 0,
+          interviewsScheduled: 0,
+          profileViews: 0,
+          matchScore: 0,
+          recommendedJobs: 0
+        });
+
+        setActivities([
+          {
+            id: '1',
+            type: 'profile_view',
+            title: 'Welcome to RezGenie!',
+            description: 'Dashboard features are being connected to the backend',
+            timestamp: new Date().toISOString()
+          }
         ]);
 
-        // Handle user profile
-        if (results[0].status === 'fulfilled' && results[0].value.success) {
-          setUser(results[0].value.data);
-        }
-
-        // Handle dashboard stats
-        if (results[1].status === 'fulfilled' && results[1].value.success) {
-          setStats(results[1].value.data);
-        }
-
-        // Handle recent activities
-        if (results[2].status === 'fulfilled' && results[2].value.success) {
-          setActivities(results[2].value.data);
-        }
-
-        // Handle recommended jobs
-        if (results[3].status === 'fulfilled' && results[3].value.success) {
-          setRecommendedJobs(results[3].value.data);
-        }
-
-        // Check if all API calls failed
-        const allFailed = results.every(result => result.status === 'rejected');
-        if (allFailed) {
-          console.warn('All API calls failed - dashboard will show empty state');
-        }
-
+        setRecommendedJobs([]);
+        setLoading(false);
+        
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [authUser, authLoading]);
 
-  if (loading) {
+  // Show loading while auth is loading OR dashboard is loading
+  if (authLoading || loading) {
+    console.log('Dashboard is in loading state - authLoading:', authLoading, 'loading:', loading);
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -123,7 +163,9 @@ export default function Dashboard() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center space-y-4">
               <Bot className="h-8 w-8 animate-pulse mx-auto text-purple-600" />
-              <p className="text-muted-foreground">Loading your dashboard...</p>
+              <p className="text-muted-foreground">
+                {authLoading ? 'Checking authentication...' : 'Loading your dashboard...'}
+              </p>
             </div>
           </div>
         </div>
@@ -132,33 +174,77 @@ export default function Dashboard() {
     );
   }
 
-  return (
-    <ProtectedRoute>
+  // If not loading and no user, this should trigger a redirect (handled in useEffect)
+  // But let's show a loading state while the redirect happens
+  if (!authUser && !authLoading) {
+    console.log('No user and not loading - should redirect to login');
+    return (
       <div className="min-h-screen bg-background">
         <Header />
-      
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <motion.div
-          initial="hidden"
-          animate="visible"  
-          variants={containerVariants}
-          className="space-y-8"
-        >
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center space-y-4">
+              <Bot className="h-8 w-8 animate-pulse mx-auto text-purple-600" />
+              <p className="text-muted-foreground">Redirecting to login...</p>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  console.log('Dashboard rendering main content, dashboardUser:', dashboardUser, 'stats:', stats);
+
+  // Add fallback check
+  if (!dashboardUser || !stats) {
+    console.log('Dashboard data not ready, showing temporary content');
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold">Welcome to RezGenie Dashboard!</h1>
+            <p className="text-muted-foreground">Dashboard is being prepared...</p>
+            <p className="text-sm text-muted-foreground">
+              DashboardUser: {dashboardUser ? 'Ready' : 'Loading...'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Stats: {stats ? 'Ready' : 'Loading...'}
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+    
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <motion.div
+        initial="hidden"
+        animate="visible"  
+        variants={containerVariants}
+        className="space-y-8"
+      >
           {/* Header with User Info */}
           <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={user?.profilePicture} alt={user?.name} />
+                <AvatarImage src={dashboardUser?.profilePicture} alt={dashboardUser?.name} />
                 <AvatarFallback className="bg-purple-100 text-purple-700 text-lg font-semibold">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  {dashboardUser?.name?.split(' ').map(n => n[0]).join('') || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
-                  Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+                  Welcome back, {dashboardUser?.name?.split(' ')[0] || 'User'}!
                 </h1>
                 <p className="text-muted-foreground">
-                  Member since {user?.memberSince} • Profile {user?.profileCompleteness}% complete
+                  Member since {dashboardUser?.memberSince} • Profile {dashboardUser?.profileCompleteness}% complete
                 </p>
               </div>
             </div>
@@ -174,8 +260,34 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
+          {/* WIP Notice */}
+          <motion.div 
+            variants={itemVariants}
+            className="mb-8"
+          >
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    Dashboard Under Development
+                  </h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>
+                      We&apos;re actively building your personalized dashboard. Some features are still being developed and will be available soon!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Profile Progress */}
-          {user && user.profileCompleteness < 100 && (
+          {dashboardUser && dashboardUser.profileCompleteness < 100 && (
             <motion.div variants={itemVariants}>
               <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
                 <CardContent className="p-6">
@@ -189,10 +301,10 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                      {user.profileCompleteness}%
+                      {dashboardUser.profileCompleteness}%
                     </Badge>
                   </div>
-                  <Progress value={user.profileCompleteness} className="mb-4" />
+                  <Progress value={dashboardUser.profileCompleteness} className="mb-4" />
                   <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
                     <User className="h-4 w-4 mr-2" />
                     Complete Profile
@@ -442,6 +554,5 @@ export default function Dashboard() {
       </div>
       <Footer />
     </div>
-    </ProtectedRoute>
   );
 }

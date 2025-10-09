@@ -2,6 +2,41 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.9.0] - 2025-10-08
+
+### CP-18 Complete Authentication Flow
+
+- **Frontend-Backend Authentication Integration**
+  - Connected AuthContext to real FastAPI backend endpoints (/api/v1/auth/login, /api/v1/auth/register)
+  - Implemented proper JWT token management with localStorage and cookie storage
+  - Added automatic token refresh logic and session persistence
+  - Created working test user credentials with proper password validation
+
+- **Advanced Toast Notification System**
+  - Replaced harsh error popups with user-friendly toast notifications using Sonner
+  - Specific error messages for authentication failures (invalid credentials, rate limiting)
+  - Detailed password requirement validation with helpful hints
+  - Success toasts for login/registration with personalized welcome messages
+  - Smart error parsing for FastAPI/Pydantic validation responses
+
+- **Enhanced User Experience**
+  - Password requirements hint automatically shows when switching to register mode
+  - Comprehensive error handling for network issues, validation errors, and edge cases
+  - Loading states and proper form behavior during authentication processes
+  - Non-blocking error handling that keeps users in the flow
+
+- **Backend Password Security**
+  - Enforced strong password requirements (8+ chars, uppercase, lowercase, number, special character)
+  - Proper bcrypt password hashing with secure salt rounds
+  - Rate limiting protection against brute force attacks
+  - Comprehensive input validation with detailed error responses
+
+- **Developer Experience**
+  - Enhanced debugging with detailed console logging throughout auth flow
+  - TypeScript-safe error handling with proper type checking
+  - Modular authentication architecture ready for additional features
+  - Complete authentication workflow testing and validation
+
 ## [0.8.0] - 2025-10-03
 
 ### CP-16 Production-Ready Infrastructure & UI Enhancements

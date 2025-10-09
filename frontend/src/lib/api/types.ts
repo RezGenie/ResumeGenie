@@ -19,12 +19,27 @@ export interface Job {
 
 export interface User {
   id: string;
-  name: string;
   email: string;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+}
+
+// Extended user interface for dashboard display
+export interface DashboardUser extends User {
+  name?: string;
   profilePicture?: string;
-  resumeUploaded: boolean;
+  resumeUploaded?: boolean;
   memberSince: string;
   profileCompleteness: number;
+  title?: string;
+  company?: string;
+  location?: string;
+  phone?: string;
+  bio?: string;
+  skills?: string[];
+  experience?: unknown[];
+  education?: unknown[];
 }
 
 export interface DashboardStats {

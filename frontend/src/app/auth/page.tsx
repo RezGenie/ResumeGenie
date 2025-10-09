@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogIn, UserPlus, X } from "lucide-react";
+import { toast } from 'sonner';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,27 +21,30 @@ export default function AuthPage() {
   const [name, setName] = useState("");
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   
   const { login, register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
-    try {
-      if (isLogin) {
-        await login(email, password);
-      } else {
-        await register(email, password);
-      }
-      // Navigation is handled by the auth context
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    } finally {
-      setIsLoading(false);
+    console.log('AuthPage: Form submission started');
+    console.log('AuthPage: isLogin:', isLogin);
+    console.log('AuthPage: email:', email);
+    console.log('AuthPage: Will call:', isLogin ? 'login' : 'register');
+
+    if (isLogin) {
+      console.log('AuthPage: Calling login function...');
+      await login(email, password);
+    } else {
+      console.log('AuthPage: Calling register function...');
+      await register(email, password);
     }
+    console.log('AuthPage: Auth function completed');
+    
+    // Always set loading to false, regardless of success/failure
+    // Success will redirect, failure will show toast
+    setIsLoading(false);
   };
 
   const handleClose = () => {
@@ -51,11 +55,20 @@ export default function AuthPage() {
   };
 
   const toggleAuthMode = () => {
+    const wasLogin = isLogin;
     setIsLogin(!isLogin);
     // Reset form when switching
     setEmail("");
     setPassword("");
     setName("");
+    
+    // Show password requirements hint when switching to register
+    if (wasLogin) {
+      toast.info("Password Requirements", {
+        description: "Must be 8+ characters with uppercase, lowercase, number, and special character.",
+        duration: 5000
+      });
+    }
   };
 
   return (
@@ -178,12 +191,6 @@ export default function AuthPage() {
                         className="h-11 bg-white dark:bg-input"
                       />
                     </motion.div>
-                    
-                    {error && (
-                      <div className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-950/20 p-3 rounded-md">
-                        {error}
-                      </div>
-                    )}
                     
                     <motion.div
                       whileHover={{ scale: 1.02 }}
