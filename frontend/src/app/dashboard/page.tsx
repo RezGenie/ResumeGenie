@@ -265,7 +265,7 @@ export default function Dashboard() {
             variants={itemVariants}
             className="mb-8"
           >
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -273,10 +273,10 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800">
+                  <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                     Dashboard Under Development
                   </h3>
-                  <div className="mt-2 text-sm text-yellow-700">
+                  <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                     <p>
                       We&apos;re actively building your personalized dashboard. Some features are still being developed and will be available soon!
                     </p>
@@ -384,8 +384,8 @@ export default function Dashboard() {
             
             {/* Recent Activity */}
             <motion.div variants={itemVariants} className="lg:col-span-2">
-              <Card>
-                <CardHeader>
+              <Card className="h-full flex flex-col">
+                <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="h-5 w-5" />
                     Recent Activity
@@ -394,10 +394,10 @@ export default function Dashboard() {
                     Your latest job search activities and updates
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="flex-1 flex flex-col">
+                  <div className="space-y-4 flex-1">
                     {activities.length === 0 ? (
-                      <div className="text-center py-8">
+                      <div className="text-center py-8 flex-1 flex flex-col justify-center">
                         <Clock className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                         <p className="text-muted-foreground">No recent activity</p>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -405,59 +405,70 @@ export default function Dashboard() {
                         </p>
                       </div>
                     ) : (
-                      activities.map((activity) => (
-                      <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex-shrink-0">
-                          {activity.type === 'application' && (
-                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                              <Briefcase className="h-4 w-4 text-blue-600" />
-                            </div>
-                          )}
-                          {activity.type === 'interview' && (
-                            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                              <Calendar className="h-4 w-4 text-green-600" />
-                            </div>
-                          )}
-                          {activity.type === 'profile_view' && (
-                            <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                              <Eye className="h-4 w-4 text-purple-600" />
-                            </div>
-                          )}
-                          {activity.type === 'job_match' && (
-                            <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
-                              <Target className="h-4 w-4 text-amber-600" />
-                            </div>
+                      <div className="space-y-4 flex-1">
+                        {activities.map((activity) => (
+                        <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex-shrink-0">
+                            {activity.type === 'application' && (
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                                <Briefcase className="h-4 w-4 text-blue-600" />
+                              </div>
+                            )}
+                            {activity.type === 'interview' && (
+                              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                                <Calendar className="h-4 w-4 text-green-600" />
+                              </div>
+                            )}
+                            {activity.type === 'profile_view' && (
+                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                                <Eye className="h-4 w-4 text-purple-600" />
+                              </div>
+                            )}
+                            {activity.type === 'job_match' && (
+                              <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
+                                <Target className="h-4 w-4 text-amber-600" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground">{activity.title}</p>
+                            <p className="text-sm text-muted-foreground">{activity.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{activity.timestamp}</p>
+                          </div>
+                          {activity.status && (
+                            <Badge 
+                              variant={activity.status === 'completed' ? 'default' : 
+                                     activity.status === 'pending' ? 'secondary' : 'outline'}
+                              className="text-xs"
+                            >
+                              {activity.status}
+                            </Badge>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground">{activity.title}</p>
-                          <p className="text-sm text-muted-foreground">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{activity.timestamp}</p>
-                        </div>
-                        {activity.status && (
-                          <Badge 
-                            variant={activity.status === 'completed' ? 'default' : 
-                                   activity.status === 'pending' ? 'secondary' : 'outline'}
-                            className="text-xs"
-                          >
-                            {activity.status}
-                          </Badge>
-                        )}
+                        ))}
                       </div>
-                      ))
                     )}
+                  </div>
+                  {/* Add a "View All Activity" button at the bottom */}
+                  <div className="mt-6 pt-4 border-t">
+                    <Button variant="outline" className="w-full" asChild>
+                      <a href="/activity">
+                        <Clock className="h-4 w-4 mr-2" />
+                        View All Activity
+                      </a>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
 
             {/* Sidebar */}
-            <div className="space-y-6">
+            <div className="space-y-6 flex flex-col h-full">
               
               {/* Recommended Jobs */}
-              <motion.div variants={itemVariants}>
-                <Card>
-                  <CardHeader>
+              <motion.div variants={itemVariants} className="flex-1">
+                <Card className="h-full flex flex-col">
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
                       Recommended Jobs
@@ -466,10 +477,10 @@ export default function Dashboard() {
                       Perfect matches for your profile
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+                  <CardContent className="flex-1 flex flex-col">
+                    <div className="space-y-4 flex-1">
                       {recommendedJobs.length === 0 ? (
-                        <div className="text-center py-8">
+                        <div className="text-center py-8 flex-1 flex flex-col justify-center">
                           <TrendingUp className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                           <p className="text-muted-foreground">No job recommendations</p>
                           <p className="text-sm text-muted-foreground mt-1">
@@ -477,37 +488,39 @@ export default function Dashboard() {
                           </p>
                         </div>
                       ) : (
-                        recommendedJobs.map((job) => (
-                        <div key={job.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-sm">{job.title}</h4>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                <Building2 className="h-3 w-3" />
-                                {job.company}
+                        <div className="space-y-4 flex-1 overflow-y-auto">
+                          {recommendedJobs.map((job) => (
+                          <div key={job.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm">{job.title}</h4>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                  <Building2 className="h-3 w-3" />
+                                  {job.company}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  {job.location}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                {job.location}
+                              <Badge variant="secondary" className="text-xs">
+                                {job.matchScore}% match
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between pt-2">
+                              <span className="text-xs text-muted-foreground">{job.postedDate}</span>
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
+                                  <Bookmark className="h-3 w-3" />
+                                </Button>
+                                <Button size="sm" className="h-6 px-2 text-xs">
+                                  View
+                                </Button>
                               </div>
                             </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {job.matchScore}% match
-                            </Badge>
                           </div>
-                          <div className="flex items-center justify-between pt-2">
-                            <span className="text-xs text-muted-foreground">{job.postedDate}</span>
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
-                                <Bookmark className="h-3 w-3" />
-                              </Button>
-                              <Button size="sm" className="h-6 px-2 text-xs">
-                                View
-                              </Button>
-                            </div>
-                          </div>
+                          ))}
                         </div>
-                        ))
                       )}
                     </div>
                     <Button variant="outline" className="w-full mt-4" asChild>

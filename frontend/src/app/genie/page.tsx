@@ -172,7 +172,8 @@ export default function StudioPage() {
       console.log('Resume uploaded successfully:', resumeData)
     } catch (error) {
       console.error('Resume upload failed:', error)
-      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      // Note: Error handling and fallback are now handled in the ResumeService
+      // If we get here, it means a real error that couldn't be recovered
       setResumeFile(null)
     } finally {
       setIsLoading(false)
@@ -328,6 +329,32 @@ export default function StudioPage() {
           </motion.div>
         </motion.div>
 
+        {/* Under Development Notice */}
+        <motion.div 
+          variants={itemVariants}
+          className="mb-8"
+        >
+          <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  🧞‍♂️ AI Genie Under Development
+                </h3>
+                <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                  <p>
+                    The AI Genie is currently being enhanced with new magical powers! Resume upload and analysis features are working in demo mode. Full backend integration coming soon.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         <motion.div
           initial="hidden"
           animate="visible"
@@ -470,7 +497,7 @@ export default function StudioPage() {
                     placeholder="Paste your dream job description here..."
                     value={jobPosting}
                     onChange={(e) => setJobPosting(e.target.value)}
-                    className="min-h-[200px] resize-vertical"
+                    className="min-h-[200px] max-h-[200px] resize-none overflow-y-auto"
                   />
                 </CardContent>
               </Card>
