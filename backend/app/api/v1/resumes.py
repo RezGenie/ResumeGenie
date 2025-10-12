@@ -10,9 +10,10 @@ from sqlalchemy import select, desc
 from pydantic import BaseModel
 import logging
 import uuid
+import secrets
 
 from app.core.database import get_db
-from app.core.security import get_current_user, rate_limit
+from app.core.security import get_current_user, rate_limit, hash_password
 from app.core.deps import get_current_user_optional, get_or_create_guest_session, check_guest_daily_limit, increment_guest_upload_count
 from app.models.user import User
 from app.models.resume import Resume
@@ -90,9 +91,13 @@ async def upload_resume(
         # Process the resume file
         resume = await file_service.process_resume_file(file, current_user, db)
         
-        # Queue background task for embedding generation
-        task = process_resume_embeddings.delay(str(resume.id))
-        logger.info(f"Queued embedding generation task: {task.id} for resume: {resume.id}")
+        # Queue background task for embedding generation (non-blocking)
+        try:
+            task = process_resume_embeddings.delay(str(resume.id))
+            logger.info(f"Queued embedding generation task: {task.id} for resume: {resume.id}")
+        except Exception as e:
+            # Don't fail the upload if the queue is temporarily unavailable
+            logger.warning(f"Failed to queue embedding generation for resume {resume.id}: {e}")
         
         # Create response
         response = ResumeResponse(
@@ -161,7 +166,13 @@ async def upload_resume_guest(
         
         # Create a temporary guest user for file processing
         guest_user_id = uuid.uuid4()
-        guest_user = User(id=guest_user_id, email=f"guest_{session_id[:8]}@temporary.com")
+        # Use a random password to satisfy NOT NULL constraint and hash it
+        temp_password = secrets.token_urlsafe(16)
+        guest_user = User(
+            id=guest_user_id,
+            email=f"guest_{session_id[:8]}@temporary.com",
+            hashed_password=hash_password(temp_password)
+        )
         
         # Add guest user to database session (required for foreign key constraint)
         db.add(guest_user)
@@ -173,9 +184,12 @@ async def upload_resume_guest(
         # Increment guest upload count
         await increment_guest_upload_count(session_id, db)
         
-        # Queue background task for embedding generation (optional for guests)
-        task = process_resume_embeddings.delay(str(resume.id))
-        logger.info(f"Queued embedding generation task: {task.id} for guest resume: {resume.id}")
+        # Queue background task for embedding generation (optional for guests, non-blocking)
+        try:
+            task = process_resume_embeddings.delay(str(resume.id))
+            logger.info(f"Queued embedding generation task: {task.id} for guest resume: {resume.id}")
+        except Exception as e:
+            logger.warning(f"Failed to queue embedding generation for guest resume {resume.id}: {e}")
         
         # Create response with guest session ID
         response = ResumeResponse(

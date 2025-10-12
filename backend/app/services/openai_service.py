@@ -295,6 +295,60 @@ class OpenAIService:
                 raise OpenAIError(f"Recommendation generation failed: {str(e)}")
         
         raise OpenAIError("Failed to generate recommendations after all retries")
+
+    async def get_chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 1200,
+    ) -> str:
+        """
+        Get a chat completion from OpenAI and return the response text.
+
+        Args:
+            messages: List of chat messages [{role, content}]
+            model: OpenAI chat model name; defaults to settings.openai_model
+            temperature: Sampling temperature
+            max_tokens: Max tokens in the response
+
+        Returns:
+            The assistant message content as a string
+        """
+        chosen_model = model or self.chat_model
+        last_error: Optional[Exception] = None
+        start_time = time.time()
+        for attempt in range(self.max_retries):
+            try:
+                await self._rate_limit_check("chat")
+                response = await asyncio.to_thread(
+                    openai.chat.completions.create,
+                    model=chosen_model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                processing_time = time.time() - start_time
+                text = response.choices[0].message.content or ""
+                logger.info(
+                    f"Chat completion generated using {chosen_model}: tokens={getattr(response.usage, 'total_tokens', 'n/a')}, time={processing_time:.2f}s"
+                )
+                return text
+            except openai.RateLimitError as e:
+                last_error = e
+                wait_time = self.retry_delay * (2 ** attempt)
+                logger.warning(f"Rate limit hit for chat, waiting {wait_time}s before retry {attempt + 1}")
+                await asyncio.sleep(wait_time)
+            except openai.APIError as e:
+                last_error = e
+                if attempt == self.max_retries - 1:
+                    logger.error(f"OpenAI API error after {self.max_retries} attempts: {e}")
+                    raise OpenAIError(f"Failed to get chat completion: {str(e)}")
+                await asyncio.sleep(self.retry_delay)
+            except Exception as e:
+                logger.error(f"Unexpected error during chat completion: {e}")
+                raise OpenAIError(f"Chat completion failed: {str(e)}")
+        raise OpenAIError(f"Failed to get chat completion after retries: {last_error}")
     
     def _create_skills_prompt(self, resume_text: str, job_description: str, similarity_score: float) -> str:
         """Create prompt for skills-focused recommendations."""

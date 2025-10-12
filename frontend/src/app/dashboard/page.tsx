@@ -65,17 +65,43 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
 
   console.log('Dashboard - Auth state:', { authUser, authLoading, isAuthenticated });
 
+  // Add timeout for auth loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (authLoading) {
+        console.log('Auth loading timed out, redirecting to auth');
+        setHasTimedOut(true);
+        router.replace('/auth');
+      }
+    }, 8000); // 8 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [authLoading, router]);
+
   // Immediate redirect if not authenticated and not loading
   useEffect(() => {
+    console.log('Dashboard redirect check:', { authLoading, authUser, isAuthenticated });
+    
     if (!authLoading && !authUser) {
       console.log('No user and not loading - redirecting immediately to login');
       router.replace('/auth');
       return;
     }
-  }, [authUser, authLoading, router]);
+    
+    // Add a timeout fallback in case auth check hangs
+    const fallbackTimeout = setTimeout(() => {
+      if (!authUser && !authLoading) {
+        console.log('Fallback timeout: redirecting to auth');
+        router.replace('/auth');
+      }
+    }, 10000); // 10 second fallback
+    
+    return () => clearTimeout(fallbackTimeout);
+  }, [authUser, authLoading, router, isAuthenticated]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {

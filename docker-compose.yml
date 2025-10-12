@@ -144,6 +144,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: rezgenie_frontend
+    # Run in development mode to avoid requiring a pre-built .next directory
+    command: npm run dev
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
       - NODE_ENV=development

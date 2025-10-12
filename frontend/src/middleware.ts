@@ -15,17 +15,18 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
+  console.log('Middleware:', { pathname, hasToken: !!token, isProtectedRoute, isAuthRoute });
+
   // Redirect to auth if accessing protected route without token
   if (isProtectedRoute && !token) {
+    console.log('Redirecting to auth - no token for protected route');
     const authUrl = new URL('/auth', request.url);
     authUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(authUrl);
   }
-
-  // Redirect to dashboard if accessing auth route with token
-  if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+  // IMPORTANT: Always allow access to /auth even if a token cookie exists.
+  // Stale or invalid tokens can cause redirect loops; the dashboard page will
+  // verify the token and handle redirects appropriately after login.
 
   return NextResponse.next();
 }

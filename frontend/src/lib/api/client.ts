@@ -55,24 +55,24 @@ export class APIClient {
         throw new Error('Unauthorized');
       }
       
-      if (response.status === 404) {
-        console.log('API endpoint not found, using fallback data:', endpoint);
-        // Return mock data for 404 instead of throwing
-        return this.getMockData(endpoint) as T;
-      }
-      
-      if (!response.ok) {
-        console.log(`API request failed with status ${response.status}, using fallback data:`, endpoint);
-        // Return mock data for any other HTTP errors
+      if (response.status === 404 || !response.ok) {
+        // For critical endpoints like Genie, do not mask errors with mock data
+        if (endpoint.startsWith('/genie')) {
+          const bodyText = await response.text().catch(() => '');
+          throw new Error(`Genie API error ${response.status}: ${bodyText || response.statusText}`);
+        }
+        console.log(`API ${response.ok ? '404' : 'error'} (${response.status}), using fallback data:`, endpoint);
         return this.getMockData(endpoint) as T;
       }
 
       const data = await response.json();
       return data;
     } catch (error) {
+      // For Genie endpoints, surface the error to the caller
+      if (endpoint.startsWith('/genie')) {
+        throw error;
+      }
       console.error('API request failed (network/parsing error), using fallback data:', error);
-      
-      // Return mock data as fallback when API is unavailable
       return this.getMockData(endpoint) as T;
     }
   }

@@ -9,13 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, and_
 from pydantic import BaseModel, Field
 import logging
-from datetime import date
+from datetime import date, datetime
+import json
 
 from app.core.database import get_db
 from app.core.security import get_current_user, rate_limit
 from app.models.user import User
 from app.models.genie_wish import GenieWish, DailyWishCount
-from app.celery.tasks.genie_processing import generate_wish_recommendations
+from app.models.resume import Resume
+from app.services.openai_service import openai_service
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,11 @@ router = APIRouter()
 # Pydantic models
 class WishRequest(BaseModel):
     wish_type: str = Field(..., description="Type of wish: 'improvement', 'career_advice', 'skill_gap', 'interview_prep'")
-    wish_text: str = Field(..., min_length=10, max_length=500, description="Detailed wish description")
+    # Allow longer inputs (full job postings). Keep a sane cap to avoid abuse.
+    wish_text: str = Field(
+        ..., min_length=10, max_length=10000,
+        description="Detailed wish description or full job posting (up to 10k characters)"
+    )
     context_data: Optional[Dict[str, Any]] = Field(None, description="Additional context (resume_id, job_title, etc.)")
     
     class Config:
@@ -105,49 +111,109 @@ async def create_wish(
                 detail=f"Invalid wish type. Must be one of: {', '.join(valid_wish_types)}"
             )
         
-        # Create genie wish record
+        # Create initial wish record (processing)
         genie_wish = GenieWish(
             user_id=current_user.id,
             wish_type=wish_request.wish_type,
-            wish_text=wish_request.wish_text,
-            context_data=wish_request.context_data or {},
-            processing_status="processing"
+            request_text=wish_request.wish_text,
+            status="processing",
         )
-        
         db.add(genie_wish)
         await db.commit()
         await db.refresh(genie_wish)
-        
+
+        # Generate AI response synchronously (no Celery dependency)
+        resume_context = ""
+        try:
+            ctx = wish_request.context_data or {}
+            resume_id = ctx.get("resume_id") if isinstance(ctx, dict) else None
+            if resume_id:
+                resume = await db.get(Resume, resume_id)
+                if resume and resume.extracted_text:
+                    resume_context = f"\n\nRESUME CONTEXT:\n{resume.extracted_text[:2000]}"
+        except Exception as e:
+            logger.warning(f"Wish context processing warning: {e}")
+
+        # Craft prompts
+        system_prompt = (
+            "You are an expert career coach and resume specialist. Provide actionable, specific recommendations."
+        )
+        user_prompt = f"""
+REQUEST: {wish_request.wish_text}
+{resume_context}
+
+Provide JSON with keys: 
+- response: Brief analysis summary
+- recommendations: List of specific actionable recommendations (sentences)
+- action_items: List of specific skills that should be added or emphasized (short skill names like "Python", "Leadership", "Excel VBA", "Communication", "AWS", "Project Management")
+- resources: List of objects with title, url, description
+- confidence_score: Number between 0-1
+
+Focus on making action_items a clean list of specific skill names (both technical and soft skills) that would improve the resume's match to this job posting.
+"""
+
+        # Call OpenAI
+        ai_raw = await openai_service.get_chat_completion(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.7,
+            max_tokens=1200,
+        )
+
+        try:
+            ai_struct = json.loads(ai_raw)
+        except json.JSONDecodeError:
+            logger.warning("AI response not JSON, wrapping into structure")
+            ai_struct = {
+                "response": ai_raw[:500],
+                "recommendations": [],
+                "action_items": [],
+                "resources": [],
+                "confidence_score": 0.8,
+            }
+
+        # Persist results into response_text and mark completed
+        genie_wish.response_text = json.dumps(ai_struct)
+        genie_wish.status = "completed"
+        genie_wish.completed_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(genie_wish)
+
         # Update daily count
         await _update_daily_count(current_user, db)
-        
-        # Queue background processing
-        task = generate_wish_recommendations.delay(str(genie_wish.id))
-        logger.info(f"Queued wish processing task: {task.id} for wish: {genie_wish.id}")
-        
-        # Create response
+
         response = GenieWishResponse(
             id=str(genie_wish.id),
             wish_type=genie_wish.wish_type,
-            wish_text=genie_wish.wish_text,
-            context_data=genie_wish.context_data,
-            is_processed=genie_wish.is_processed,
-            processing_status=genie_wish.processing_status,
-            processing_error=genie_wish.processing_error,
+            wish_text=wish_request.wish_text,
+            context_data=wish_request.context_data,
+            is_processed=True,
+            processing_status=genie_wish.status,
+            processing_error=None,
             created_at=genie_wish.created_at.isoformat(),
-            processed_at=genie_wish.processed_at.isoformat() if genie_wish.processed_at else None
+            processed_at=genie_wish.completed_at.isoformat() if genie_wish.completed_at else None,
         )
-        
-        logger.info(f"Genie wish created successfully: {genie_wish.id}")
+
+        logger.info(f"Genie wish processed successfully: {genie_wish.id}")
         return response
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Genie wish creation error: {e}")
+        # Mark wish as failed if it was created already
+        try:
+            if 'genie_wish' in locals() and getattr(genie_wish, 'id', None):
+                genie_wish.status = "failed"
+                genie_wish.error_message = str(e)
+                await db.commit()
+        except Exception as inner:
+            logger.warning(f"Failed to update wish error state: {inner}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create genie wish"
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI service unavailable or model access denied. Please try again later or contact support."
         )
 
 
@@ -185,16 +251,18 @@ async def list_wishes(
         # Create response list
         wish_list = []
         for wish in wishes:
+            # Parse stored AI results for consistency (optional)
+            is_done = (wish.status or "") == "completed"
             wish_response = GenieWishResponse(
                 id=str(wish.id),
                 wish_type=wish.wish_type,
-                wish_text=wish.wish_text,
-                context_data=wish.context_data,
-                is_processed=wish.is_processed,
-                processing_status=wish.processing_status,
-                processing_error=wish.processing_error,
+                wish_text=wish.request_text or "",
+                context_data=None,
+                is_processed=is_done,
+                processing_status=wish.status or "pending",
+                processing_error=wish.error_message,
                 created_at=wish.created_at.isoformat(),
-                processed_at=wish.processed_at.isoformat() if wish.processed_at else None
+                processed_at=wish.completed_at.isoformat() if wish.completed_at else None
             )
             wish_list.append(wish_response)
         
@@ -238,26 +306,32 @@ async def get_wish(
                 detail="Access denied"
             )
         
-        # Create detailed response
+        # Parse stored AI results
+        ai_response = {}
+        try:
+            ai_response = json.loads(wish.response_text or "{}")
+        except json.JSONDecodeError:
+            ai_response = {}
+
+        # Create detailed response (map model fields)
         response = GenieWishDetailResponse(
             id=str(wish.id),
             wish_type=wish.wish_type,
-            wish_text=wish.wish_text,
-            context_data=wish.context_data,
-            is_processed=wish.is_processed,
-            processing_status=wish.processing_status,
-            processing_error=wish.processing_error,
+            wish_text=wish.request_text or "",
+            context_data=None,
+            is_processed=wish.status == "completed",
+            processing_status=wish.status or "pending",
+            processing_error=wish.error_message,
             created_at=wish.created_at.isoformat(),
-            processed_at=wish.processed_at.isoformat() if wish.processed_at else None,
-            ai_response=wish.ai_response,
-            recommendations=wish.recommendations,
-            action_items=wish.action_items,
-            resources=wish.resources,
-            confidence_score=wish.confidence_score
+            processed_at=wish.completed_at.isoformat() if wish.completed_at else None,
+            ai_response=ai_response.get("response"),
+            recommendations=ai_response.get("recommendations"),
+            action_items=ai_response.get("action_items"),
+            resources=ai_response.get("resources"),
+            confidence_score=ai_response.get("confidence_score"),
         )
-        
         return response
-        
+    
     except HTTPException:
         raise
     except Exception as e:
@@ -300,8 +374,8 @@ async def get_daily_usage(
                 wish_count=0
             )
         
-        # Determine daily limit based on user tier
-        daily_limit = 50 if current_user.is_premium else 5
+        # Determine daily limit based on user tier (fallback to non-premium)
+        daily_limit = 50 if getattr(current_user, "is_premium", False) else 10
         wishes_used = daily_count.wish_count
         wishes_remaining = max(0, daily_limit - wishes_used)
         
@@ -394,8 +468,8 @@ async def _check_daily_limits(user: User, db: AsyncSession) -> None:
     daily_count = result.scalar_one_or_none()
     current_count = daily_count.wish_count if daily_count else 0
     
-    # Determine limit based on user tier
-    daily_limit = 50 if user.is_premium else 5
+    # Determine limit based on user tier (fallback to non-premium)
+    daily_limit = 50 if getattr(user, "is_premium", False) else 10
     
     if current_count >= daily_limit:
         raise HTTPException(

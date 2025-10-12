@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     
     # OpenAI
     openai_api_key: str = ""
-    openai_model: str = "gpt-4"
+    # Choose a broadly-available default model; can be overridden by OPENAI_MODEL env var
+    openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
     
     # JWT

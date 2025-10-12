@@ -38,7 +38,7 @@ interface Wish {
   }
 }
 
-const ACCEPTED_FILE_TYPES = ['.pdf', '.doc', '.docx']
+const ACCEPTED_FILE_TYPES = ['.pdf', '.docx']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 const containerVariants = {
@@ -158,29 +158,110 @@ interface AnalysisResults {
 }
 
 export default function StudioPage() {
+
   const { isAuthenticated } = useAuth()
   const [isRecModalOpen, setIsRecModalOpen] = useState(false)
+  const [selectedWish, setSelectedWish] = useState<Wish | null>(null)
+  const [isWishDetailModalOpen, setIsWishDetailModalOpen] = useState(false)
   const modalCloseRef = useRef<HTMLButtonElement | null>(null)
   const modalRef = useRef<HTMLDivElement | null>(null)
+  const [resumeFile, setResumeFile] = useState<UploadedFile | null>(null)
+  const [jobPosting, setJobPosting] = useState('')
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [dailyWishes, setDailyWishes] = useState(0)
+  const [maxWishes, setMaxWishes] = useState(3)
+  const [wishes, setWishes] = useState<Wish[]>([])
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Fetch real daily wish usage from backend (only when authenticated)
+  useEffect(() => {
+    const fetchDailyUsage = async () => {
+      try {
+        if (!isAuthenticated) {
+          setDailyWishes(0)
+          setMaxWishes(3)
+          return
+        }
+        const { apiClient } = await import('@/lib/api/client')
+        const data = await apiClient.get<{ wishes_used: number; daily_limit: number }>("/genie/usage/daily")
+        if (data && typeof (data as any).wishes_used === 'number' && typeof (data as any).daily_limit === 'number') {
+          setDailyWishes((data as any).wishes_used)
+          setMaxWishes((data as any).daily_limit)
+        } else {
+          setDailyWishes(0)
+          setMaxWishes(3)
+        }
+      } catch (err) {
+        setDailyWishes(0)
+        setMaxWishes(3)
+      }
+    }
+    fetchDailyUsage()
+  }, [isAuthenticated])
+
+  // Fetch historical wishes when user is authenticated
+  useEffect(() => {
+    const fetchWishHistory = async () => {
+      try {
+        if (!isAuthenticated) {
+          setWishes([])
+          return
+        }
+        const { apiClient } = await import('@/lib/api/client')
+        const historicalWishes = await apiClient.get<any[]>("/genie")
+        
+        if (Array.isArray(historicalWishes)) {
+          // Fetch detailed data for completed wishes
+          const detailedWishes = await Promise.all(
+            historicalWishes.map(async (wish) => {
+              let detailedData = null
+              if (wish.is_processed) {
+                try {
+                  detailedData = await apiClient.get<any>(`/genie/${wish.id}`)
+                } catch (err) {
+                  console.warn(`Failed to fetch details for wish ${wish.id}:`, err)
+                }
+              }
+
+              return {
+                id: wish.id,
+                type: 'resume_analysis' as const,
+                title: 'Resume & Job Match Analysis',
+                description: `Analysis of resume against job posting`,
+                timestamp: new Date(wish.created_at),
+                status: wish.is_processed ? 'completed' : (wish.processing_status === 'processing' ? 'processing' : 'pending'),
+                results: detailedData ? {
+                  score: Math.round((detailedData.confidence_score || 0) * 100),
+                  insights: detailedData.recommendations || [],
+                  recommendations: detailedData.action_items || []
+                } : undefined
+              } as Wish
+            })
+          )
+          setWishes(detailedWishes)
+        }
+      } catch (err) {
+        console.warn('Failed to fetch wish history:', err)
+        // Don't clear wishes on error - keep any current session wishes
+      }
+    }
+    fetchWishHistory()
+  }, [isAuthenticated])
+
+  // Modal focus trap and scroll lock
   useEffect(() => {
     if (!isRecModalOpen) return
-
     const prevActive = document.activeElement as HTMLElement | null
-    // focus the close button when modal opens
     setTimeout(() => modalCloseRef.current?.focus(), 0)
-
-    // lock scroll
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsRecModalOpen(false)
-      }
-
+      if (e.key === 'Escape') setIsRecModalOpen(false)
       if (e.key === 'Tab') {
-        // simple focus trap
         const container = modalRef.current
         if (!container) return
         const focusable = Array.from(container.querySelectorAll<HTMLElement>(
@@ -190,16 +271,13 @@ export default function StudioPage() {
         const first = focusable[0]
         const last = focusable[focusable.length - 1]
         if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
+          e.preventDefault(); first.focus()
         }
         if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
+          e.preventDefault(); last.focus()
         }
       }
     }
-
     document.addEventListener('keydown', handleKey)
     return () => {
       document.removeEventListener('keydown', handleKey)
@@ -207,18 +285,7 @@ export default function StudioPage() {
       prevActive?.focus()
     }
   }, [isRecModalOpen])
-  const [resumeFile, setResumeFile] = useState<UploadedFile | null>(null)
-  const [jobPosting, setJobPosting] = useState('')
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [dailyWishes, setDailyWishes] = useState(0)
-  const [wishes, setWishes] = useState<Wish[]>([])
-  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  
-  const maxWishes = 3
+
   const remainingWishes = maxWishes - dailyWishes
 
   const formatFileSize = (bytes: number) => {
@@ -345,70 +412,84 @@ export default function StudioPage() {
       })
       return
     }
-    
     if (dailyWishes >= maxWishes) {
       toast.error('Daily wish limit reached!', {
         description: 'You\'ve used all your daily wishes. Come back tomorrow for more.'
       })
       return
     }
-    
     setIsAnalyzing(true)
     
-    // Create a new wish entry
-    const newWish: Wish = {
-      id: crypto.randomUUID(),
-      type: 'resume_analysis',
-      title: 'Resume & Job Match Analysis',
-      description: `Analysis of ${resumeFile.name} against job posting`,
-      timestamp: new Date(),
-      status: 'processing'
-    }
-    
-    // Add wish to history immediately
-    setWishes(prev => [newWish, ...prev])
-    
-    // Simulate API call - replace with real backend integration
-    setTimeout(() => {
-      const mockResults: AnalysisResults = {
-        resumeScore: 85,
-        matchScore: 78,
-        skillGaps: ['React', 'TypeScript', 'AWS', 'Docker'],
-        insights: [
-          'Strong technical background with relevant programming experience',
-          'Good project portfolio demonstrates practical skills',
-          'Leadership experience shows growth potential'
-        ],
-        recommendations: [
-          'Add more specific project descriptions with quantifiable results',
-          'Include cloud technologies mentioned in the job posting',
-          'Highlight any certifications or continuous learning efforts',
-          'Consider adding a technical skills section with proficiency levels'
-        ]
+    try {
+      if (!isAuthenticated) {
+        toast.error('Please log in to grant a wish', { description: 'Sign in to use AI Genie features.' })
+        return
+      }
+      const { apiClient } = await import('@/lib/api/client')
+      
+      // Call backend to create a wish
+      const data = await apiClient.post<{ id: string }>(
+        '/genie',
+        {
+          wish_type: 'improvement',
+          wish_text: jobPosting,
+          context_data: { resume_id: resumeFile.id }
+        }
+      )
+
+      // Add wish to history immediately with real backend ID
+      const newWish: Wish = {
+        id: data.id,
+        type: 'resume_analysis',
+        title: 'Resume & Job Match Analysis',
+        description: `Analysis of ${resumeFile.name} against job posting`,
+        timestamp: new Date(),
+        status: 'processing'
+      }
+      setWishes(prev => [newWish, ...prev])
+
+      // Poll for wish completion (simplified)
+      let wishDetails = null
+      for (let i = 0; i < 30; i++) { // up to 30s
+        try {
+          wishDetails = await apiClient.get<any>(`/genie/${data.id}`)
+          if (wishDetails && wishDetails.processing_status === 'completed') break
+        } catch {}
+        await new Promise(r => setTimeout(r, 1000))
+      }
+      if (!wishDetails || wishDetails.processing_status !== 'completed') {
+        throw new Error('Wish processing timed out')
       }
       
-      // Update the wish with results
-      setWishes(prev => prev.map(wish => 
-        wish.id === newWish.id 
-          ? { 
-              ...wish, 
-              status: 'completed' as const, 
+      // Update the wish with real results
+      setWishes(prev => prev.map(wish =>
+        wish.id === data.id
+          ? {
+              ...wish,
+              status: 'completed' as const,
               results: {
-                score: mockResults.resumeScore,
-                insights: mockResults.insights,
-                recommendations: mockResults.recommendations
+                score: Math.round((wishDetails.confidence_score || 0) * 100),
+                insights: wishDetails.recommendations || [],
+                recommendations: wishDetails.action_items || []
               }
             }
           : wish
       ))
-      
-      setAnalysisResults(mockResults)
-      setIsAnalyzing(false)
+      setAnalysisResults({
+        resumeScore: Math.round((wishDetails.confidence_score || 0) * 100),
+        matchScore: 0,
+        skillGaps: wishDetails.action_items || [],
+        insights: wishDetails.recommendations || [],
+        recommendations: wishDetails.action_items || []
+      })
       setDailyWishes(prev => prev + 1)
-      
-      // Here you would typically send the data to your backend
-      console.log('Submitted:', { resumeFile, jobPosting })
-    }, 3000)
+    } catch (error) {
+      // Remove the temporary wish if it failed
+      setWishes(prev => prev.filter(wish => wish.status !== 'processing'))
+      toast.error('Wish failed', { description: (error as Error).message })
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const getWishIcon = (type: Wish['type']) => {
@@ -559,7 +640,7 @@ export default function StudioPage() {
                             : [
                                 'Add quantifiable metrics to your project descriptions (e.g., improved performance by 30%)',
                                 'Include relevant cloud technologies mentioned in the job posting',
-                                'List certifications or ongoing coursework in a dedicated section',
+                                'List certifications or ongoing coursework in a dedic                                docker-compose exec postgres bashated section',
                                 'Use strong action verbs and concise bullet points for achievements'
                               ].map((mock, idx) => (
                                 <li key={idx} className="flex items-start gap-2">
@@ -867,7 +948,8 @@ export default function StudioPage() {
           </div>
 
           {/* Submit Button */}
-          <motion.div variants={itemVariants} className="flex justify-center">
+
+          <motion.div variants={itemVariants} className="flex flex-col items-center">
             <Button 
               size="lg" 
               onClick={handleSubmit}
@@ -886,6 +968,12 @@ export default function StudioPage() {
                 </>
               )}
             </Button>
+            {dailyWishes >= maxWishes && (
+              <div className="mt-3 text-sm text-amber-600 bg-amber-100 dark:bg-amber-900/30 rounded-lg px-4 py-2 border border-amber-200 dark:border-amber-800 max-w-md text-center">
+                <span className="font-semibold">Daily wish limit reached!</span><br />
+                You have used all your wishes for today. Come back tomorrow for more, or upgrade to Pro for unlimited wishes.
+              </div>
+            )}
           </motion.div>
 
           {/* Analysis Results Cards */}
@@ -956,28 +1044,52 @@ export default function StudioPage() {
             </Card>
 
             {/* Skill Gap Analysis */}
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                   Skill Gap Analysis
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="h-80">
+                <div className="space-y-4 h-full flex flex-col">
                   <p className="text-sm text-muted-foreground">
-                    Skills mentioned in the job posting that could strengthen your profile
+                    Skills from the job posting that could strengthen your profile
                   </p>
-                  {analysisResults ? (
-                    <div className="flex flex-wrap gap-2">
-                      {analysisResults.skillGaps.map((skill, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
+                  {analysisResults && analysisResults.skillGaps.length > 0 ? (
+                    <div className="space-y-3 flex-1 min-h-0">
+                      <div className="grid gap-2 overflow-y-auto max-h-52 pr-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent overflow-x-hidden">
+                        {analysisResults.skillGaps.map((skill, index) => {
+                          // Determine if it's likely a technical or soft skill for styling
+                          const isTechnical = /^(Python|JavaScript|React|AWS|SQL|Excel|VBA|Tableau|PowerBI|Java|C\+\+|Docker|Kubernetes|Azure|GCP|Node\.js|API|Database|HTML|CSS|Git|Linux|Windows|Mac|Android|iOS|Machine Learning|AI|Data|Analytics|Cloud|DevOps|Agile|Scrum|\.NET|PHP|Ruby|Go|Rust|Swift|Kotlin|R|MATLAB|Salesforce|SAP|Oracle|MongoDB|PostgreSQL|MySQL|Redis|Elasticsearch|Hadoop|Spark|TensorFlow|PyTorch|Pandas|NumPy|Scipy|Jupyter|Anaconda|Visual Studio|IntelliJ|Eclipse|Xcode|Android Studio)/i.test(skill)
+                          
+                          return (
+                            <div key={index} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-muted">
+                              <div className={`w-2 h-2 rounded-full ${isTechnical ? 'bg-blue-500' : 'bg-purple-500'}`}></div>
+                              <span className="text-sm font-medium flex-1">{skill}</span>
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs ${isTechnical ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'}`}
+                              >
+                                {isTechnical ? 'Technical' : 'Soft Skill'}
+                              </Badge>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground border-t">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <span>Technical Skills</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                          <span>Soft Skills</span>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center py-4 text-muted-foreground">
+                    <div className="flex items-center justify-center py-4 text-muted-foreground flex-1">
                       <span className="text-sm">Awaiting analysis...</span>
                     </div>
                   )}
@@ -997,114 +1109,126 @@ export default function StudioPage() {
                   Your Wish History
                 </CardTitle>
                 <CardDescription>
-                  Track your past requests and their magical results
+                  Click any analysis to view full results
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="h-96">
+                <div className="h-full flex flex-col">
                   {wishes.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className="text-center py-8 text-muted-foreground flex-1 flex flex-col justify-center">
                       <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No wishes yet! Make your first wish above.</p>
                     </div>
                   ) : (
-                    wishes.map((wish) => (
-                      <motion.div
-                        key={wish.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="border rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg text-white ${getWishColor(wish.type)}`}>
-                              {getWishIcon(wish.type)}
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{wish.title}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {wish.description}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
-                                  {formatTimeAgo(wish.timestamp)}
-                                </span>
+                    <div className="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+                      {wishes.map((wish) => (
+                        <motion.div
+                          key={wish.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`border rounded-lg p-4 transition-all duration-200 ${
+                            wish.status === 'completed' 
+                              ? 'cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5' 
+                              : 'cursor-default'
+                          }`}
+                          onClick={() => {
+                            if (wish.status === 'completed') {
+                              setSelectedWish(wish)
+                              setIsWishDetailModalOpen(true)
+                            }
+                          }}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className={`p-2 rounded-lg text-white ${getWishColor(wish.type)}`}>
+                                {getWishIcon(wish.type)}
                               </div>
-                            </div>
-                          </div>
-                          
-                          <Badge 
-                            variant={
-                              wish.status === 'completed' ? 'default' :
-                              wish.status === 'processing' ? 'secondary' : 'outline'
-                            }
-                            className={
-                              wish.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                              wish.status === 'processing' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
-                              'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                            }
-                          >
-                            {wish.status === 'processing' && <Zap className="h-3 w-3 mr-1 animate-pulse" />}
-                            {wish.status === 'completed' && <Trophy className="h-3 w-3 mr-1" />}
-                            {wish.status.charAt(0).toUpperCase() + wish.status.slice(1)}
-                          </Badge>
-                        </div>
-
-                        {wish.status === 'processing' && (
-                          <div className="mt-3">
-                            <Progress value={65} className="h-2" />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              AI genie is working on your request...
-                            </p>
-                          </div>
-                        )}
-
-                        {wish.status === 'completed' && wish.results && (
-                          <div className="mt-4 space-y-3">
-                            {wish.results.score && (
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm font-medium">Score:</span>
-                                <div className="flex items-center gap-2 flex-1">
-                                  <Progress value={wish.results.score} className="flex-1" />
-                                  <span className="text-sm font-bold text-purple-600">
-                                    {wish.results.score}%
-                                  </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h4 className="font-medium truncate">{wish.title}</h4>
+                                  {wish.status === 'completed' && wish.results?.score && (
+                                    <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                      {wish.results.score}%
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground line-clamp-2 break-words">
+                                  {wish.description}
+                                </p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(wish.timestamp).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                  </div>
+                                  {wish.status === 'completed' && (
+                                    <span className="text-xs text-primary font-medium">
+                                      Click to view details →
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            )}
-
-                            {wish.results.insights && wish.results.insights.length > 0 && (
-                              <div>
-                                <h5 className="text-sm font-medium mb-2">Key Insights:</h5>
-                                <ul className="space-y-1">
-                                  {wish.results.insights.map((insight, index) => (
-                                    <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                                      <span className="text-purple-600 mt-1">•</span>
-                                      {insight}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {wish.results.recommendations && wish.results.recommendations.length > 0 && (
-                              <div>
-                                <h5 className="text-sm font-medium mb-2">Recommendations:</h5>
-                                <ul className="space-y-1">
-                                  {wish.results.recommendations.map((rec, index) => (
-                                    <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                                      <span className="text-green-600 mt-1">✨</span>
-                                      {rec}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                            </div>
+                            
+                            <Badge 
+                              variant={
+                                wish.status === 'completed' ? 'default' :
+                                wish.status === 'processing' ? 'secondary' : 'outline'
+                              }
+                              className={`ml-3 ${
+                                wish.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                                wish.status === 'processing' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                              }`}
+                            >
+                              {wish.status === 'processing' && <Zap className="h-3 w-3 mr-1 animate-pulse" />}
+                              {wish.status === 'completed' && <Trophy className="h-3 w-3 mr-1" />}
+                              {wish.status.charAt(0).toUpperCase() + wish.status.slice(1)}
+                            </Badge>
                           </div>
-                        )}
-                      </motion.div>
-                    ))
+
+                          {wish.status === 'processing' && (
+                            <div className="mt-3">
+                              <Progress value={65} className="h-2" />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                AI genie is working on your request...
+                              </p>
+                            </div>
+                          )}
+
+                          {wish.status === 'completed' && wish.results && (
+                            <div className="mt-3 pt-3 border-t border-muted/50">
+                              <div className="grid grid-cols-3 gap-4 text-center">
+                                {wish.results.score && (
+                                  <div>
+                                    <div className="text-lg font-bold text-primary">{wish.results.score}%</div>
+                                    <div className="text-xs text-muted-foreground">Overall Score</div>
+                                  </div>
+                                )}
+                                {wish.results.insights && (
+                                  <div>
+                                    <div className="text-lg font-bold text-blue-600">{wish.results.insights.length}</div>
+                                    <div className="text-xs text-muted-foreground">Insights</div>
+                                  </div>
+                                )}
+                                {wish.results.recommendations && (
+                                  <div>
+                                    <div className="text-lg font-bold text-purple-600">{wish.results.recommendations.length}</div>
+                                    <div className="text-xs text-muted-foreground">Tips</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -1158,6 +1282,147 @@ export default function StudioPage() {
                               <div>{mock}</div>
                             </div>
                           ))}
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Wish Detail Modal */}
+          <AnimatePresence>
+            {isWishDetailModalOpen && selectedWish && (
+              <motion.div 
+                className="fixed inset-0 z-50 flex items-center justify-center"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={overlayVariants}
+              >
+                <motion.div 
+                  className="absolute inset-0 bg-black/50" 
+                  onClick={() => setIsWishDetailModalOpen(false)}
+                />
+                <motion.div 
+                  className="relative w-full max-w-4xl mx-auto p-6"
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={modalVariants}
+                >
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm max-h-[90vh] overflow-hidden flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg text-white ${getWishColor(selectedWish.type)}`}>
+                          {getWishIcon(selectedWish.type)}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold">{selectedWish.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(selectedWish.timestamp).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => setIsWishDetailModalOpen(false)}
+                        aria-label="Close wish details"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto space-y-6">
+                      {/* Overall Score */}
+                      {selectedWish.results?.score && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <Bot className="h-4 w-4 text-blue-600" />
+                            Overall Analysis Score
+                          </h4>
+                          <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                            <div className="text-3xl font-bold text-primary">
+                              {selectedWish.results.score}%
+                            </div>
+                            <div className="flex-1">
+                              <Progress value={selectedWish.results.score} className="h-3" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Key Insights */}
+                      {selectedWish.results?.insights && selectedWish.results.insights.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <Target className="h-4 w-4 text-blue-600" />
+                            Key Insights ({selectedWish.results.insights.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {selectedWish.results.insights.map((insight, index) => (
+                              <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <span className="text-blue-600 mt-1 font-bold">•</span>
+                                <span className="text-sm">{insight}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recommendations */}
+                      {selectedWish.results?.recommendations && selectedWish.results.recommendations.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4 text-amber-500" />
+                            AI Recommendations ({selectedWish.results.recommendations.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {selectedWish.results.recommendations.map((rec, index) => (
+                              <div key={index} className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                <span className="text-amber-600 mt-1">✨</span>
+                                <span className="text-sm">{rec}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Skill Gaps */}
+                      {selectedWish.results?.skillGaps && selectedWish.results.skillGaps.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-purple-600" />
+                            Skill Gap Analysis ({selectedWish.results.skillGaps.length} skills)
+                          </h4>
+                          <div className="grid gap-2">
+                            {selectedWish.results.skillGaps.map((skill, index) => {
+                              const isTechnical = /^(Python|JavaScript|React|AWS|SQL|Excel|VBA|Tableau|PowerBI|Java|C\+\+|Docker|Kubernetes|Azure|GCP|Node\.js|API|Database|HTML|CSS|Git|Linux|Windows|Mac|Android|iOS|Machine Learning|AI|Data|Analytics|Cloud|DevOps|Agile|Scrum|\.NET|PHP|Ruby|Go|Rust|Swift|Kotlin|R|MATLAB|Salesforce|SAP|Oracle|MongoDB|PostgreSQL|MySQL|Redis|Elasticsearch|Hadoop|Spark|TensorFlow|PyTorch|Pandas|NumPy|Scipy|Jupyter|Anaconda|Visual Studio|IntelliJ|Eclipse|Xcode|Android Studio)/i.test(skill)
+                              
+                              return (
+                                <div key={index} className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                  <div className={`w-2 h-2 rounded-full ${isTechnical ? 'bg-blue-500' : 'bg-purple-500'}`}></div>
+                                  <span className="text-sm font-medium flex-1">{skill}</span>
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={`text-xs ${isTechnical ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'}`}
+                                  >
+                                    {isTechnical ? 'Technical' : 'Soft Skill'}
+                                  </Badge>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                   </div>
                 </motion.div>

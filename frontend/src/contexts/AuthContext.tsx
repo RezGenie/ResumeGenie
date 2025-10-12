@@ -34,6 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = !!user;
 
+  // Helper function to clear all auth state
+  const clearAuthState = useCallback(() => {
+    console.log('Clearing all auth state...');
+    setUser(null);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=strict';
+  }, []);
+
   // Define refreshToken first
   const refreshToken = useCallback(async () => {
     try {
@@ -59,12 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Token refresh failed:', error);
       // Force logout on refresh failure
-      setUser(null);
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
+      clearAuthState();
       router.push('/auth');
     }
-  }, [router]);
+  }, [router, clearAuthState]);
 
   // Check if user is authenticated on mount
   useEffect(() => {
@@ -111,35 +118,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('CheckAuth: Verifying token with backend...');
-      // Verify token with backend
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      
+      // Create an AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        // Verify token with backend
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        console.log('CheckAuth: Backend response status:', response.status);
 
-      console.log('CheckAuth: Backend response status:', response.status);
-
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('CheckAuth: User data received:', userData);
-        setUser(userData);
-      } else {
-        console.log('CheckAuth: Token invalid, clearing storage');
-        // Token is invalid, remove it
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        setUser(null);
+        if (response.ok) {
+          const userData = await response.json();
+          console.log('CheckAuth: User data received:', userData);
+          setUser(userData);
+        } else {
+          console.log('CheckAuth: Token invalid, clearing storage');
+          // Token is invalid, remove it
+          clearAuthState();
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          console.log('CheckAuth: Request timed out, clearing auth state');
+        } else {
+          console.error('CheckAuth: Network error:', fetchError);
+        }
+        // Clear tokens on timeout or error
+        clearAuthState();
       }
     } catch (error) {
       console.error('CheckAuth: Auth check failed:', error);
       // Clear tokens on error
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      setUser(null);
+      clearAuthState();
     } finally {
       console.log('CheckAuth: Setting loading to false');
       setIsLoading(false);
@@ -379,13 +398,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       console.log('Logout: Clearing all auth data...');
       // Always clear local state and tokens
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      
-      // Clear cookie
-      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=strict';
-      
-      setUser(null);
+      clearAuthState();
       setIsLoading(false);
       
       // Show logout success message
