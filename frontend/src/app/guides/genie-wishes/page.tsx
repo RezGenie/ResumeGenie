@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { Logo } from "@/components/ui/logo"
 
 export default function GenieWishes() {
   return (
@@ -261,7 +262,7 @@ export default function GenieWishes() {
           >
             <Card>
               <CardContent className="py-8 text-center">
-                <span className="text-4xl mb-4 block">🧞‍♂️</span>
+                <Logo className="h-6 w-6" />
                 <h2 className="text-2xl font-bold mb-4">
                   Ready to Make Your First Wish?
                 </h2>

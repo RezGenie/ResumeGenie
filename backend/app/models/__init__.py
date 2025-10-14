@@ -3,7 +3,7 @@ from .user import User
 from .resume import Resume
 from .job_comparison import JobComparison
 from .genie_wish import GenieWish, DailyWishCount
-from .guest_session import GuestSession, GuestDailyUpload
+from .guest_session import GuestSession, GuestDailyUpload, GuestDailyWish
 
 __all__ = [
     "User",
@@ -12,5 +12,6 @@ __all__ = [
     "GenieWish",
     "DailyWishCount",
     "GuestSession",
-    "GuestDailyUpload"
+    "GuestDailyUpload",
+    "GuestDailyWish"
 ]

@@ -49,98 +49,93 @@ export class ResumeService {
         ? `${baseURL}/resumes/upload/guest`
         : `${baseURL}/resumes/upload`;
       
-      // Create XMLHttpRequest for progress tracking
-      return new Promise<ResumeResponse>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        // Track upload progress
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            options?.onProgress?.(progress);
-          }
-        });
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const result = JSON.parse(xhr.responseText);
-              const message = token 
-                ? `Resume "${result.original_filename}" uploaded successfully!`
-                : `Resume "${result.original_filename}" uploaded! Use your magic wishes to analyze it.`;
-              
-              toast.success(message, {
-                description: token 
-                  ? 'Your resume is being processed in the background.'
-                  : 'Your resume is ready for analysis. No account required!'
-              });
-              options?.onComplete?.(result);
-              resolve(result);
-            } catch {
-              const error = new Error('Failed to parse server response');
-              options?.onError?.(error);
-              reject(error);
-            }
-          } else {
-            // Handle authentication errors by retrying as guest
-            if (xhr.status === 401 && !isGuest && token) {
-              console.log('Authentication failed, retrying as guest...');
-              // Retry the upload as guest
-              this.retryAsGuest(file, options, resolve, reject);
-              return;
-            }
-            
-            const statusVal = typeof xhr.status === 'number' ? xhr.status : 0
-            const responseVal = xhr.responseText || xhr.statusText || ''
-            const error = this.handleUploadError(statusVal, responseVal, isGuest);
-            options?.onError?.(error);
-            reject(error);
-          }
-        });
-
-        // Network error - show toast after a short delay to avoid flash on transient glitches
-        const showNetworkError = () => {
-          const error = new Error('Network connection failed');
-          toast.error('Unable to connect to server', {
-            description: 'Please check your connection and try again.'
-          });
-          options?.onError?.(error);
-          reject(error);
-        }
-
-        xhr.addEventListener('error', () => {
-          // wait briefly before reporting to give transient network glitches a chance to resolve
-          setTimeout(showNetworkError, 800);
-        });
-
-        // Also handle request timeouts explicitly
-        xhr.timeout = 20000; // 20s
-        xhr.addEventListener('timeout', () => {
-          setTimeout(() => {
-            const error = new Error('Request timed out');
-            toast.error('Request timed out', {
-              description: 'The server is taking too long to respond. Try again later.'
-            });
-            options?.onError?.(error);
-            reject(error);
-          }, 200);
-        });
-
-        xhr.open('POST', uploadURL);
-        
-        // Set headers
-        if (token) {
-          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        } else {
-          // For guest uploads, include session ID if available
-          const guestSessionId = localStorage.getItem('guest_session_id');
-          if (guestSessionId) {
-            xhr.setRequestHeader('X-Guest-Session-ID', guestSessionId);
-          }
-        }
-        
-        xhr.send(formData);
+      // Use fetch instead of XMLHttpRequest (XMLHttpRequest has CORS issues)
+      console.log('[ResumeService] Starting upload with fetch:', {
+        uploadURL,
+        isGuest,
+        hasToken: !!token,
+        fileSize: file.size,
+        fileName: file.name,
+        fileType: file.type
       });
+
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        // For guest uploads, include session ID if available
+        const guestSessionId = localStorage.getItem('guest_session_id');
+        if (guestSessionId) {
+          headers['X-Guest-Session-ID'] = guestSessionId;
+        }
+      }
+
+      const response = await fetch(uploadURL, {
+        method: 'POST',
+        body: formData,
+        headers,
+        mode: 'cors'
+      });
+
+      console.log('[ResumeService] Upload response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
+      if (response.status === 401 && !isGuest && token) {
+        console.log('Authentication failed, retrying as guest...');
+        // Retry as guest
+        return this.uploadResume(file, { ...options, isGuest: true });
+      }
+
+      if (!response.ok) {
+        let errorText = '';
+        let errorDetail = '';
+        try {
+          const responseText = await response.text();
+          errorText = responseText;
+          
+          // Try to parse as JSON to get the detail field
+          try {
+            const errorJson = JSON.parse(responseText);
+            errorDetail = errorJson.detail || errorJson.message || responseText;
+          } catch {
+            errorDetail = responseText;
+          }
+        } catch {
+          errorText = `HTTP ${response.status} ${response.statusText}`;
+          errorDetail = errorText;
+        }
+        
+        console.error('[ResumeService] Upload failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText,
+          errorDetail,
+          fullResponse: errorText
+        });
+        
+        const error = this.handleUploadError(response.status, errorDetail, isGuest);
+        options?.onError?.(error);
+        throw error;
+      }
+
+      const result = await response.json();
+      
+      const message = token 
+        ? `Resume "${result.original_filename}" uploaded successfully!`
+        : `Resume "${result.original_filename}" uploaded! Use your magic wishes to analyze it.`;
+      
+      toast.success(message, {
+        description: token 
+          ? 'Your resume is being processed in the background.'
+          : 'Your resume is ready for analysis. No account required!'
+      });
+      
+      options?.onComplete?.(result);
+      return result;
 
     } catch (error) {
       console.error('Resume upload error:', error);
@@ -172,6 +167,17 @@ export class ResumeService {
 
   private handleUploadError(status: number, responseText: string, isGuest: boolean = false): Error {
     let errorMessage = 'Resume upload failed';
+    let showDefaultToast = true; // Flag to control default toast
+    
+    // Handle case where status is 0 (network/CORS issue)
+    if (status === 0) {
+      errorMessage = 'Network connection failed. Please check your internet connection.';
+      console.error('[ResumeService] Network error - status 0 suggests CORS or connection issue');
+      toast.error('Connection failed', {
+        description: 'Unable to reach the server. Please check your connection and try again.'
+      });
+      return new Error(errorMessage);
+    }
     
     try {
       const errorData = JSON.parse(responseText);
@@ -197,31 +203,75 @@ export class ResumeService {
         errorMessage = 'File is too large. Please choose a file smaller than 10MB.';
         break;
       case 400:
-        // Keep the server's validation message if available
+        // Check for specific file type errors
+        if (responseText.toLowerCase().includes('unsupported file type') || 
+            responseText.toLowerCase().includes('only pdf and docx')) {
+          errorMessage = 'File type not supported. Please upload PDF or DOCX files only.';
+        }
+        // Otherwise keep the server's validation message if available
         break;
       case 429:
-        errorMessage = isGuest 
-          ? 'Daily upload limit reached (3 files per day). Sign up for unlimited uploads!'
-          : 'Upload limit reached. Please try again later.';
+        showDefaultToast = false; // We'll show a custom toast
+        // Parse the limit details from the error message
+        if (responseText.includes('Daily upload limit exceeded') || responseText.includes('Daily wish limit exceeded')) {
+          const countMatch = responseText.match(/Current count: (\d+)\/(\d+)/);
+          const currentCount = countMatch ? countMatch[1] : '3';
+          const maxCount = countMatch ? countMatch[2] : '3';
+          
+          errorMessage = `Daily limit reached (${currentCount}/${maxCount} wishes)`;
+          
+          toast.error(errorMessage, {
+            description: isGuest 
+              ? 'Sign up for a free account for unlimited wishes'
+              : 'You can make more wishes tomorrow',
+            duration: 6000
+          });
+        } else {
+          errorMessage = isGuest 
+            ? 'Daily limit reached (3 wishes per day). Sign up for unlimited wishes!'
+            : 'Daily limit reached. Please try again later.';
+          
+          toast.error('Daily limit reached', {
+            description: errorMessage,
+            duration: 5000
+          });
+        }
         break;
       case 500:
         errorMessage = 'Server error. Please try again later.';
         break;
+      case 502:
+        errorMessage = 'Service temporarily unavailable. Please try again in a few minutes.';
+        break;
+      case 503:
+        errorMessage = 'Service maintenance in progress. Please try again later.';
+        break;
+      default:
+        if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (status >= 400) {
+          errorMessage = 'Request failed. Please check your input and try again.';
+        } else if (status === 0) {
+          errorMessage = 'Connection failed. Please check your network.';
+        }
     }
 
-    // Append status code to help with debugging
-    const toastMessage = `${errorMessage}${status ? ` (status ${status})` : ''}`
+    // Show default toast only if we haven't shown a custom one
+    if (showDefaultToast) {
+      // Append status code to help with debugging
+      const toastMessage = `${errorMessage}${status ? ` (status ${status})` : ''}`
 
-    // If this looks like an S3/MinIO related error, give a hint
-    const lower = (responseText || '').toLowerCase()
-    if (lower.includes('minio') || lower.includes('s3') || lower.includes('bucket')) {
-      toast.error('Upload failed (storage error)', {
-        description: `${toastMessage} — storage service may be down.`
-      })
-    } else {
-      toast.error('Upload failed', {
-        description: toastMessage
-      })
+      // If this looks like an S3/MinIO related error, give a hint
+      const lower = (responseText || '').toLowerCase()
+      if (lower.includes('minio') || lower.includes('s3') || lower.includes('bucket')) {
+        toast.error('Upload failed (storage error)', {
+          description: `${toastMessage} — storage service may be down.`
+        })
+      } else {
+        toast.error('Upload failed', {
+          description: toastMessage
+        })
+      }
     }
 
     console.error('[ResumeService] upload error details:', { status, responseText })
@@ -253,18 +303,7 @@ export class ResumeService {
     }));
   }
 
-  private retryAsGuest(
-    file: File, 
-    options: UploadOptions | undefined, 
-    resolve: (value: ResumeResponse) => void, 
-    reject: (reason: Error) => void
-  ): void {
-    // Retry the upload as guest
-    const guestOptions = { ...options, isGuest: true };
-    this.uploadResume(file, guestOptions)
-      .then(resolve)
-      .catch(reject);
-  }
+
 
   async getResumes(): Promise<ResumeResponse[]> {
     try {

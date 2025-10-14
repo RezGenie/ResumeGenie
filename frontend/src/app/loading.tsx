@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { Logo } from "@/components/ui/logo"
 
 export default function Loading() {
   return (
@@ -19,7 +20,7 @@ export default function Loading() {
           }}
           className="mb-6"
         >
-          <span className="text-6xl block">🧞‍♂️</span>
+          <Logo className="w-16 h-16" />
         </motion.div>
 
         {/* Loading Text */}

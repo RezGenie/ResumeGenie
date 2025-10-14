@@ -141,8 +141,8 @@ export default function JobDiscoveryPage() {
         <Header />
         <main className="container mx-auto px-4 py-8 max-w-6xl">
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
+            <div className="flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
               <p className="text-muted-foreground">Finding the best opportunities for you...</p>
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function JobDiscoveryPage() {
 
           {/* Under Development Notice */}
           <motion.div variants={itemVariants} className="max-w-4xl mx-auto">
-            <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border border-purple-200/50 dark:border-purple-700/50 rounded-lg p-4">
+            <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
@@ -211,10 +211,10 @@ export default function JobDiscoveryPage() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <h3 className="text-sm font-medium text-amber-600">
                     Job Discovery Under Development
                   </h3>
-                  <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                  <div className="mt-2 text-sm text-amber-600">
                     <p>
                       We&apos;re currently building job scraping and real-time job data integration. The jobs shown below are demo data to showcase the interface and functionality.
                     </p>

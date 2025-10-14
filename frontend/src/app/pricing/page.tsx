@@ -53,7 +53,7 @@ export default function PricingPage() {
           transition={{ duration: 0.6 }}
           className="mb-8"
         >
-          <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border border-purple-200/50 dark:border-purple-700/50 rounded-lg p-4">
+          <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
@@ -61,10 +61,10 @@ export default function PricingPage() {
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <h3 className="text-sm font-medium text-amber-600">
                   Pricing Under Development
                 </h3>
-                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                <div className="mt-2 text-sm text-amber-600">
                   <p>
                     All features are currently free during the development phase. Payment processing will be available soon!
                   </p>

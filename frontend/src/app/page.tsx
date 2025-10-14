@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { Logo } from "@/components/ui/logo";
 
 export default function Home() {
   return (
@@ -21,14 +22,14 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="flex items-center justify-center mb-8"
           >
-            <motion.span 
-              className="text-6xl mr-4"
+            <motion.div 
+              className="mr-4"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5, delay: 0.2, type: "spring", stiffness: 200 }}
             >
-              🧞‍♂️
-            </motion.span>
+              <Logo size={96} />
+            </motion.div>
             <div>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
                 <span className="bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">

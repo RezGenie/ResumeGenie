@@ -9,6 +9,21 @@ export class APIClient {
     this.baseURL = baseURL;
   }
 
+  private getOrCreateGuestSessionId(): string {
+    if (typeof window === 'undefined') return '';
+    
+    let sessionId = localStorage.getItem('guest_session_id');
+    if (!sessionId) {
+      // Generate a unique session ID based on browser fingerprint
+      const userAgent = navigator.userAgent;
+      const timestamp = Date.now();
+      const random = Math.random().toString(36);
+      sessionId = btoa(`${userAgent}_${timestamp}_${random}`).replace(/[+/=]/g, '').substring(0, 32);
+      localStorage.setItem('guest_session_id', sessionId);
+    }
+    return sessionId;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -39,6 +54,13 @@ export class APIClient {
           ...config.headers,
           Authorization: `Bearer ${token}`,
         };
+      } else {
+        // For guest users, add session ID header
+        const guestSessionId = this.getOrCreateGuestSessionId();
+        config.headers = {
+          ...config.headers,
+          'X-Guest-Session-ID': guestSessionId,
+        };
       }
     }
 
@@ -46,8 +68,9 @@ export class APIClient {
       const response = await fetch(url, config);
       
       if (response.status === 401) {
-        // Handle unauthorized - clear tokens and redirect to login
-        if (typeof window !== 'undefined') {
+        // Handle unauthorized - but only redirect if it's not a guest endpoint
+        const isGuestEndpoint = endpoint.includes('/guest') || endpoint.includes('/genie/guest');
+        if (!isGuestEndpoint && typeof window !== 'undefined') {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('refresh_token');
           window.location.href = '/auth';

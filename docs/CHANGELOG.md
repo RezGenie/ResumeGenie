@@ -2,6 +2,55 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.12.0] - 2025-10-14
+
+### CP-50 Enhance Guest Experience
+
+- **New Features**
+  - Anonymous users can upload resumes and get AI analysis
+  - Career advice available without registration
+  - Search, filter, and delete wish history
+  - Resume upload now optional for general career questions
+
+- **UI Improvements**
+  - Unified color scheme across all components
+  - Copy functionality for AI recommendations
+  - More intuitive iconography (sparkles for wishes)
+  - Improved mobile experience
+
+- **Bug Fixes**
+  - Fixed guest session tracking across browser restarts
+  - Unified wish and upload limit tracking
+  - Graceful 404 handling and better error messages
+  - Fixed transaction handling and table creation issues
+
+- **Performance**
+  - Intelligent responses when OpenAI quota exceeded
+  - Immediate UI feedback for all user actions
+  - Efficient localStorage and database operations
+
+## [0.11.0] - 2025-10-13
+
+### CP-21 Wish Management API & OpenAI Integration
+
+- **OpenAI Integration & AI-Powered Wishes**
+  - Integrated OpenAI GPT-4 for intelligent resume analysis and career advice
+  - Added comprehensive wish management system with 4 wish types (improvement, career_advice, skill_gap, interview_prep)
+  - Implemented real-time AI responses with structured analysis and actionable recommendations
+  - Enhanced error handling with graceful fallbacks and user-friendly messaging
+
+- **Wish Limits & User Management**
+  - Added role-based wish limits: 3 wishes for guests, 10 for premium users, unlimited for admins
+  - Implemented daily usage tracking with automatic reset at midnight UTC
+  - Enhanced guest upload experience with graceful sign-in prompts for additional features
+  - Added comprehensive wish history and status management
+
+- **UI/UX Improvements**
+  - Updated header dropdown with distinct dashboard icon
+  - Enhanced wish interface with better error messaging and loading states
+  - Improved authentication flow with better user feedback
+  - Added real-time wish status updates and progress tracking
+
 ## [0.10.0] - 2025-10-09
 
 ### CP-20 File Upload Service Improvements

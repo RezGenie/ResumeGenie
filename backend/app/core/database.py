@@ -67,3 +67,19 @@ async def close_db():
     """
     await engine.dispose()
     logger.info("Database connections closed")
+
+
+async def get_db_health():
+    """
+    Check database health and return status information.
+    """
+    try:
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as session:
+            # Simple query to test connection
+            result = await session.execute(text("SELECT 1"))
+            result.fetchone()  # Remove await - fetchone() is sync in SQLAlchemy 2.0
+            return {"connection": "ok", "type": "postgresql"}
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        raise

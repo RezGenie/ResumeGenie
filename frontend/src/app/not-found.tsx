@@ -7,6 +7,7 @@ import { Home, ArrowLeft, CreditCard, BookOpen, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { Logo } from "@/components/ui/logo"
 
 export default function NotFound() {
   return (
@@ -25,9 +26,9 @@ export default function NotFound() {
               stiffness: 200,
               damping: 20 
             }}
-            className="mb-8"
+            className="mb-8 flex justify-center"
           >
-            <span className="text-8xl md:text-9xl block mb-4">🧞‍♂️</span>
+            <Logo size={120} />
           </motion.div>
 
           {/* 404 Text */}

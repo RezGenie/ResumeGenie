@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { Logo } from "@/components/ui/logo"
 
 export default function Contact() {
   return (
@@ -182,7 +183,7 @@ export default function Contact() {
                 </Button>
                 <Button variant="outline" asChild>
                   <Link href="/">
-                    <span className="mr-2">🧞‍♂️</span>
+                    <Logo className="h-6 w-6" />
                     Try RezGenie
                   </Link>
                 </Button>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogIn, UserPlus, X } from "lucide-react";
+import { LogIn, UserPlus, X, Loader2 } from "lucide-react";
 import { toast } from 'sonner';
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Logo } from "@/components/ui/logo";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -109,7 +110,7 @@ export default function AuthPage() {
                     }}
                     transition={{ duration: 0.6, type: "spring" }}
                   >
-                    <span className="text-4xl">🧞‍♂️</span>
+                    <Logo size={64} />
                   </motion.div>
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -213,7 +214,7 @@ export default function AuthPage() {
                           >
                             {isLoading ? (
                               <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                 {isLogin ? "Signing In..." : "Creating Account..."}
                               </>
                             ) : isLogin ? (

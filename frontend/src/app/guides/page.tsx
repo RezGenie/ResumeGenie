@@ -5,9 +5,10 @@ import { motion } from "framer-motion"
 import { FileText, Sparkles, Target, ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { Logo } from "@/components/ui/logo"
 
 export default function Guides() {
   const guides = [
@@ -181,7 +182,7 @@ export default function Guides() {
         >
           <Card>
             <CardContent className="py-8">
-              <span className="text-4xl mb-4 block">🧞‍♂️</span>
+              <Logo className="h-16 w-16 mb-4 mx-auto" />
               <h2 className="text-2xl font-bold mb-4">
                 Ready to Optimize Your Resume?
               </h2>

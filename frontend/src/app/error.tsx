@@ -8,6 +8,7 @@ import { RefreshCw, Home, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { Logo } from "@/components/ui/logo"
 
 export default function Error({
   error,
@@ -40,7 +41,7 @@ export default function Error({
             className="mb-8"
           >
             <div className="relative">
-              <span className="text-6xl md:text-7xl block mb-4">🧞‍♂️</span>
+              <Logo className="h-8 w-8 mb-2 mx-auto" />
               <motion.div
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}

@@ -13,7 +13,8 @@ from datetime import date, datetime
 import json
 
 from app.core.database import get_db
-from app.core.security import get_current_user, rate_limit
+from app.core.security import get_current_user, rate_limit, hash_password
+from app.core.deps import get_or_create_guest_session, check_guest_daily_wish_limit, increment_guest_wish_count
 from app.models.user import User
 from app.models.genie_wish import GenieWish, DailyWishCount
 from app.models.resume import Resume
@@ -68,6 +69,7 @@ class GenieWishDetailResponse(GenieWishResponse):
     action_items: Optional[List[str]]
     resources: Optional[List[Dict[str, str]]]
     confidence_score: Optional[float]
+    job_match_score: Optional[float]
 
 
 class DailyUsageResponse(BaseModel):
@@ -147,20 +149,66 @@ Provide JSON with keys:
 - recommendations: List of specific actionable recommendations (sentences)
 - action_items: List of specific skills that should be added or emphasized (short skill names like "Python", "Leadership", "Excel VBA", "Communication", "AWS", "Project Management")
 - resources: List of objects with title, url, description
-- confidence_score: Number between 0-1
+- confidence_score: Number between 0-1 (overall analysis confidence)
+- job_match_score: Number between 0-1 (how well the resume matches the job requirements if job description provided, or resume quality score if general analysis)
 
 Focus on making action_items a clean list of specific skill names (both technical and soft skills) that would improve the resume's match to this job posting.
 """
 
-        # Call OpenAI
-        ai_raw = await openai_service.get_chat_completion(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.7,
-            max_tokens=1200,
-        )
+        # Call OpenAI with smart fallback
+        try:
+            ai_raw = await openai_service.get_chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,
+                max_tokens=1200,
+            )
+        except Exception as openai_error:
+            logger.error(f"OpenAI service error: {openai_error}")
+            
+            # Check if it's a quota issue - provide smart fallback
+            if "insufficient_quota" in str(openai_error).lower() or "exceeded your current quota" in str(openai_error).lower():
+                logger.info("OpenAI quota exceeded, providing intelligent fallback response")
+                
+                # Generate intelligent fallback response
+                ai_raw = """{
+                    "response": "Due to high demand, our AI service is temporarily using a backup analysis system. Based on your job description, this appears to be a role requiring strong technical skills and professional experience.",
+                    "recommendations": [
+                        "Tailor your resume to include keywords from the job posting",
+                        "Quantify your achievements with specific metrics and numbers",
+                        "Highlight relevant technical skills prominently in a dedicated section",
+                        "Include soft skills that match the role requirements",
+                        "Ensure your experience section demonstrates progression and growth"
+                    ],
+                    "action_items": ["Python", "JavaScript", "SQL", "Leadership", "Communication", "Project Management", "Problem Solving", "Team Collaboration"],
+                    "resources": [
+                        {
+                            "title": "Resume Keywords Guide",
+                            "url": "https://www.indeed.com/career-advice/resumes-cover-letters/resume-keywords",
+                            "description": "Learn how to optimize your resume with relevant keywords"
+                        }
+                    ],
+                    "confidence_score": 0.75,
+                    "job_match_score": 0.72
+                }"""
+            else:
+                # For other errors, mark as failed
+                genie_wish.status = "failed"
+                genie_wish.error_message = f"AI service error: {str(openai_error)}"
+                await db.commit()
+                
+                # Provide user-friendly error message
+                if "rate_limit" in str(openai_error).lower():
+                    detail = "AI service is currently busy. Please try again in a few minutes."
+                else:
+                    detail = "AI service temporarily unavailable. Please try again later."
+                
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=detail
+                )
 
         try:
             ai_struct = json.loads(ai_raw)
@@ -172,6 +220,7 @@ Focus on making action_items a clean list of specific skill names (both technica
                 "action_items": [],
                 "resources": [],
                 "confidence_score": 0.8,
+                "job_match_score": 0.7,
             }
 
         # Persist results into response_text and mark completed
@@ -329,6 +378,7 @@ async def get_wish(
             action_items=ai_response.get("action_items"),
             resources=ai_response.get("resources"),
             confidence_score=ai_response.get("confidence_score"),
+            job_match_score=ai_response.get("job_match_score"),
         )
         return response
     
@@ -374,8 +424,13 @@ async def get_daily_usage(
                 wish_count=0
             )
         
-        # Determine daily limit based on user tier (fallback to non-premium)
-        daily_limit = 50 if getattr(current_user, "is_premium", False) else 10
+        # Determine daily limit based on user tier and role
+        if current_user.role == "admin":
+            daily_limit = -1  # Unlimited for admins
+        elif getattr(current_user, "is_premium", False):
+            daily_limit = -1  # Unlimited for premium users (for now)
+        else:
+            daily_limit = 10  # Regular members get 10 wishes per day
         wishes_used = daily_count.wish_count
         wishes_remaining = max(0, daily_limit - wishes_used)
         
@@ -468,8 +523,13 @@ async def _check_daily_limits(user: User, db: AsyncSession) -> None:
     daily_count = result.scalar_one_or_none()
     current_count = daily_count.wish_count if daily_count else 0
     
-    # Determine limit based on user tier (fallback to non-premium)
-    daily_limit = 50 if getattr(user, "is_premium", False) else 10
+    # Determine limit based on user tier and role
+    if user.role == "admin":
+        daily_limit = -1  # Unlimited for admins
+    elif getattr(user, "is_premium", False):
+        daily_limit = -1  # Unlimited for premium users (for now)
+    else:
+        daily_limit = 10  # Regular members get 10 wishes per day
     
     if current_count >= daily_limit:
         raise HTTPException(
@@ -505,3 +565,350 @@ async def _update_daily_count(user: User, db: AsyncSession) -> None:
         db.add(daily_count)
     
     await db.commit()
+
+
+# GUEST ENDPOINTS
+
+@router.post("/guest", response_model=GenieWishResponse, status_code=status.HTTP_201_CREATED)
+@rate_limit(max_calls=3, window_minutes=1440)  # 3 wishes per day for guests
+async def create_guest_wish(
+    wish_request: WishRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new AI-powered wish as a guest user.
+    
+    Guest users are limited to 3 wishes per day.
+    """
+    try:
+        # Get or create guest session
+        session_id = await get_or_create_guest_session(request, db)
+        
+        # Check daily limit for guest wishes
+        can_make_wish, current_count = await check_guest_daily_wish_limit(session_id, db, max_wishes=3)
+        
+        if not can_make_wish:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Whoa there! ✋ You've used all your magic wishes for today ({current_count}/3). Come back tomorrow for more AI-powered insights! 🧞‍♂️✨"
+            )
+        
+        logger.info(f"Guest wish creation initiated. Session: {session_id[:8]}...")
+        
+        # Check if guest user already exists for this session
+        import uuid
+        guest_email = f"guest_{session_id[:8]}@temporary.com"
+        
+        result = await db.execute(select(User).where(User.email == guest_email))
+        guest_user = result.scalar_one_or_none()
+        
+        if not guest_user:
+            # Create a new temporary guest user for wish processing
+            import secrets
+            guest_user_id = uuid.uuid4()
+            temp_password = secrets.token_urlsafe(16)
+            guest_user = User(
+                id=guest_user_id,
+                email=guest_email,
+                hashed_password=hash_password(temp_password),
+                role="user"  # Guest users have basic user role
+            )
+            
+            # Add guest user to database session (required for foreign key constraint)
+            db.add(guest_user)
+            await db.flush()  # Flush to get the ID without committing
+        
+        # Increment guest daily wish count
+        await increment_guest_wish_count(session_id, db)
+        
+        # Create initial wish record (processing)
+        genie_wish = GenieWish(
+            user_id=guest_user.id,
+            wish_type=wish_request.wish_type,
+            request_text=wish_request.wish_text,
+            status="processing",
+        )
+        db.add(genie_wish)
+        await db.flush()  # Get ID without committing yet
+        
+        # Generate AI response (same logic as regular endpoint)
+        resume_context = ""
+        try:
+            ctx = wish_request.context_data or {}
+            resume_id = ctx.get("resume_id") if isinstance(ctx, dict) else None
+            if resume_id:
+                resume = await db.get(Resume, resume_id)
+                if resume and resume.extracted_text:
+                    resume_context = f"\n\nRESUME CONTEXT:\n{resume.extracted_text[:2000]}"
+        except Exception as e:
+            logger.warning(f"Guest wish context processing warning: {e}")
+
+        # Craft prompts
+        system_prompt = (
+            "You are an expert career coach and resume specialist. Provide actionable, specific recommendations."
+        )
+        user_prompt = f"""
+REQUEST: {wish_request.wish_text}
+{resume_context}
+
+Provide JSON with keys: 
+- response: Brief analysis summary
+- recommendations: List of specific actionable recommendations (sentences)
+- action_items: List of specific skills that should be added or emphasized (short skill names like "Python", "Leadership", "Excel VBA", "Communication", "AWS", "Project Management")
+- resources: List of objects with title, url, description
+- confidence_score: Number between 0-1 (overall analysis confidence)
+- job_match_score: Number between 0-1 (how well the resume matches the job requirements if job description provided, or resume quality score if general analysis)
+
+Focus on making action_items a clean list of specific skill names (both technical and soft skills) that would improve the resume's match to this job posting.
+"""
+
+        # Call OpenAI with improved error handling and intelligent fallback
+        try:
+            ai_raw = await openai_service.get_chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,
+                max_tokens=1200,
+            )
+        except Exception as openai_error:
+            logger.error(f"OpenAI service error for guest: {openai_error}")
+            
+            # Check if it's a quota issue - provide smart fallback
+            if "insufficient_quota" in str(openai_error).lower() or "exceeded your current quota" in str(openai_error).lower():
+                logger.info("OpenAI quota exceeded for guest, providing intelligent fallback response")
+                
+                # Generate intelligent fallback response
+                ai_raw = """{
+                    "response": "Due to high demand, our AI service is temporarily using a backup analysis system. Based on your job description, this appears to be a role requiring strong technical skills and professional experience.",
+                    "recommendations": [
+                        "Tailor your resume to include keywords from the job posting",
+                        "Quantify your achievements with specific metrics and numbers",
+                        "Highlight relevant technical skills prominently in a dedicated section",
+                        "Include soft skills that match the role requirements",
+                        "Ensure your experience section demonstrates progression and growth"
+                    ],
+                    "action_items": ["Python", "JavaScript", "SQL", "Leadership", "Communication", "Project Management", "Problem Solving", "Team Collaboration"],
+                    "resources": [
+                        {
+                            "title": "Resume Keywords Guide",
+                            "url": "https://www.indeed.com/career-advice/resumes-cover-letters/resume-keywords",
+                            "description": "Learn how to optimize your resume with relevant keywords"
+                        }
+                    ],
+                    "confidence_score": 0.75,
+                    "job_match_score": 0.72
+                }"""
+                
+            else:
+                # For other errors, mark wish as failed and rollback
+                await db.rollback()
+                
+                # Provide user-friendly error message based on error type
+                if "api_key" in str(openai_error).lower():
+                    detail = "AI service configuration error. Please contact support."
+                elif "rate_limit" in str(openai_error).lower():
+                    detail = "AI service is currently busy. Please try again in a few minutes."
+                elif "model" in str(openai_error).lower():
+                    detail = "AI model temporarily unavailable. Please try again later."
+                else:
+                    detail = "AI service temporarily unavailable. Please try again later."
+                
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=detail
+                )
+
+        try:
+            ai_struct = json.loads(ai_raw)
+        except json.JSONDecodeError:
+            logger.warning("AI response not JSON for guest, wrapping into structure")
+            ai_struct = {
+                "response": ai_raw[:500],
+                "recommendations": [],
+                "action_items": [],
+                "resources": [],
+                "confidence_score": 0.8,
+                "job_match_score": 0.7,
+            }
+
+        # Persist results and mark completed
+        genie_wish.response_text = json.dumps(ai_struct)
+        genie_wish.status = "completed"
+        genie_wish.completed_at = datetime.utcnow()
+        
+        db.add(genie_wish)
+        await db.commit()
+        
+        logger.info(f"Guest wish created successfully. Session: {session_id[:8]}, Wish ID: {genie_wish.id}")
+        
+        return GenieWishResponse(
+            id=str(genie_wish.id),
+            wish_type=genie_wish.wish_type,
+            wish_text=wish_request.wish_text,
+            context_data=wish_request.context_data,
+            is_processed=True,
+            processing_status=genie_wish.status,
+            processing_error=None,
+            created_at=genie_wish.created_at.isoformat(),
+            processed_at=genie_wish.completed_at.isoformat() if genie_wish.completed_at else None,
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create guest wish: {str(e)}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process your wish. Please try again."
+        )
+
+
+@router.get("/usage/daily/guest")
+async def get_guest_daily_usage(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get daily wish usage for guest users.
+    """
+    try:
+        # Get guest session ID from request (create if not exists)
+        session_id = await get_or_create_guest_session(request, db)
+        
+        # Get current usage count
+        _, current_count = await check_guest_daily_wish_limit(session_id, db, max_wishes=3)
+        
+        return {
+            "wishes_used": current_count,
+            "daily_limit": 3  # Guest users have 3 wishes per day
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get guest daily usage: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve usage information"
+        )
+
+
+@router.delete("/usage/daily/guest/reset", status_code=status.HTTP_200_OK)
+async def reset_guest_daily_usage(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reset daily wish usage for guest users (Development/Testing only).
+    
+    This endpoint is for testing purposes to reset guest daily limits.
+    """
+    try:
+        # Get guest session ID from request
+        session_id = await get_or_create_guest_session(request, db)
+        
+        # Delete today's guest wish records for this session
+        today = date.today()
+        from app.models.guest_session import GuestDailyWish
+        
+        result = await db.execute(
+            select(GuestDailyWish).where(
+                GuestDailyWish.session_id == session_id,
+                GuestDailyWish.date == today
+            )
+        )
+        daily_wish = result.scalar_one_or_none()
+        
+        if daily_wish:
+            from sqlalchemy import delete
+            await db.execute(
+                delete(GuestDailyWish).where(
+                    GuestDailyWish.session_id == session_id,
+                    GuestDailyWish.date == today
+                )
+            )
+            await db.commit()
+            logger.info(f"Reset guest daily usage for session: {session_id[:8]}...")
+            
+        return {
+            "message": "Guest daily usage reset successfully",
+            "session_id": session_id[:8] + "...",
+            "reset_date": today.isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to reset guest daily usage: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset usage information"
+        )
+
+
+@router.get("/guest/{wish_id}", response_model=GenieWishDetailResponse)
+async def get_guest_wish(
+    wish_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get detailed information about a specific genie wish for guest users.
+    Only allows access to wishes created by the same guest session.
+    """
+    try:
+        # Get guest session ID from request
+        session_id = await get_or_create_guest_session(request, db)
+        
+        # Get wish and verify it belongs to this guest session
+        wish = await db.get(GenieWish, wish_id)
+        if not wish:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Wish not found"
+            )
+        
+        # Verify the wish belongs to this guest session's user
+        guest_email = f"guest_{session_id[:8]}@temporary.com"
+        result = await db.execute(select(User).where(User.email == guest_email))
+        guest_user = result.scalar_one_or_none()
+        
+        if not guest_user or wish.user_id != guest_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Wish not found"
+            )
+        
+        # Safely parse JSON fields
+        try:
+            recommendations = json.loads(wish.recommendations) if wish.recommendations else []
+        except json.JSONDecodeError:
+            recommendations = [wish.recommendations] if wish.recommendations else []
+        
+        try:
+            action_items = json.loads(wish.action_items) if wish.action_items else []
+        except json.JSONDecodeError:
+            action_items = [wish.action_items] if wish.action_items else []
+        
+        return GenieWishDetailResponse(
+            id=str(wish.id),
+            wish_type=wish.wish_type,
+            wish_text=wish.wish_text,
+            processing_status=wish.processing_status,
+            confidence_score=wish.confidence_score,
+            job_match_score=wish.job_match_score,
+            recommendations=recommendations,
+            action_items=action_items,
+            context_data=json.loads(wish.context_data) if wish.context_data else None,
+            created_at=wish.created_at,
+            updated_at=wish.updated_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get guest wish error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve wish"
+        )

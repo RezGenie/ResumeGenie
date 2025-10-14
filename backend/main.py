@@ -76,11 +76,35 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
-    return {
+    from app.core.database import get_db_health
+
+    
+    health_status = {
         "status": "healthy",
-        "environment": settings.environment,
-        "timestamp": time.time()
+        "timestamp": time.time(),
+        "services": {}
     }
+    
+    # Check database
+    try:
+        db_health = await get_db_health()
+        health_status["services"]["database"] = {"status": "healthy", "details": db_health}
+    except Exception as e:
+        health_status["services"]["database"] = {"status": "unhealthy", "error": str(e)}
+        health_status["status"] = "degraded"
+    
+    # Check OpenAI service
+    try:
+        if settings.openai_api_key:
+            health_status["services"]["openai"] = {"status": "configured"}
+        else:
+            health_status["services"]["openai"] = {"status": "not_configured", "warning": "API key not set"}
+            health_status["status"] = "degraded"
+    except Exception as e:
+        health_status["services"]["openai"] = {"status": "error", "error": str(e)}
+        health_status["status"] = "degraded"
+    
+    return health_status
 
 
 # Root endpoint
