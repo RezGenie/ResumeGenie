@@ -4,14 +4,16 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
-from datetime import datetime, date
+from datetime import date
 import hashlib
-import uuid
+import logging
 
 from app.core.config import settings
 from app.core.database import get_db as get_database_session
 from app.models.user import User
 from app.models.guest_session import GuestSession, GuestDailyUpload
+
+logger = logging.getLogger(__name__)
 
 # Security
 security = HTTPBearer()
@@ -88,10 +90,11 @@ async def get_current_user_optional(
 
 
 def generate_guest_session_id(request: Request) -> str:
-    """Generate a unique session ID for guest users based on IP and User-Agent."""
+    """Generate a consistent session ID for guest users based on IP and User-Agent."""
     ip = getattr(request.client, "host", "unknown") if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
-    unique_string = f"{ip}:{user_agent}:{uuid.uuid4()}"
+    # Use only IP and User-Agent for consistent session tracking (remove random UUID)
+    unique_string = f"{ip}:{user_agent}"
     return hashlib.sha256(unique_string.encode()).hexdigest()
 
 
@@ -104,10 +107,17 @@ async def get_or_create_guest_session(
     session_id = request.headers.get("X-Guest-Session-ID")
     
     if not session_id:
-        # Generate new session ID
+        # Generate session ID based on IP + User-Agent
         session_id = generate_guest_session_id(request)
-        
-        # Create guest session record
+    
+    # Check if session already exists in database
+    result = await db.execute(
+        select(GuestSession).where(GuestSession.session_id == session_id)
+    )
+    existing_session = result.scalar_one_or_none()
+    
+    if not existing_session:
+        # Create new guest session record
         guest_session = GuestSession(
             session_id=session_id,
             ip_address=getattr(request.client, "host", None) if request.client else None,
@@ -129,6 +139,7 @@ async def check_guest_daily_limit(
     Returns (can_upload, current_count).
     """
     today = date.today()
+    logger.info(f"Checking upload limit for session {session_id[:8]} on {today}")
     
     # Get or create daily upload record
     result = await db.execute(
@@ -138,6 +149,7 @@ async def check_guest_daily_limit(
         )
     )
     daily_upload = result.scalar_one_or_none()
+    logger.info(f"Found existing upload record: {daily_upload is not None}")
     
     if not daily_upload:
         # Create new daily record
@@ -148,9 +160,12 @@ async def check_guest_daily_limit(
         )
         db.add(daily_upload)
         await db.commit()
+        logger.info(f"Created new upload record for session {session_id[:8]}")
+        await db.refresh(daily_upload)  # Refresh to get the committed data
         return True, 0
     
     can_upload = daily_upload.upload_count < max_uploads
+    logger.info(f"Upload check result: can_upload={can_upload}, count={daily_upload.upload_count}/{max_uploads}")
     return can_upload, daily_upload.upload_count
 
 
@@ -172,3 +187,71 @@ async def increment_guest_upload_count(
     if daily_upload:
         daily_upload.upload_count += 1
         await db.commit()
+
+
+async def check_guest_daily_wish_limit(
+    session_id: str,
+    db: AsyncSession,
+    max_wishes: int = 3
+) -> tuple[bool, int]:
+    """
+    Check if guest has exceeded daily wish limit.
+    Returns (can_make_wish, current_count).
+    """
+    today = date.today()
+    
+    # Get or create daily wish record
+    from app.models.guest_session import GuestDailyWish
+    
+    result = await db.execute(
+        select(GuestDailyWish).where(
+            GuestDailyWish.session_id == session_id,
+            GuestDailyWish.date == today
+        )
+    )
+    daily_wish = result.scalar_one_or_none()
+    
+    if not daily_wish:
+        # Create new daily record
+        daily_wish = GuestDailyWish(
+            session_id=session_id,
+            date=today,
+            wish_count=0
+        )
+        db.add(daily_wish)
+        await db.flush()  # Flush to make record available within this transaction
+        return True, 0
+    
+    can_make_wish = daily_wish.wish_count < max_wishes
+    return can_make_wish, daily_wish.wish_count
+
+
+async def increment_guest_wish_count(
+    session_id: str,
+    db: AsyncSession
+) -> None:
+    """Increment guest daily wish count."""
+    today = date.today()
+    
+    from app.models.guest_session import GuestDailyWish
+    
+    result = await db.execute(
+        select(GuestDailyWish).where(
+            GuestDailyWish.session_id == session_id,
+            GuestDailyWish.date == today
+        )
+    )
+    daily_wish = result.scalar_one_or_none()
+    
+    if daily_wish:
+        daily_wish.wish_count += 1
+    else:
+        # Create new daily wish record starting at 1
+        daily_wish = GuestDailyWish(
+            session_id=session_id,
+            date=today,
+            wish_count=1
+        )
+        db.add(daily_wish)
+    
+    # Don't commit here - let the calling function handle the transaction

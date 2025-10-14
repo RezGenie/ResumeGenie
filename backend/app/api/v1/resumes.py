@@ -14,7 +14,7 @@ import secrets
 
 from app.core.database import get_db
 from app.core.security import get_current_user, rate_limit, hash_password
-from app.core.deps import get_current_user_optional, get_or_create_guest_session, check_guest_daily_limit, increment_guest_upload_count
+from app.core.deps import get_or_create_guest_session, check_guest_daily_wish_limit, increment_guest_wish_count
 from app.models.user import User
 from app.models.resume import Resume
 from app.services.file_service import file_service, FileValidationError, FileStorageError
@@ -69,6 +69,11 @@ class ProcessingStatusResponse(BaseModel):
     progress: Optional[dict]
     error: Optional[str]
 
+
+@router.options("/upload")
+async def upload_resume_options():
+    """Handle CORS preflight for authenticated upload."""
+    return {"detail": "OK"}
 
 @router.post("/upload", response_model=ResumeResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit(max_calls=10, window_minutes=60)  # 10 uploads per hour
@@ -133,6 +138,11 @@ async def upload_resume(
         )
 
 
+@router.options("/upload/guest")
+async def upload_resume_guest_options():
+    """Handle CORS preflight for guest upload."""
+    return {"detail": "OK"}
+
 @router.post("/upload/guest", response_model=ResumeResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit(max_calls=3, window_minutes=1440)  # 3 uploads per day for guests
 async def upload_resume_guest(
@@ -152,37 +162,56 @@ async def upload_resume_guest(
     try:
         # Get or create guest session
         session_id = await get_or_create_guest_session(request, db)
+        logger.info(f"Guest session ID: {session_id}")
         
-        # Check daily upload limit
-        can_upload, current_count = await check_guest_daily_limit(session_id, db, max_uploads=3)
-        
-        if not can_upload:
+        # Check daily wish limit instead of separate upload limit
+        try:
+            can_upload, current_count = await check_guest_daily_wish_limit(session_id, db, max_wishes=3)
+            logger.info(f"Wish check for upload: can_upload={can_upload}, current_count={current_count}")
+            
+            if not can_upload:
+                logger.warning(f"Wish limit exceeded for session {session_id[:8]}: {current_count}/3")
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Daily wish limit exceeded. You can make up to 3 wishes per day as a guest. Current count: {current_count}/3"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error checking wish limit: {str(e)}")
             raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Daily upload limit exceeded. You can upload up to 3 files per day as a guest. Current count: {current_count}/3"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error checking wish limit: {str(e)}"
             )
         
         logger.info(f"Guest resume upload initiated. Session: {session_id[:8]}...")
         
-        # Create a temporary guest user for file processing
-        guest_user_id = uuid.uuid4()
-        # Use a random password to satisfy NOT NULL constraint and hash it
-        temp_password = secrets.token_urlsafe(16)
-        guest_user = User(
-            id=guest_user_id,
-            email=f"guest_{session_id[:8]}@temporary.com",
-            hashed_password=hash_password(temp_password)
-        )
+        # Check if guest user already exists for this session
+        guest_email = f"guest_{session_id[:8]}@temporary.com"
         
-        # Add guest user to database session (required for foreign key constraint)
-        db.add(guest_user)
-        await db.flush()  # Flush to get the ID without committing
+        result = await db.execute(select(User).where(User.email == guest_email))
+        guest_user = result.scalar_one_or_none()
+        
+        if not guest_user:
+            # Create a new temporary guest user for file processing
+            guest_user_id = uuid.uuid4()
+            # Use a random password to satisfy NOT NULL constraint and hash it
+            temp_password = secrets.token_urlsafe(16)
+            guest_user = User(
+                id=guest_user_id,
+                email=guest_email,
+                hashed_password=hash_password(temp_password)
+            )
+            
+            # Add guest user to database session (required for foreign key constraint)
+            db.add(guest_user)
+            await db.flush()  # Flush to get the ID without committing
         
         # Process the resume file
         resume = await file_service.process_resume_file(file, guest_user, db)
         
-        # Increment guest upload count
-        await increment_guest_upload_count(session_id, db)
+        # Increment guest wish count (upload counts as a wish)
+        await increment_guest_wish_count(session_id, db)
         
         # Queue background task for embedding generation (optional for guests, non-blocking)
         try:
@@ -217,11 +246,31 @@ async def upload_resume_guest(
         logger.error(f"Guest file storage error: {e.detail}")
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     
+    except HTTPException as e:
+        logger.error(f"Guest resume upload HTTPException: {e.detail}")
+        raise e
+    
     except Exception as e:
-        logger.error(f"Guest resume upload error: {e}")
+        logger.error(f"Guest resume upload error: {e}", exc_info=True)
+        
+        # Rollback the database session to clean up any partial changes
+        try:
+            await db.rollback()
+        except Exception as rollback_error:
+            logger.warning(f"Error during rollback: {rollback_error}")
+        
+        # Provide more specific error messages based on the exception type
+        error_detail = "Resume upload failed"
+        if "database" in str(e).lower() or "connection" in str(e).lower():
+            error_detail = "Database connection error. Please try again later."
+        elif "minio" in str(e).lower() or "s3" in str(e).lower():
+            error_detail = "File storage error. Please try again later."
+        elif "timeout" in str(e).lower():
+            error_detail = "Upload timeout. Please try with a smaller file."
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Resume upload failed"
+            detail=error_detail
         )
 
 

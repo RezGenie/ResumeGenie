@@ -7,7 +7,7 @@ import openai
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+
 import numpy as np
 from dataclasses import dataclass
 import json
@@ -17,8 +17,8 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Configure OpenAI
-openai.api_key = settings.openai_api_key
+# Initialize OpenAI client (modern v1.x approach)
+client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
 
 
 @dataclass
@@ -144,7 +144,7 @@ class OpenAIService:
                 await self._rate_limit_check("embedding")
                 
                 response = await asyncio.to_thread(
-                    openai.embeddings.create,
+                    self.client.embeddings.create,
                     model=self.embedding_model,
                     input=text
                 )
@@ -250,7 +250,7 @@ class OpenAIService:
                 await self._rate_limit_check("chat")
                 
                 response = await asyncio.to_thread(
-                    openai.chat.completions.create,
+                    client.chat.completions.create,
                     model=self.chat_model,
                     messages=[
                         {"role": "system", "content": "You are an expert resume consultant and career advisor with deep knowledge of ATS systems, hiring practices, and resume optimization."},
@@ -321,8 +321,7 @@ class OpenAIService:
         for attempt in range(self.max_retries):
             try:
                 await self._rate_limit_check("chat")
-                response = await asyncio.to_thread(
-                    openai.chat.completions.create,
+                response = await client.chat.completions.create(
                     model=chosen_model,
                     messages=messages,
                     temperature=temperature,
@@ -341,14 +340,29 @@ class OpenAIService:
                 await asyncio.sleep(wait_time)
             except openai.APIError as e:
                 last_error = e
+                logger.warning(f"OpenAI API error on attempt {attempt + 1}: {e}")
+                
+                # Don't retry on certain errors
+                if "invalid_api_key" in str(e).lower() or "unauthorized" in str(e).lower():
+                    logger.error(f"Authentication error with OpenAI API: {e}")
+                    raise OpenAIError(f"API key authentication failed: {str(e)}")
+                
+                if "insufficient_quota" in str(e).lower() or "exceeded your current quota" in str(e).lower():
+                    logger.error(f"OpenAI quota exceeded: {e}")
+                    raise OpenAIError("AI service quota exceeded. Please contact support to upgrade the billing plan.")
+                
+                if "model_not_found" in str(e).lower():
+                    logger.error(f"Model not found error: {e}")
+                    raise OpenAIError(f"AI model not available: {str(e)}")
+                    
                 if attempt == self.max_retries - 1:
                     logger.error(f"OpenAI API error after {self.max_retries} attempts: {e}")
-                    raise OpenAIError(f"Failed to get chat completion: {str(e)}")
+                    raise OpenAIError(f"AI service error after retries: {str(e)}")
                 await asyncio.sleep(self.retry_delay)
             except Exception as e:
                 logger.error(f"Unexpected error during chat completion: {e}")
-                raise OpenAIError(f"Chat completion failed: {str(e)}")
-        raise OpenAIError(f"Failed to get chat completion after retries: {last_error}")
+                raise OpenAIError(f"Unexpected AI service error: {str(e)}")
+        raise OpenAIError(f"AI service failed after {self.max_retries} retries: {last_error}")
     
     def _create_skills_prompt(self, resume_text: str, job_description: str, similarity_score: float) -> str:
         """Create prompt for skills-focused recommendations."""

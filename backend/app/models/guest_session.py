@@ -42,3 +42,20 @@ class GuestDailyUpload(Base):
     
     def __repr__(self):
         return f"<GuestDailyUpload(session_id={self.session_id}, date={self.date}, count={self.upload_count})>"
+
+
+class GuestDailyWish(Base):
+    """Track daily wish counts for guest sessions."""
+    __tablename__ = "guest_daily_wishes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    session_id = Column(String(255), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    wish_count = Column(Integer, default=0)
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    def __repr__(self):
+        return f"<GuestDailyWish(session_id={self.session_id}, date={self.date}, count={self.wish_count})>"

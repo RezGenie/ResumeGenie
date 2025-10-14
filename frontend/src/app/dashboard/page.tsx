@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { 
   FileText, 
-  Bot, 
+  Loader2,
   Upload,
   Briefcase,
   Calendar,
@@ -30,8 +30,61 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { DashboardUser, DashboardStats, RecentActivity, Job } from "@/lib/api";
+import { DashboardUser, DashboardStats, Job } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+
+// API response interfaces
+interface WishApiResponse {
+  id: string;
+  wish_type: string;
+  wish_text: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  created_at: string;
+  updated_at?: string;
+  results?: {
+    analysis?: string;
+    recommendations?: string[];
+    insights?: string[];
+  };
+}
+
+interface ResumeApiResponse {
+  id: string;
+  filename: string;
+  created_at: string;
+  processing_status: 'uploading' | 'processing' | 'completed' | 'failed';
+  file_size?: number;
+}
+
+interface JobApiResponse {
+  id: string;
+  job_title?: string;
+  company_name?: string;
+  location?: string;
+  match_score?: number;
+  created_at: string;
+  comparison_results?: {
+    overall_match: number;
+    skills_match: number;
+    experience_match: number;
+  };
+}
+
+interface DailyUsageApiResponse {
+  wishes_used: number;
+  daily_limit: number;
+  remaining_wishes: number;
+}
+
+// Enhanced activity types to support real API data
+interface RecentActivity {
+  id: string;
+  type: 'application' | 'interview' | 'profile_view' | 'job_match' | 'wish_granted' | 'resume_upload' | 'job_comparison';
+  title: string;
+  description: string;
+  timestamp: string;
+  status?: 'completed' | 'pending' | 'processing';
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -103,6 +156,119 @@ export default function Dashboard() {
     return () => clearTimeout(fallbackTimeout);
   }, [authUser, authLoading, router, isAuthenticated]);
 
+  const fetchRealDashboardData = async () => {
+    try {
+      const { apiClient } = await import('@/lib/api/client');
+      
+      // Fetch all dashboard data in parallel
+      const [wishesData, resumesData, dailyUsageData, jobsData] = await Promise.allSettled([
+        apiClient.get<WishApiResponse[]>('/genie/'),
+        apiClient.get<ResumeApiResponse[]>('/resumes/'),
+        apiClient.get<DailyUsageApiResponse>('/genie/usage/daily'),
+        apiClient.get<JobApiResponse[]>('/jobs/')
+      ]);
+
+      // Process API responses
+      const wishes: WishApiResponse[] = wishesData.status === 'fulfilled' ? wishesData.value : [];
+      const resumes: ResumeApiResponse[] = resumesData.status === 'fulfilled' ? resumesData.value : [];
+      const usage: DailyUsageApiResponse = dailyUsageData.status === 'fulfilled' ? dailyUsageData.value : { wishes_used: 0, daily_limit: 3, remaining_wishes: 3 };
+      const jobs: JobApiResponse[] = jobsData.status === 'fulfilled' ? jobsData.value : [];
+
+      // Calculate statistics
+      const completedWishes = wishes.filter((w) => w.status === 'completed');
+      const avgMatchScore = jobs.length > 0 
+        ? jobs.reduce((acc: number, job) => acc + (job.match_score || 0), 0) / jobs.length 
+        : 0;
+
+      setStats({
+        totalApplications: jobs.length,
+        pendingApplications: wishes.filter((w) => w.status === 'processing').length,
+        interviewsScheduled: 0, // This would need a separate API
+        profileViews: resumes.length * 5, // Estimated views per resume
+        matchScore: Math.round(avgMatchScore),
+        recommendedJobs: Math.min(jobs.length + 3, 10) // Simulate recommendations
+      });
+
+      // Create recent activity from real data
+      const newActivities: RecentActivity[] = [];
+      
+      // Add recent wishes
+      wishes.slice(0, 3).forEach((wish) => {
+        newActivities.push({
+          id: wish.id,
+          type: 'wish_granted',
+          title: `${wish.wish_type.replace('_', ' ')} wish granted`,
+          description: wish.wish_text.substring(0, 80) + (wish.wish_text.length > 80 ? '...' : ''),
+          timestamp: wish.created_at
+        });
+      });
+
+      // Add recent resume uploads
+      resumes.slice(0, 2).forEach((resume) => {
+        newActivities.push({
+          id: resume.id,
+          type: 'resume_upload',
+          title: 'Resume uploaded',
+          description: `Uploaded: ${resume.filename}`,
+          timestamp: resume.created_at
+        });
+      });
+
+      // Add recent job comparisons
+      jobs.slice(0, 2).forEach((job) => {
+        newActivities.push({
+          id: job.id,
+          type: 'job_comparison',
+          title: 'Job comparison completed',
+          description: `${job.job_title || 'Position'} - ${job.match_score || 0}% match`,
+          timestamp: job.created_at
+        });
+      });
+
+      // Sort by timestamp and take most recent
+      newActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setActivities(newActivities.slice(0, 5));
+
+      // Set recommended jobs (could be enhanced with actual recommendations API)
+      const transformedJobs: Job[] = jobs.slice(0, 3).map((job) => ({
+        id: job.id,
+        title: job.job_title || 'Untitled Position',
+        company: job.company_name || 'Unknown Company',
+        location: job.location || 'Location TBD',
+        salary: '$50,000 - $80,000', // Default salary range since not in API response
+        type: 'Full-time', // Default type since not in API response
+        postedDate: new Date(job.created_at).toLocaleDateString(),
+        description: 'Job description not available',
+        requirements: [],
+        matchScore: job.match_score || 0,
+        experience: 'Mid-level', // Default experience level since not in API response
+        skills: [], // Default empty skills array since not in API response
+        saved: false // Default saved state since not in API response
+      }));
+      setRecommendedJobs(transformedJobs);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      // Set fallback data on API error
+      setStats({
+        totalApplications: 0,
+        pendingApplications: 0,
+        interviewsScheduled: 0,
+        profileViews: 0,
+        matchScore: 0,
+        recommendedJobs: 0
+      });
+      setActivities([{
+        id: '1',
+        type: 'profile_view',
+        title: 'Welcome to RezGenie!',
+        description: 'Upload a resume or make a wish to get started.',
+        timestamp: new Date().toISOString()
+      }]);
+      setRecommendedJobs([]);
+    }
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -147,27 +313,8 @@ export default function Dashboard() {
           education: []
         });
 
-        // Set basic stats with WIP message
-        setStats({
-          totalApplications: 0,
-          pendingApplications: 0,
-          interviewsScheduled: 0,
-          profileViews: 0,
-          matchScore: 0,
-          recommendedJobs: 0
-        });
-
-        setActivities([
-          {
-            id: '1',
-            type: 'profile_view',
-            title: 'Welcome to RezGenie!',
-            description: 'Dashboard features are being connected to the backend',
-            timestamp: new Date().toISOString()
-          }
-        ]);
-
-        setRecommendedJobs([]);
+        // Fetch real dashboard data from APIs
+        await fetchRealDashboardData();
         setLoading(false);
         
       } catch (error) {
@@ -188,7 +335,7 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center space-y-4">
-              <Bot className="h-8 w-8 animate-pulse mx-auto text-purple-600" />
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
               <p className="text-muted-foreground">
                 {authLoading ? 'Checking authentication...' : 'Loading your dashboard...'}
               </p>
@@ -210,8 +357,8 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center space-y-4">
-              <Bot className="h-8 w-8 animate-pulse mx-auto text-purple-600" />
-              <p className="text-muted-foreground">Redirecting to login...</p>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
+              <p className="text-muted-foreground">Preparing your dashboard...</p>
             </div>
           </div>
         </div>
@@ -275,11 +422,11 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="hover:bg-gray-50 hover:border-gray-300 dark:hover:bg-gray-800 dark:hover:border-gray-600">
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="hover:bg-gray-50 hover:border-gray-300 dark:hover:bg-gray-800 dark:hover:border-gray-600">
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
               </Button>
@@ -291,7 +438,7 @@ export default function Dashboard() {
             variants={itemVariants}
             className="mb-8"
           >
-            <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border border-purple-200/50 dark:border-purple-700/50 rounded-lg p-4">
+            <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
@@ -299,10 +446,10 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <h3 className="text-sm font-medium text-amber-600">
                     Dashboard Under Development
                   </h3>
-                  <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                  <div className="mt-2 text-sm text-amber-600">
                     <p>
                       We&apos;re actively building your personalized dashboard. Some features are still being developed and will be available soon!
                     </p>
@@ -331,7 +478,7 @@ export default function Dashboard() {
                     </Badge>
                   </div>
                   <Progress value={dashboardUser.profileCompleteness} className="mb-4" />
-                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-700 text-white">
                     <User className="h-4 w-4 mr-2" />
                     Complete Profile
                   </Button>
@@ -435,7 +582,7 @@ export default function Dashboard() {
                         {activities.map((activity) => (
                         <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                           <div className="flex-shrink-0">
-                            {activity.type === 'application' && (
+                            {(activity.type === 'application' || activity.type === 'job_comparison') && (
                               <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
                                 <Briefcase className="h-4 w-4 text-blue-600" />
                               </div>
@@ -450,9 +597,14 @@ export default function Dashboard() {
                                 <Eye className="h-4 w-4 text-purple-600" />
                               </div>
                             )}
-                            {activity.type === 'job_match' && (
+                            {(activity.type === 'job_match' || activity.type === 'wish_granted') && (
                               <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
                                 <Target className="h-4 w-4 text-amber-600" />
+                              </div>
+                            )}
+                            {activity.type === 'resume_upload' && (
+                              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                                <FileText className="h-4 w-4 text-green-600" />
                               </div>
                             )}
                           </div>
@@ -477,7 +629,7 @@ export default function Dashboard() {
                   </div>
                   {/* Add a "View All Activity" button at the bottom */}
                   <div className="mt-6 pt-4 border-t">
-                    <Button variant="outline" className="w-full" asChild>
+                    <Button variant="outline" className="w-full hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
                       <a href="/activity">
                         <Clock className="h-4 w-4 mr-2" />
                         View All Activity
@@ -549,7 +701,7 @@ export default function Dashboard() {
                         </div>
                       )}
                     </div>
-                    <Button variant="outline" className="w-full mt-4" asChild>
+                    <Button variant="outline" className="w-full mt-4 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
                       <a href="/opportunities">
                         <Search className="h-4 w-4 mr-2" />
                         Discover More Jobs
@@ -566,21 +718,21 @@ export default function Dashboard() {
                     <CardTitle>Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Button variant="outline" className="w-full justify-start" asChild>
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
                       <a href="/genie">
                         <Upload className="h-4 w-4 mr-2" />
                         Update Resume
                       </a>
                     </Button>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300">
                       <Users className="h-4 w-4 mr-2" />
                       Network Connections
                     </Button>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300">
                       <FileText className="h-4 w-4 mr-2" />
                       Application History
                     </Button>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300">
                       <Calendar className="h-4 w-4 mr-2" />
                       Interview Schedule
                     </Button>

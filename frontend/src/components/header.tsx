@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Menu, X, User, LogOut, Upload, BarChart3 } from "lucide-react"
+import { Menu, X, User, LogOut, Upload, BarChart3, LayoutDashboard } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -61,13 +61,17 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6 lg:px-8 xl:px-12">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
+        <Link href="/" className="flex items-center space-x-2">
           <motion.div
             whileHover={{ scale: 1.1 }}
             transition={{ duration: 0.3 }}
             className="flex h-8 w-8 items-center justify-center"
           >
-            <span className="text-2xl">🧞‍♂️</span>
+            <img 
+              src="/logo.png" 
+              alt="RezGenie Logo" 
+              className="h-8 w-8 object-contain"
+            />
           </motion.div>
           <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             RezGenie
@@ -128,7 +132,7 @@ export function Header() {
           {user ? (
             <>
               {/* Quick Upload Button for Desktop */}
-              <Button variant="outline" size="sm" asChild className="hidden md:flex">
+              <Button variant="outline" size="sm" asChild className="hidden md:flex hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300 transition-all duration-200">
                 <Link href="/genie">
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Resume
@@ -166,7 +170,7 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
@@ -198,10 +202,10 @@ export function Header() {
             </>
           ) : (
             <div className="hidden lg:flex items-center space-x-2">
-              <Button variant="ghost" asChild className="whitespace-nowrap">
+              <Button variant="ghost" asChild className="whitespace-nowrap hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/30 dark:hover:text-purple-300 transition-all duration-200">
                 <Link href="/auth">Log In</Link>
               </Button>
-              <Button asChild className="whitespace-nowrap">
+              <Button asChild className="whitespace-nowrap hover:bg-purple-700 hover:shadow-lg transition-all duration-200">
                 <Link href="/genie">Get Started</Link>
               </Button>
             </div>
@@ -319,12 +323,12 @@ export function Header() {
                   Pricing
                 </Link>
                 <div className="border-t pt-4 mt-4 space-y-2">
-                  <Button variant="ghost" asChild className="w-full justify-start h-12 text-base">
+                  <Button variant="ghost" asChild className="w-full justify-start h-12 text-base hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/30 dark:hover:text-purple-300 transition-all duration-200">
                     <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
                       Log In
                     </Link>
                   </Button>
-                  <Button asChild className="w-full justify-start h-12 text-base">
+                  <Button asChild className="w-full justify-start h-12 text-base hover:bg-purple-700 hover:shadow-lg transition-all duration-200">
                     <Link href="/genie" onClick={() => setIsMenuOpen(false)}>
                       Get Started
                     </Link>
