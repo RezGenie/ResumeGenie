@@ -1,6 +1,4 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
-import os
 from functools import lru_cache
 
 
@@ -45,6 +43,19 @@ class Settings(BaseSettings):
     # Celery
     celery_broker_url: str = "redis://:redis123@redis:6379/0"
     celery_result_backend: str = "redis://:redis123@redis:6379/0"
+    
+    # Adzuna API Configuration
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    adzuna_country: str = "ca"  # Canada
+    adzuna_base_url: str = "https://api.adzuna.com/v1/api/jobs"
+    adzuna_rate_limit: int = 10
+    adzuna_max_pages: int = 5
+    
+    # Job Processing Configuration
+    job_embedding_batch_size: int = 50
+    job_cleanup_days: int = 30
+    job_ingestion_interval: int = 3600  # seconds
 
     class Config:
         env_file = ".env"

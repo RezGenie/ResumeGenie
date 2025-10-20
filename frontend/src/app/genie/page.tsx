@@ -19,7 +19,6 @@ import {
   Loader2,
   Copy,
   Search,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -233,7 +232,7 @@ interface AnalysisResults {
 }
 
 export default function StudioPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isRecModalOpen, setIsRecModalOpen] = useState(false);
   const [selectedWish, setSelectedWish] = useState<Wish | null>(null);
   const [isWishDetailModalOpen, setIsWishDetailModalOpen] = useState(false);
@@ -253,6 +252,36 @@ export default function StudioPage() {
     useState<AnalysisResults | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Progressive highlighting states for user guidance
+  const [showInitialHighlight, setShowInitialHighlight] = useState(true);
+  const [isResumeUploading, setIsResumeUploading] = useState(false);
+  const [showButtonHighlight, setShowButtonHighlight] = useState(false);
+  const [showOutputHighlight, setShowOutputHighlight] = useState(false);
+
+  // Fade-out states for smooth transitions
+  const [initialHighlightFading, setInitialHighlightFading] = useState(false);
+  const [outputHighlightFading, setOutputHighlightFading] = useState(false);
+
+  // Auto-disable initial highlighting after 8 seconds with smooth fade-out
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialHighlightFading(true);
+      // Complete fade-out after transition (increased to match CSS)
+      setTimeout(() => {
+        setShowInitialHighlight(false);
+        setInitialHighlightFading(false);
+      }, 1200); // Match CSS transition duration
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Helper function to get consistent highlight classes
+  const getHighlightClass = (isHighlighted: boolean, isFading: boolean = false) => {
+    if (!isHighlighted) return "";
+    if (isFading) return "animate-pulse-border-fadeout border-2";
+    return "animate-pulse-border border-2 border-purple-500/50";
+  };
 
   // Derived state to check if daily limit is reached
   const isDailyLimitReached = maxWishes < 999 && dailyWishes >= maxWishes;
@@ -300,6 +329,46 @@ export default function StudioPage() {
     refreshDailyUsage();
   }, [isAuthenticated, refreshDailyUsage]);
 
+  // For guests: Ensure latest recommendations are shown when they've used all wishes
+  useEffect(() => {
+    if (!isAuthenticated && dailyWishes >= maxWishes && maxWishes < 999 && !analysisResults) {
+      const savedWishes = localStorage.getItem('genie_wishes');
+      if (savedWishes) {
+        try {
+          const parsedWishes = JSON.parse(savedWishes);
+          if (Array.isArray(parsedWishes)) {
+            const wishesWithDates = parsedWishes.map(wish => ({
+              ...wish,
+              timestamp: new Date(wish.timestamp)
+            }));
+            
+            const mostRecentCompletedWish = wishesWithDates
+              .filter(wish => wish.status === 'completed' && wish.results)
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+            
+            if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+              setAnalysisResults({
+                resumeScore: mostRecentCompletedWish.results.score || 0,
+                matchScore: mostRecentCompletedWish.results.score || 0,
+                skillGaps: mostRecentCompletedWish.results.recommendations || [],
+                insights: mostRecentCompletedWish.results.insights || [],
+                recommendations: mostRecentCompletedWish.results.insights || [],
+              });
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to parse wishes from localStorage for recommendations:', error);
+        }
+      }
+    }
+  }, [isAuthenticated, dailyWishes, maxWishes, analysisResults]);
+
+  // Clear analysis results when user changes to prevent cross-user contamination
+  useEffect(() => {
+    setAnalysisResults(null);
+    setWishes([]);
+  }, [user?.id, isAuthenticated]);
+
   // Fetch historical wishes when user is authenticated, or load from localStorage for guests
   useEffect(() => {
     const fetchWishHistory = async () => {
@@ -317,6 +386,21 @@ export default function StudioPage() {
                   timestamp: new Date(wish.timestamp)
                 }));
                 setWishes(wishesWithDates);
+                
+                // For guests: Set analysisResults to the most recent completed wish
+                const mostRecentCompletedWish = wishesWithDates
+                  .filter(wish => wish.status === 'completed' && wish.results)
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+                
+                if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+                  setAnalysisResults({
+                    resumeScore: mostRecentCompletedWish.results.score || 0,
+                    matchScore: mostRecentCompletedWish.results.score || 0, // Use same score if no separate match score
+                    skillGaps: mostRecentCompletedWish.results.recommendations || [],
+                    insights: mostRecentCompletedWish.results.insights || [],
+                    recommendations: mostRecentCompletedWish.results.insights || [],
+                  });
+                }
               }
             } else {
               setWishes([]);
@@ -477,11 +561,89 @@ export default function StudioPage() {
       });
     } catch (error) {
       console.error('Failed to delete wish:', error);
-      toast.error("Failed to delete wish", { 
+      toast.error("The wish couldn't be erased from history! 🕰️✨", { 
         description: "Please try again later" 
       });
     }
   }, [isAuthenticated]);
+
+  // Helper function to parse and handle API errors with genie personality
+  const parseApiError = (error: Error): { title: string; description: string } => {
+    // Check if it's a validation error (422)
+    if (error.message && error.message.includes('422')) {
+      try {
+        // Extract the JSON error details
+        const match = error.message.match(/{"detail":\[.*?\]}/);
+        if (match) {
+          const errorData = JSON.parse(match[0]);
+          const detail = errorData.detail?.[0];
+          
+          if (detail?.type === 'string_too_short') {
+            const minLength = detail.ctx?.min_length || 10;
+            return {
+              title: "Your wish needs more magic words! ✨",
+              description: `Please write at least ${minLength} characters for the genie to understand your request.`
+            };
+          }
+          
+          if (detail?.type === 'string_too_long') {
+            const maxLength = detail.ctx?.max_length || 5000;
+            return {
+              title: "Your wish scroll is too long! 📜",
+              description: `Please keep your request under ${maxLength} characters.`
+            };
+          }
+          
+          if (detail?.loc?.includes('wish_text')) {
+            return {
+              title: "The genie couldn't read your wish! 🔮",
+              description: "Please check your career question or job posting format."
+            };
+          }
+        }
+      } catch (parseError) {
+        console.warn('Failed to parse API error:', parseError);
+      }
+    }
+    
+    // Check for network/connection errors
+    if (error.message.includes('fetch') || error.message.includes('network')) {
+      return {
+        title: "The genie's connection is weak! 📡✨",
+        description: "Please check your internet connection and try again."
+      };
+    }
+    
+    // Check for timeout errors
+    if (error.message.includes('timeout') || error.message.includes('timed out')) {
+      return {
+        title: "The genie is taking too long to respond! ⏰",
+        description: "The magical analysis is overloaded. Please try again in a moment."
+      };
+    }
+    
+    // Check for authentication errors
+    if (error.message.includes('401') || error.message.includes('unauthorized')) {
+      return {
+        title: "The genie doesn't recognize you! 🔐",
+        description: "Please sign in again to continue using your magical powers."
+      };
+    }
+    
+    // Check for rate limiting
+    if (error.message.includes('429') || error.message.includes('rate limit')) {
+      return {
+        title: "The genie needs a moment to recharge! ⚡",
+        description: "Too many wishes at once. Please wait a moment before trying again."
+      };
+    }
+    
+    // Default fallback for unknown errors
+    return {
+      title: "The genie's lamp flickered! ✨",
+      description: "Something unexpected happened. Please try a different career question."
+    };
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -511,7 +673,9 @@ export default function StudioPage() {
 
   const copyRecommendationsToClipboard = async () => {
     if (!analysisResults?.recommendations || analysisResults.recommendations.length === 0) {
-      toast.error("No recommendations to copy");
+      toast.error("The cosmic wisdom hasn't materialized yet! 🔮", {
+        description: "No magical recommendations to copy at this moment"
+      });
       return;
     }
 
@@ -522,7 +686,7 @@ export default function StudioPage() {
     try {
       await navigator.clipboard.writeText(recommendationsText);
       toast.success("Recommendations copied to clipboard");
-    } catch (err) {
+    } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = recommendationsText;
@@ -531,8 +695,10 @@ export default function StudioPage() {
       try {
         document.execCommand('copy');
         toast.success("Recommendations copied to clipboard");
-      } catch (fallbackErr) {
-        toast.error("Failed to copy recommendations");
+      } catch {
+        toast.error("The mystical clipboard spell failed! 📋✨", {
+          description: "Unable to copy your divine recommendations"
+        });
       }
       document.body.removeChild(textArea);
     }
@@ -541,7 +707,7 @@ export default function StudioPage() {
   const handleFileSelect = async (file: File) => {
     const error = validateFile(file);
     if (error) {
-      toast.error("Invalid file", {
+      toast.error("That scroll isn't magical enough! 📜", {
         description: error,
       });
       return;
@@ -550,6 +716,8 @@ export default function StudioPage() {
     // Reset progress and set loading
     setUploadProgress(0);
     setIsLoading(true);
+    setIsResumeUploading(true);
+    setShowInitialHighlight(false);
 
     // Create a temporary file object for UI feedback
     const tempFile: UploadedFile = {
@@ -578,11 +746,15 @@ export default function StudioPage() {
             resumeData: response,
           };
           setResumeFile(uploadedFile);
+          setIsResumeUploading(false);
+          setShowButtonHighlight(true);
           console.log("Resume uploaded successfully:", response);
         },
         onError: (error) => {
           console.error("Resume upload failed:", error);
           setResumeFile(null);
+          setIsResumeUploading(false);
+          setShowInitialHighlight(true);
         },
       });
 
@@ -592,9 +764,12 @@ export default function StudioPage() {
       console.error("Resume upload failed:", error);
       // Error is already handled by the onError callback and ResumeService
       setResumeFile(null);
+      setIsResumeUploading(false);
+      setShowInitialHighlight(true);
     } finally {
       setIsLoading(false);
       setUploadProgress(0);
+      setIsResumeUploading(false);
     }
   };
 
@@ -633,15 +808,43 @@ export default function StudioPage() {
   };
 
   const handleSubmit = async () => {
-    // More flexible validation: only require job posting/wish text
-    if (!jobPosting.trim()) {
-      toast.error("Missing requirements! 📝", {
+    // Enhanced validation with better user guidance
+    const trimmedWish = jobPosting.trim();
+    
+    if (!trimmedWish) {
+      toast.error("Your genie needs more details! 🧞‍♂️📝", {
         description: "Please enter your career question, job posting, or wish text.",
       });
       return;
     }
+    
+    // Check minimum length (backend requires 10 characters)
+    if (trimmedWish.length < 10) {
+      toast.error("Your wish needs more magic words! ✨", {
+        description: `Please write at least 10 characters. You have ${trimmedWish.length} characters.`,
+      });
+      return;
+    }
+    
+    // Check for overly simple inputs
+    const simpleInputs = ['hello', 'hi', 'test', 'testing', 'help me', 'please help'];
+    if (simpleInputs.includes(trimmedWish.toLowerCase())) {
+      toast.error("The genie needs a real career wish! 🔮", {
+        description: "Try asking something like 'How can I improve my resume?' or paste a job description.",
+      });
+      return;
+    }
+    
+    // Check for very repetitive content
+    if (/^(.)\1{9,}$/.test(trimmedWish) || /^(.{1,3})\1{4,}$/.test(trimmedWish)) {
+      toast.error("The genie detected magical interference! 🌟", {
+        description: "Please write a meaningful career question or job description.",
+      });
+      return;
+    }
+    
     if (maxWishes < 999 && dailyWishes >= maxWishes) {
-      toast.error("Daily wish limit reached!", {
+      toast.error("The genie's magic is exhausted for today! 🧞‍♂️💤", {
         description:
           "You've used all your daily wishes. Come back tomorrow for more.",
       });
@@ -733,8 +936,33 @@ export default function StudioPage() {
         matchScore: Math.round((wishDetails.job_match_score || 0) * 100),
         skillGaps: wishDetails.action_items || [],
         insights: wishDetails.recommendations || [],
-        recommendations: wishDetails.action_items || [],
+        recommendations: wishDetails.recommendations || [],
       });
+      // Enable output highlighting after successful analysis
+      setShowButtonHighlight(false);
+      setShowOutputHighlight(true);
+      
+      // Auto-scroll to show recommendations after a brief delay
+      setTimeout(() => {
+        const recommendationsElement = document.querySelector('[data-recommendations-section]');
+        if (recommendationsElement) {
+          recommendationsElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 500);
+      
+      // Automatically disable highlighting after 10 seconds with smooth fade-out
+      setTimeout(() => {
+        setOutputHighlightFading(true);
+        // Complete fade-out after transition (increased to match CSS)
+        setTimeout(() => {
+          setShowOutputHighlight(false);
+          setOutputHighlightFading(false);
+        }, 1200); // Match CSS transition duration
+      }, 10000);
+      
       // Refresh usage count after successful wish
       await refreshDailyUsage();
     } catch (error) {
@@ -751,7 +979,13 @@ export default function StudioPage() {
         
         return updatedWishes;
       });
-      toast.error("Wish failed", { description: (error as Error).message });
+      
+      // Parse the error and show user-friendly message
+      const { title, description } = parseApiError(error as Error);
+      toast.error(title, { 
+        description: description
+      });
+      
       // Refresh usage count even after error to get accurate count
       await refreshDailyUsage();
     } finally {
@@ -773,20 +1007,7 @@ export default function StudioPage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Wish Granting Overlay */}
-      {isAnalyzing && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-600" />
-            <p className="text-lg font-medium text-foreground">
-              Granting your wish...
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Please wait while our AI analyzes your request
-            </p>
-          </div>
-        </div>
-      )}
+
 
       <div className="container mx-auto px-4 py-20 max-w-4xl">
         {/* Header */}
@@ -805,45 +1026,6 @@ export default function StudioPage() {
               Your AI genie will grant you personalized career insights!
             </p>
           </motion.div>
-        </motion.div>
-
-        {/* Under Development Notice */}
-        
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-8"
-        >
-          <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-amber-500"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-amber-600">
-                  AI Genie Under Development
-                </h3>
-                <div className="mt-2 text-sm text-amber-600">
-                  <p>
-                    The AI Genie is currently being enhanced with new magical
-                    powers! Resume upload and analysis features are working in
-                    demo mode. Full backend integration coming soon.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </motion.div>
 
         <motion.div
@@ -885,7 +1067,14 @@ export default function StudioPage() {
                   <div className="space-y-4">
                     {/* Expanded AI Recommendations Section */}
                     <div>
-                      <div className="bg-card rounded-md p-4 text-left max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10">
+                      <div 
+                        data-recommendations-section
+                        className={`bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${
+                          showOutputHighlight && analysisResults?.insights?.length 
+                            ? getHighlightClass(true, outputHighlightFading)
+                            : ""
+                        }`}
+                      >
                         <div className="flex items-center justify-between mb-3">
                           <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
                             <Lightbulb
@@ -907,9 +1096,9 @@ export default function StudioPage() {
                           </div>
                         </div>
                         <ul className="space-y-2 text-sm text-muted-foreground">
-                          {analysisResults?.recommendations &&
-                          analysisResults.recommendations.length > 0
-                            ? analysisResults.recommendations.map(
+                          {analysisResults?.insights &&
+                          analysisResults.insights.length > 0
+                            ? analysisResults.insights.map(
                                 (rec, idx) => (
                                   <li
                                     key={idx}
@@ -923,10 +1112,10 @@ export default function StudioPage() {
                                 )
                               )
                             : [
-                                "Add quantifiable metrics to your project descriptions (e.g., improved performance by 30%)",
-                                "Include relevant cloud technologies mentioned in the job posting",
-                                "List certifications or ongoing coursework in a dedic                                docker-compose exec postgres bashated section",
-                                "Use strong action verbs and concise bullet points for achievements",
+                                "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
+                                "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
+                                "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
+                                "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
                               ].map((mock, idx) => (
                                 <li
                                   key={idx}
@@ -1033,26 +1222,87 @@ export default function StudioPage() {
 
                     {/* AI Recommendations moved to the right column */}
 
-                    {/* Status Messages */}
+                    {/* Status Messages and Recommendations */}
                     {remainingWishes === 0 ? (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-center pt-4 border-t border-primary/20"
+                        className="text-center"
                       >
-                        <div className="flex items-center justify-center gap-2 text-sm text-amber-600 dark:text-amber-400 mb-2">
-                          <Clock className="h-4 w-4" />
-                          Wishes reset at midnight UTC
+                        {/* Show recommendations first for guests who've used all wishes */}
+                        <div 
+                          data-recommendations-section
+                          className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${
+                            showOutputHighlight && analysisResults?.insights?.length 
+                              ? getHighlightClass(true, outputHighlightFading)
+                              : ""
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                              <Lightbulb className="h-5 w-5 text-gray-900 dark:text-gray-100" />
+                              Your Genie Recommendations
+                            </h5>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setIsRecModalOpen(true)}
+                              aria-label="Expand recommendations"
+                              title="View full recommendations"
+                            >
+                              <Maximize2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <ul className="space-y-2 text-sm text-muted-foreground">
+                            {analysisResults?.insights &&
+                            analysisResults.insights.length > 0
+                              ? analysisResults.insights.map(
+                                  (rec, idx) => (
+                                    <li
+                                      key={idx}
+                                      className="flex items-start gap-2"
+                                    >
+                                      <span className="text-green-500 mt-1">
+                                        •
+                                      </span>
+                                      <span>{rec}</span>
+                                    </li>
+                                  )
+                                )
+                              : [
+                                  "🧞‍♂️ You've used all your daily wishes! Your genie insights are waiting here",
+                                  "✨ Sign up for unlimited access to career magic and personalized recommendations",
+                                  "🔮 Your completed wishes hold valuable career insights - check your wish history below!",
+                                ].map((mock, idx) => (
+                                  <li
+                                    key={idx}
+                                    className="flex items-start gap-2"
+                                  >
+                                    <span className="text-muted-foreground mt-1">
+                                      •
+                                    </span>
+                                    <span>{mock}</span>
+                                  </li>
+                                ))}
+                          </ul>
                         </div>
-                        <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                          <Link
-                            href="/auth"
-                            className="text-primary hover:underline"
-                          >
-                          Sign up
-                          </Link>{" "}
-                          for unlimited wishes with Pro!
-                        </p>
+                        
+                        {/* Status message below recommendations */}
+                        <div className="pt-4 border-t border-primary/20 mt-4">
+                          <div className="flex items-center justify-center gap-2 text-sm text-amber-600 dark:text-amber-400 mb-2">
+                            <Clock className="h-4 w-4" />
+                            Wishes reset at midnight UTC
+                          </div>
+                          <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                            <Link
+                              href="/auth"
+                              className="text-primary hover:underline"
+                            >
+                            Sign up
+                            </Link>{" "}
+                            for unlimited wishes with Pro!
+                          </p>
+                        </div>
                       </motion.div>
                     ) : (
                       <motion.div
@@ -1061,7 +1311,14 @@ export default function StudioPage() {
                         className="text-center"
                       >
                         {/* Expanded recommendations panel */}
-                        <div className="mt-3 bg-card rounded-md p-4 text-left max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10">
+                        <div 
+                          data-recommendations-section
+                          className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${
+                            showOutputHighlight && analysisResults?.insights?.length 
+                              ? getHighlightClass(true, outputHighlightFading)
+                              : ""
+                          }`}
+                        >
                           <div className="flex items-center justify-between mb-3">
                             <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                               <Lightbulb className="h-5 w-5 text-gray-900 dark:text-gray-100" />
@@ -1078,9 +1335,9 @@ export default function StudioPage() {
                             </Button>
                           </div>
                           <ul className="space-y-2 text-sm text-muted-foreground">
-                            {analysisResults?.recommendations &&
-                            analysisResults.recommendations.length > 0
-                              ? analysisResults.recommendations.map(
+                            {analysisResults?.insights &&
+                            analysisResults.insights.length > 0
+                              ? analysisResults.insights.map(
                                   (rec, idx) => (
                                     <li
                                       key={idx}
@@ -1094,10 +1351,10 @@ export default function StudioPage() {
                                   )
                                 )
                               : [
-                                  "Add quantifiable metrics to your project descriptions (e.g., improved performance by 30%)",
-                                  "Include relevant cloud technologies mentioned in the job posting",
-                                  "List certifications or ongoing coursework in a dedicated section",
-                                  "Use strong action verbs and concise bullet points for achievements",
+                                  "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
+                                  "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
+                                  "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
+                                  "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
                                 ].map((mock, idx) => (
                                   <li
                                     key={idx}
@@ -1123,7 +1380,11 @@ export default function StudioPage() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Resume Upload */}
             <motion.div variants={itemVariants}>
-              <Card className="h-full">
+              <Card className={`h-full ${
+                showInitialHighlight && !analysisResults
+                  ? getHighlightClass(true, initialHighlightFading)
+                  : ""
+              }`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
@@ -1137,7 +1398,7 @@ export default function StudioPage() {
                 <CardContent className="space-y-4">
                   {!resumeFile ? (
                     <div
-                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all h-[400px] flex flex-col justify-center ${
                         isDailyLimitReached 
                           ? "border-muted-foreground/15 bg-muted/20 cursor-not-allowed opacity-60"
                           : `cursor-pointer group ${
@@ -1281,7 +1542,11 @@ export default function StudioPage() {
 
             {/* Job Posting */}
             <motion.div variants={itemVariants}>
-              <Card className="h-full">
+              <Card className={`h-full ${
+                showInitialHighlight && !analysisResults
+                  ? getHighlightClass(true, initialHighlightFading)
+                  : ""
+              }`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
@@ -1297,9 +1562,15 @@ export default function StudioPage() {
                     <Textarea
                       placeholder={isDailyLimitReached 
                         ? `Daily limit reached (${dailyWishes}/${maxWishes}). Come back tomorrow!`
-                        : "Ask me anything about your career! Examples:\n\n• Paste a job description for match analysis\n• 'How can I improve my resume for software engineering roles?'\n• 'What skills should I develop for data science?'\n• 'Review my career goals and suggest next steps'"}
+                        : "Ask me anything about your career! (At least 10 characters)\n\nExamples:\n• Paste a job description for match analysis\n• 'How can I improve my resume for software engineering roles?'\n• 'What skills should I develop for data science?'\n• 'Review my career goals and suggest next steps'\n• 'Analyze this job posting: [paste job description]'"}
                       value={jobPosting}
-                      onChange={(e) => setJobPosting(e.target.value)}
+                      onChange={(e) => {
+                        setJobPosting(e.target.value);
+                        if (!isResumeUploading && e.target.value.trim()) {
+                          setShowInitialHighlight(false);
+                          setShowButtonHighlight(true);
+                        }
+                      }}
                       disabled={isDailyLimitReached}
                       className={`h-[400px] resize-none overflow-y-auto border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm text-sm leading-relaxed rounded-lg ${
                         isDailyLimitReached
@@ -1330,14 +1601,15 @@ export default function StudioPage() {
               disabled={
                 !jobPosting.trim() ||
                 isDailyLimitReached ||
-                isAnalyzing
+                isAnalyzing ||
+                isResumeUploading
               }
-              className="px-8"
+              className={`px-8 ${showButtonHighlight && !(!jobPosting.trim() || isDailyLimitReached || isAnalyzing || isResumeUploading) ? getHighlightClass(true) : ''}`}
             >
               {isAnalyzing ? (
                 <>
-                  <Zap className="h-5 w-5 mr-2 animate-pulse" />
-                  Analyzing...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Granting Wish...
                 </>
               ) : (
                 <>
@@ -1354,10 +1626,14 @@ export default function StudioPage() {
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {/* Resume Analysis */}
-            <Card>
+            <Card className={`relative transition-all duration-300 ${
+              showOutputHighlight && analysisResults 
+                ? getHighlightClass(true, outputHighlightFading)
+                : ""
+            }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Bot className="h-5 w-5" />
+                  <Bot className="h-5 w-5 text-purple-600" />
                   Resume Analysis
                 </CardTitle>
               </CardHeader>
@@ -1367,7 +1643,7 @@ export default function StudioPage() {
                     <span className="text-sm font-medium">Overall Score</span>
                     <Badge
                       variant="secondary"
-                      className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                      className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
                     >
                       {analysisResults
                         ? `${analysisResults.resumeScore}%`
@@ -1389,7 +1665,7 @@ export default function StudioPage() {
                               key={index}
                               className="text-sm text-muted-foreground flex items-start gap-2"
                             >
-                              <span className="text-blue-600 mt-1">•</span>
+                              <span className="text-purple-600 mt-1">•</span>
                               {insight}
                             </li>
                           ))}
@@ -1406,10 +1682,14 @@ export default function StudioPage() {
             </Card>
 
             {/* Job Match Score */}
-            <Card>
+            <Card className={`relative transition-all duration-300 ${
+              showOutputHighlight && analysisResults 
+                ? getHighlightClass(true, outputHighlightFading)
+                : ""
+            }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Target className="h-5 w-5" />
+                  <Target className="h-5 w-5 text-purple-600" />
                   Job Match Score
                 </CardTitle>
               </CardHeader>
@@ -1419,7 +1699,7 @@ export default function StudioPage() {
                     <span className="text-sm font-medium">Match Score</span>
                     <Badge
                       variant="secondary"
-                      className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                      className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
                     >
                       {analysisResults
                         ? `${analysisResults.matchScore}%`
@@ -1440,10 +1720,14 @@ export default function StudioPage() {
             </Card>
 
             {/* Skill Gap Analysis */}
-            <Card className="overflow-hidden">
+            <Card className={`overflow-hidden relative transition-all duration-300 ${
+              showOutputHighlight && analysisResults 
+                ? getHighlightClass(true, outputHighlightFading)
+                : ""
+            }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <TrendingUp className="h-5 w-5" />
+                  <TrendingUp className="h-5 w-5 text-purple-600" />
                   Skill Gap Analysis
                 </CardTitle>
               </CardHeader>
@@ -1472,8 +1756,8 @@ export default function StudioPage() {
                                 <div
                                   className={`w-2 h-2 rounded-full ${
                                     isTechnical
-                                      ? "bg-blue-500"
-                                      : "bg-purple-500"
+                                      ? "bg-purple-500"
+                                      : "bg-pink-500"
                                   }`}
                                 ></div>
                                 <span className="text-sm font-medium flex-1">
@@ -1483,8 +1767,8 @@ export default function StudioPage() {
                                   variant="secondary"
                                   className={`text-xs ${
                                     isTechnical
-                                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                      : "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
                                   }`}
                                 >
                                   {isTechnical ? "Technical" : "Soft Skill"}
@@ -1496,11 +1780,11 @@ export default function StudioPage() {
                       </div>
                       <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground border-t">
                         <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                           <span>Technical Skills</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                          <div className="w-2 h-2 rounded-full bg-pink-500"></div>
                           <span>Soft Skills</span>
                         </div>
                       </div>
@@ -1519,7 +1803,11 @@ export default function StudioPage() {
 
           {/* Wish History */}
           <motion.div variants={itemVariants}>
-            <Card className="max-w-4xl mx-auto">
+            <Card className={`max-w-4xl mx-auto ${
+              showOutputHighlight && wishes.some(w => w.status === 'completed')
+                ? getHighlightClass(true, outputHighlightFading)
+                : ""
+            }`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -1537,12 +1825,12 @@ export default function StudioPage() {
                 {wishes.length > 0 && (
                   <div className="flex flex-col sm:flex-row gap-3 mt-4">
                     <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                       <Input
                         placeholder="Search wishes by title or description..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 border-input bg-background text-foreground placeholder:text-muted-foreground"
                       />
                     </div>
                     <div className="flex gap-2">
@@ -1701,7 +1989,7 @@ export default function StudioPage() {
                                 className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                                 title="Delete wish"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <X className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
@@ -1821,10 +2109,10 @@ export default function StudioPage() {
                             </div>
                           ))
                         : [
-                            "Add quantifiable metrics to your project descriptions (e.g., improved performance by 30%)",
-                            "Include relevant cloud technologies mentioned in the job posting",
-                            "List certifications or ongoing coursework in a dedicated section",
-                            "Use strong action verbs and concise bullet points for achievements",
+                            "The cosmic forces are still aligning your personalized insights ✨",
+                            "Your genie is crafting magical recommendations just for you 🔮",
+                            "The stars haven't revealed your perfect guidance yet - try again! 🌟",
+                            "Your wishes deserve divine attention - let me divine deeper insights! 💫",
                           ].map((mock, idx) => (
                             <div key={idx} className="flex items-start gap-3">
                               <span className="text-muted-foreground mt-1">

@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Date
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Date, Boolean, Float
+from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import uuid
@@ -15,9 +15,23 @@ class GenieWish(Base):
     # Wish details
     wish_type = Column(String(50), nullable=False)  # skills, ats, formatting, general
     request_text = Column(Text)
-    response_text = Column(Text)
+    response_text = Column(Text)  # Keep for backward compatibility
     
-    # Status tracking
+    # Detailed AI response fields
+    ai_response = Column(Text)  # The main AI response text
+    recommendations = Column(JSON)  # List of recommendations
+    action_items = Column(JSON)  # List of action items/skills
+    resources = Column(JSON)  # List of resources with title, url, description
+    confidence_score = Column(Float)  # AI confidence score
+    job_match_score = Column(Float)  # Job match score
+    
+    # Processing status
+    is_processed = Column(Boolean, default=False)
+    processing_status = Column(String(50), default="pending")
+    processing_error = Column(Text)
+    processed_at = Column(DateTime(timezone=True))
+    
+    # Status tracking (legacy - for backward compatibility)
     status = Column(String(50), default="pending")  # pending, processing, completed, failed
     error_message = Column(Text)
     

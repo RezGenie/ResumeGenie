@@ -77,7 +77,9 @@ class FileService:
             if not self.minio_client.bucket_exists(settings.minio_bucket_name):
                 self.minio_client.make_bucket(settings.minio_bucket_name)
                 logger.info(f"Created MinIO bucket: {settings.minio_bucket_name}")
-        except S3Error as e:
+        except Exception as e:
+            logger.warning(f"MinIO not available during startup: {e}")
+            # Continue startup without MinIO for development
             logger.error(f"MinIO bucket creation error: {e}")
     
     @staticmethod

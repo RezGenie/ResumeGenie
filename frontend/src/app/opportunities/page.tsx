@@ -11,7 +11,9 @@ import {
   Star,
   Target,
   ChevronDown,
-  Loader2
+  Loader2,
+  Eye,
+  ExternalLink
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,8 +28,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { Job, jobService } from "@/lib/api";
+import { JobDisplay, JobStats, jobService } from "@/lib/api";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { JobSwipeDeck } from "@/components/jobs/JobSwipeDeck";
+import { JobDetailsModal } from "@/components/jobs/JobDetailsModal";
+import { savedJobsService } from "@/lib/api/savedJobs";
+import { Logo } from "@/components/ui/logo"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -57,9 +63,15 @@ export default function JobDiscoveryPage() {
   const [locationFilter, setLocationFilter] = useState("all");
   const [salaryFilter, setSalaryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("match");
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<JobDisplay[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Mobile swipe state
+  const [selectedJob, setSelectedJob] = useState<JobDisplay | null>(null);
+  const [isJobModalOpen, setIsJobModalOpen] = useState(false);
 
   // Fetch jobs on component mount and when filters change
   useEffect(() => {
@@ -75,10 +87,15 @@ export default function JobDiscoveryPage() {
           salary: salaryFilter === "all" ? "" : salaryFilter,
         };
 
-        const response = await jobService.getJobs(filters, 1, 50);
+        const response = await jobService.getJobs(filters, 0, 50);
         
         if (response.success) {
-          setJobs(response.data);
+          // Mark jobs as saved if they exist in saved jobs
+          const jobsWithSavedStatus = response.data.map(job => ({
+            ...job,
+            saved: savedJobsService.isJobSaved(job.id)
+          }));
+          setJobs(jobsWithSavedStatus);
         } else {
           setError(response.message || "Failed to fetch jobs");
         }
@@ -91,7 +108,20 @@ export default function JobDiscoveryPage() {
       }
     };
 
+    // Also fetch job stats
+    const fetchJobStats = async () => {
+      try {
+        const statsResponse = await jobService.getJobStats();
+        if (statsResponse.success) {
+          setJobStats(statsResponse.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch job stats:', err);
+      }
+    };
+
     fetchJobs();
+    fetchJobStats();
   }, [searchTerm, locationFilter, salaryFilter]);
 
   // Filter and sort jobs based on search criteria
@@ -99,24 +129,24 @@ export default function JobDiscoveryPage() {
     .filter(job => {
       const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (job.skills || []).some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+                           (job.skills || []).some((skill: string) => skill.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesLocation = locationFilter === "all" || 
-                             (locationFilter === "remote" && job.location.toLowerCase().includes("remote")) ||
+                             (locationFilter === "remote" && (job.remote || job.location.toLowerCase().includes("remote"))) ||
                              (locationFilter === "hybrid" && job.location.toLowerCase().includes("hybrid")) ||
-                             (locationFilter === "onsite" && !job.location.toLowerCase().includes("remote") && !job.location.toLowerCase().includes("hybrid"));
+                             (locationFilter === "onsite" && !job.remote && !job.location.toLowerCase().includes("remote") && !job.location.toLowerCase().includes("hybrid"));
 
       return matchesSearch && matchesLocation;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case "match":
-          return b.matchScore - a.matchScore;
+          return (b.matchScore || 0) - (a.matchScore || 0);
         case "salary":
-          // Simple salary comparison (would need more sophisticated parsing in real app)
-          return b.salary.localeCompare(a.salary);
+          // Simple salary comparison using salaryText
+          return (b.salaryText || '').localeCompare(a.salaryText || '');
         case "recent":
-          return a.postedDate.localeCompare(b.postedDate);
+          return new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime();
         default:
           return 0;
       }
@@ -125,10 +155,31 @@ export default function JobDiscoveryPage() {
   // Handle job save/unsave
   const handleToggleSaveJob = async (jobId: string) => {
     try {
-      await jobService.toggleSaveJob(jobId);
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return;
+
+      const isCurrentlySaved = savedJobsService.isJobSaved(jobId);
+      
+      if (isCurrentlySaved) {
+        // Remove from saved jobs
+        savedJobsService.removeSavedJob(jobId);
+      } else {
+        // Add to saved jobs
+        savedJobsService.saveJob({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          salary: job.salaryText,
+          description: job.snippet,
+          skills: job.skills || [],
+          jobUrl: job.redirect_url
+        });
+      }
+      
       // Update local state
-      setJobs(prev => prev.map(job => 
-        job.id === jobId ? { ...job, saved: !job.saved } : job
+      setJobs(prev => prev.map(j => 
+        j.id === jobId ? { ...j, saved: !isCurrentlySaved } : j
       ));
     } catch (err) {
       console.error('Failed to toggle job save status:', err);
@@ -143,7 +194,9 @@ export default function JobDiscoveryPage() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex flex-col items-center space-y-4">
               <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-              <p className="text-muted-foreground">Finding the best opportunities for you...</p>
+              <div className="text-center space-y-2">
+                <p className="text-muted-foreground">Loading your opportunities...</p>
+              </div>
             </div>
           </div>
         </main>
@@ -159,17 +212,31 @@ export default function JobDiscoveryPage() {
         <main className="container mx-auto px-4 py-8 max-w-6xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center space-y-4">
-              <div className="text-6xl">⚠️</div>
-              <h2 className="text-xl font-semibold">Unable to Load Jobs</h2>
+              <div className="text-6xl">🧞‍♂️💨</div>
+              <h2 className="text-xl font-semibold">Oops! The genie&apos;s lamp seems to be offline</h2>
               <p className="text-muted-foreground max-w-md">
-                {error}
+                {error.includes('fetch') || error.includes('network') 
+                  ? "Our job genie is having trouble connecting to the job realm. Please check your internet connection and try again!"
+                  : error.includes('authentication') || error.includes('credentials')
+                  ? "The genie needs to verify your identity first. Please sign in and try again!"
+                  : `The genie encountered an unexpected challenge: ${error}`
+                }
               </p>
-              <Button 
-                onClick={() => window.location.reload()} 
-                className="whitespace-nowrap"
-              >
-                Try Again
-              </Button>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  className="whitespace-nowrap"
+                >
+                  ✨ Rub the Lamp Again
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setError(null)}
+                  className="whitespace-nowrap"
+                >
+                  Try Different Magic
+                </Button>
+              </div>
             </div>
           </div>
         </main>
@@ -199,29 +266,6 @@ export default function JobDiscoveryPage() {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Find jobs that match your skills and experience. See compatibility scores and get personalized recommendations.
             </p>
-          </motion.div>
-
-          {/* Under Development Notice */}
-          <motion.div variants={itemVariants} className="max-w-4xl mx-auto">
-            <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-amber-600">
-                    Job Discovery Under Development
-                  </h3>
-                  <div className="mt-2 text-sm text-amber-600">
-                    <p>
-                      We&apos;re currently building job scraping and real-time job data integration. The jobs shown below are demo data to showcase the interface and functionality.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </motion.div>
 
           {/* Search and Filters */}
@@ -323,8 +367,48 @@ export default function JobDiscoveryPage() {
               </DropdownMenu>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredJobs.map((job) => (
+            {filteredJobs.length === 0 ? (
+              <div className="text-center py-16 space-y-6">
+                <div className="text-8xl">🧞‍♂️</div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-semibold">No matching opportunities found</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    The genie searched far and wide but couldn&apos;t find jobs matching your current filters. 
+                    Try adjusting your search criteria or clearing some filters!
+                  </p>
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setLocationFilter("all");
+                      setSalaryFilter("all");
+                    }}
+                  >
+                    🧹 Clear All Filters
+                  </Button>
+                  <Button onClick={() => setSearchTerm("")}>
+                    🔍 Try Different Keywords
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Mobile: Swipe Deck */}
+                <div className="block lg:hidden">
+                  <div className="h-[600px] bg-background rounded-lg">
+                    <JobSwipeDeck onJobDetailsAction={(job) => {
+                      setSelectedJob(job);
+                      setIsJobModalOpen(true);
+                    }} />
+                  </div>
+                </div>
+                
+                {/* Desktop: Grid View */}
+                <div className="hidden lg:block">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {filteredJobs.map((job) => (
                 <motion.div
                   key={job.id}
                   variants={itemVariants}
@@ -349,14 +433,14 @@ export default function JobDiscoveryPage() {
                             </div>
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-4 w-4" />
-                              {job.salary}
+                              {job.salaryText || 'Salary not specified'}
                             </div>
                           </div>
                         </div>
                         <div className="text-right space-y-2">
                           <div className="flex items-center gap-1">
                             <Target className="h-4 w-4 text-purple-600" />
-                            <span className="font-bold text-purple-600">{job.matchScore}%</span>
+                            <span className="font-bold text-purple-600">{job.matchScore || 0}%</span>
                           </div>
                           <Badge variant="outline" className="text-xs">
                             {job.type}
@@ -366,7 +450,7 @@ export default function JobDiscoveryPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <p className="text-sm text-muted-foreground line-clamp-2">
-                        {job.description}
+                        {job.snippet || 'No description available'}
                       </p>
                       
                       <div className="space-y-2">
@@ -375,7 +459,7 @@ export default function JobDiscoveryPage() {
                           <span className="text-sm font-medium">Required Skills</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {(job.skills || []).slice(0, 4).map((skill, skillIndex) => (
+                          {(job.skills || []).slice(0, 4).map((skill: string, skillIndex: number) => (
                             <Badge key={skillIndex} variant="secondary" className="text-xs">
                               {skill}
                             </Badge>
@@ -391,46 +475,75 @@ export default function JobDiscoveryPage() {
                       <div className="flex items-center justify-between pt-4 border-t">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-4 w-4" />
-                          {job.postedDate}
+                          {new Date(job.posted_at).toLocaleDateString()}
                         </div>
                         <div className="flex items-center gap-2">
                           <Button 
                             size="sm" 
                             variant="outline"
                             onClick={() => handleToggleSaveJob(job.id)}
-                            className={job.saved ? "bg-purple-50 border-purple-200 text-purple-700" : ""}
+                            className={job.saved 
+                              ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300" 
+                              : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"}
                           >
                             {job.saved ? "Saved" : "Save"}
                           </Button>
-                          <Button size="sm" className="whitespace-nowrap">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedJob(job);
+                              setIsJobModalOpen(true);
+                            }}
+                            className="gap-1 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"
+                          >
+                            <Eye className="w-4 h-4" />
                             View Details
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="whitespace-nowrap gap-1"
+                            onClick={() => window.open(job.redirect_url, '_blank')}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Apply Now
                           </Button>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
-              ))}
-            </div>
-
-            {filteredJobs.length === 0 && (
-              <motion.div
-                variants={itemVariants}
-                className="text-center py-12"
-              >
-                <div className="max-w-md mx-auto space-y-4">
-                  <div className="text-6xl">🔍</div>
-                  <h3 className="text-xl font-semibold">No jobs found</h3>
-                  <p className="text-muted-foreground">
-                    Try adjusting your search criteria or filters to find more opportunities.
-                  </p>
+                ))}
+                  </div>
                 </div>
-              </motion.div>
+              </>
             )}
           </motion.div>
         </motion.div>
       </main>
       <Footer />
+      
+      {/* Job Details Modal for Mobile */}
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={isJobModalOpen}
+        onCloseAction={() => {
+          setIsJobModalOpen(false);
+          setSelectedJob(null);
+        }}
+        onLikeAction={(jobId) => {
+          // TODO: Implement like functionality
+          console.log('Liked job:', jobId);
+          setIsJobModalOpen(false);
+          setSelectedJob(null);
+        }}
+        onPassAction={(jobId) => {
+          // TODO: Implement pass functionality
+          console.log('Passed job:', jobId);
+          setIsJobModalOpen(false);
+          setSelectedJob(null);
+        }}
+      />
     </div>
     </ProtectedRoute>
   );

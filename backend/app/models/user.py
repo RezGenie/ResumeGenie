@@ -24,6 +24,11 @@ class User(Base):
     job_comparisons = relationship("JobComparison", back_populates="user", cascade="all, delete-orphan")
     genie_wishes = relationship("GenieWish", back_populates="user", cascade="all, delete-orphan")
     daily_wish_counts = relationship("DailyWishCount", back_populates="user", cascade="all, delete-orphan")
+    
+    # New job-related relationships
+    preferences = relationship("UserPreferences", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    job_swipes = relationship("JobSwipe", back_populates="user", cascade="all, delete-orphan")
+    saved_jobs = relationship("SavedJob", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(email={self.email}, active={self.is_active})>"

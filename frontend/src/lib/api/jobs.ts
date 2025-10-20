@@ -1,267 +1,266 @@
-// Job API Service
-// 
-// NOTE: The backend currently has job comparison endpoints (/api/v1/jobs/) for analyzing 
-// resumes against job postings, but not job listing endpoints for browsing opportunities.
-// This service provides mock data as fallback until job listing APIs are implemented.
+// Job Discovery API Service
+// Uses the new job discovery endpoints: /api/v1/jobs/discovery, /api/v1/jobs/discovery/stats, /api/v1/jobs/discovery/search
 
 import { apiClient } from './client';
-import { Job, JobFilters, PaginatedResponse, APIResponse } from './types';
+import { Job, JobDisplay, JobStats, JobFilters, APIResponse } from './types';
+import { userPreferencesService } from './userPreferences';
 
 export class JobService {
   /**
-   * Fetch jobs with optional filters and pagination
+   * Fetch jobs feed with optional filters and pagination
    */
   async getJobs(
     filters: Partial<JobFilters> = {},
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResponse<Job>> {
+    skip: number = 0,
+    limit: number = 20
+  ): Promise<APIResponse<JobDisplay[]>> {
     try {
       const params = new URLSearchParams({
-        page: page.toString(),
+        skip: skip.toString(),
         limit: limit.toString(),
-        ...Object.entries(filters).reduce((acc, [key, value]) => {
-          if (value) acc[key] = value;
-          return acc;
-        }, {} as Record<string, string>)
       });
 
-      const response = await apiClient.get<PaginatedResponse<Job>>(`/jobs?${params}`);
+      // Add location filter if provided
+      if (filters.location && filters.location !== 'all') {
+        if (filters.location === 'remote') {
+          params.append('remote_only', 'true');
+        } else if (filters.location !== 'all') {
+          params.append('location', filters.location);
+        }
+      }
+
+      let endpoint = '/jobs/discovery';
       
-      // Check if response has the expected paginated format
-      if (!response || !response.data || 
-          (Array.isArray(response) && response.length === 0) ||
-          (Array.isArray(response.data) && response.data.length === 0)) {
-        console.log('Jobs API: Backend returned empty or invalid data format, using mock data');
-        return this.getMockJobs(filters, page, limit);
+      // Use search endpoint if search term provided
+      if (filters.search && filters.search.trim()) {
+        endpoint = '/jobs/discovery/search';
+        params.append('q', filters.search.trim());
+      }
+
+      const jobs = await apiClient.get<Job[]>(`${endpoint}?${params}`);
+      
+      // Transform to JobDisplay format for UI
+      let jobsDisplay: JobDisplay[] = jobs.map(this.transformJobToDisplay);
+      
+      // Apply smart filtering based on user preferences
+      if (userPreferencesService.hasCompletedProfile()) {
+        console.log('Applying smart job filtering...');
+        const originalCount = jobsDisplay.length;
+        
+        // Filter jobs based on user preferences
+        jobsDisplay = userPreferencesService.filterJobs(jobsDisplay);
+        
+        // Sort by preference match score (highest first)
+        jobsDisplay = jobsDisplay.sort((a, b) => {
+          const scoreA = userPreferencesService.scoreJob(a);
+          const scoreB = userPreferencesService.scoreJob(b);
+          return scoreB - scoreA;
+        });
+        
+        // Update match scores based on preferences
+        jobsDisplay = jobsDisplay.map(job => ({
+          ...job,
+          matchScore: Math.round(userPreferencesService.scoreJob(job))
+        }));
+        
+        console.log(`Smart filtering: ${originalCount} → ${jobsDisplay.length} jobs (${originalCount - jobsDisplay.length} filtered out)`);
+      } else {
+        console.log('Profile incomplete, showing all jobs without filtering');
       }
       
-      return response;
+      return {
+        success: true,
+        data: jobsDisplay,
+        message: userPreferencesService.hasCompletedProfile() 
+          ? `Found ${jobsDisplay.length} personalized job matches`
+          : `Found ${jobsDisplay.length} jobs`
+      };
     } catch (error) {
-      console.log('Jobs API: Backend request failed, using mock data:', error);
-      return this.getMockJobs(filters, page, limit);
+      console.error('Jobs API: Failed to fetch jobs:', error);
+      return {
+        success: false,
+        data: [],
+        message: error instanceof Error ? error.message : 'Failed to fetch jobs'
+      };
     }
   }
 
   /**
-   * Generate mock job data for development/fallback
+   * Get job statistics
    */
-  private getMockJobs(
-    filters: Partial<JobFilters> = {},
-    page: number = 1,
-    limit: number = 10
-  ): PaginatedResponse<Job> {
-    const mockJobs: Job[] = [
-      {
-        id: '1',
-        title: 'Senior Software Engineer',
-        company: 'TechCorp',
-        location: 'San Francisco, CA',
-        type: 'Full-time',
-        salary: '$120,000 - $160,000',
-        experience: '5+ years',
-        postedDate: '2025-10-05',
-        matchScore: 85,
-        skills: ['React', 'Node.js', 'TypeScript', 'AWS', 'MongoDB'],
-        description: 'Join our team as a Senior Software Engineer and help build the next generation of applications. You will work with cutting-edge technologies and collaborate with a talented team.',
-        requirements: ['5+ years experience', 'React', 'Node.js', 'TypeScript', 'AWS'],
-        saved: false
-      },
-      {
-        id: '2',
-        title: 'Frontend Developer',
-        company: 'StartupXYZ',
-        location: 'Remote',
-        type: 'Full-time',
-        salary: '$80,000 - $110,000',
-        experience: '3+ years',
-        postedDate: '2025-10-04',
-        matchScore: 72,
-        skills: ['React', 'TypeScript', 'CSS', 'JavaScript', 'Figma'],
-        description: 'We are looking for a talented Frontend Developer to join our growing team. You will be responsible for creating beautiful and intuitive user interfaces.',
-        requirements: ['3+ years experience', 'React', 'TypeScript', 'CSS/SCSS'],
-        saved: false
-      },
-      {
-        id: '3',
-        title: 'Full Stack Developer',
-        company: 'InnovateTech',
-        location: 'New York, NY',
-        type: 'Full-time',
-        salary: '$90,000 - $130,000',
-        experience: '4+ years',
-        postedDate: '2025-10-03',
-        matchScore: 78,
-        skills: ['React', 'Python', 'PostgreSQL', 'Docker', 'FastAPI'],
-        description: 'Join our innovative team as a Full Stack Developer. Work on both frontend and backend technologies to deliver amazing user experiences.',
-        requirements: ['4+ years experience', 'React', 'Python', 'PostgreSQL', 'Docker'],
-        saved: false
-      },
-      {
-        id: '4',
-        title: 'DevOps Engineer',
-        company: 'CloudFirst',
-        location: 'Austin, TX',
-        type: 'Full-time',
-        salary: '$100,000 - $140,000',
-        experience: '3+ years',
-        postedDate: '2025-10-02',
-        matchScore: 65,
-        skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'Jenkins'],
-        description: 'Help us build and maintain scalable cloud infrastructure. You will work with modern DevOps tools and practices.',
-        requirements: ['3+ years experience', 'AWS', 'Docker', 'Kubernetes', 'Terraform'],
-        saved: false
-      },
-      {
-        id: '5',
-        title: 'Product Manager',
-        company: 'GrowthCo',
-        location: 'Seattle, WA',
-        type: 'Full-time',
-        salary: '$110,000 - $150,000',
-        experience: '5+ years',
-        postedDate: '2025-10-01',
-        matchScore: 60,
-        skills: ['Product Strategy', 'Agile', 'Analytics', 'Leadership', 'Roadmapping'],
-        description: 'Lead product development and strategy for our core platforms. Work closely with engineering and design teams.',
-        requirements: ['5+ years experience', 'Product Management', 'Agile', 'Data Analysis'],
-        saved: false
-      }
-    ];
-
-    // Apply basic filtering
-    let filteredJobs = mockJobs;
-    
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      filteredJobs = filteredJobs.filter(job => 
-        job.title.toLowerCase().includes(searchTerm) ||
-        job.company.toLowerCase().includes(searchTerm) ||
-        job.description.toLowerCase().includes(searchTerm)
-      );
+  async getJobStats(): Promise<APIResponse<JobStats>> {
+    try {
+      const stats = await apiClient.get<JobStats>('/jobs/discovery/stats');
+      return {
+        success: true,
+        data: stats,
+        message: 'Job statistics retrieved successfully'
+      };
+    } catch (error) {
+      console.error('Jobs API: Failed to fetch job statistics:', error);
+      return {
+        success: false,
+        data: {
+          total_jobs: 0,
+          jobs_with_embeddings: 0,
+          jobs_by_provider: {},
+          recent_jobs_count: 0
+        },
+        message: error instanceof Error ? error.message : 'Failed to fetch job statistics'
+      };
     }
-    
-    if (filters.location && filters.location !== 'all') {
-      filteredJobs = filteredJobs.filter(job => 
-        job.location.toLowerCase().includes(filters.location!.toLowerCase())
-      );
-    }
+  }
 
-    // Simple pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedJobs = filteredJobs.slice(startIndex, endIndex);
-
+  /**
+   * Transform backend Job to frontend JobDisplay
+   */
+  private transformJobToDisplay(job: Job): JobDisplay {
     return {
-      success: true,
-      data: paginatedJobs,
-      pagination: {
-        page,
-        limit,
-        total: filteredJobs.length,
-        totalPages: Math.ceil(filteredJobs.length / limit)
-      },
-      message: 'Jobs fetched successfully (mock data)'
+      ...job,
+      salaryText: JobService.formatSalary(job.salary_min, job.salary_max, job.currency),
+      skills: job.tags || [],
+      type: job.remote ? 'Remote' : 'Full-time',
+      saved: false, // Will be updated based on user's saved jobs
     };
   }
 
   /**
-   * Get a specific job by ID
+   * Format salary information
    */
-  async getJobById(id: string): Promise<APIResponse<Job>> {
+  private static formatSalary(min?: number, max?: number, currency = 'USD'): string {
+    if (!min && !max) return 'Salary not specified';
+    
+    const symbol = currency === 'USD' ? '$' : currency;
+    
+    if (min && max) {
+      return `${symbol}${min.toLocaleString()} - ${symbol}${max.toLocaleString()}`;
+    } else if (min) {
+      return `${symbol}${min.toLocaleString()}+`;
+    } else if (max) {
+      return `Up to ${symbol}${max.toLocaleString()}`;
+    }
+    
+    return 'Salary not specified';
+  }
+
+  /**
+   * Get a specific job by ID (for future implementation)
+   */
+  async getJobById(id: string): Promise<APIResponse<JobDisplay>> {
     try {
-      return await apiClient.get<APIResponse<Job>>(`/jobs/${id}`);
-    } catch (error) {
-      console.log('Jobs API: Failed to get job by ID, using mock data:', error);
-      // Return mock job data
-      const mockJob: Job = {
-        id,
-        title: 'Software Engineer',
-        company: 'TechCorp',
-        location: 'San Francisco, CA',
-        type: 'Full-time',
-        salary: '$100,000 - $140,000',
-        experience: '3+ years',
-        postedDate: '2025-10-05',
-        matchScore: 75,
-        skills: ['React', 'Node.js', 'TypeScript', 'JavaScript', 'Git'],
-        description: 'Join our team as a Software Engineer and work on exciting projects.',
-        requirements: ['3+ years experience', 'React', 'Node.js'],
-        saved: false
-      };
+      // This endpoint doesn't exist yet in the backend, but we can return from the feed
+      const jobsResponse = await this.getJobs({}, 0, 100);
+      if (jobsResponse.success) {
+        const job = jobsResponse.data.find(j => j.id === id);
+        if (job) {
+          return {
+            success: true,
+            data: job,
+            message: 'Job found successfully'
+          };
+        }
+      }
+      
       return {
-        success: true,
-        data: mockJob,
-        message: 'Job fetched successfully (mock data)'
+        success: false,
+        data: {} as JobDisplay,
+        message: 'Job not found'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: {} as JobDisplay,
+        message: error instanceof Error ? error.message : 'Failed to get job'
       };
     }
   }
 
   /**
-   * Get recommended jobs for the current user
+   * Get recommended jobs for the current user (future endpoint)
    */
-  async getRecommendedJobs(limit: number = 5): Promise<APIResponse<Job[]>> {
+  async getRecommendedJobs(limit: number = 5): Promise<APIResponse<JobDisplay[]>> {
     try {
-      return await apiClient.get<APIResponse<Job[]>>(`/jobs/recommended?limit=${limit}`);
+      // Use the existing discovery feed for now
+      const response = await this.getJobs({}, 0, limit);
+      return response;
     } catch (error) {
-      console.log('Jobs API: Failed to get recommended jobs, using mock data:', error);
-      // Return subset of mock jobs as recommendations
-      const mockJobs = this.getMockJobs({}, 1, limit);
       return {
-        success: true,
-        data: mockJobs.data,
-        message: 'Recommended jobs fetched successfully (mock data)'
+        success: false,
+        data: [],
+        message: error instanceof Error ? error.message : 'Failed to get recommended jobs'
       };
     }
   }
 
   /**
-   * Save/unsave a job
+   * Save/unsave a job (future implementation)
    */
   async toggleSaveJob(jobId: string): Promise<APIResponse<{ saved: boolean }>> {
     try {
-      return await apiClient.post<APIResponse<{ saved: boolean }>>(`/jobs/${jobId}/save`);
-    } catch (error) {
-      console.log('Jobs API: Failed to toggle save job, using mock response:', error);
-      // Mock successful save/unsave
+      // TODO: Implement actual save/unsave when backend endpoint is ready
+      console.log(`Toggle save for job ${jobId}`);
       return {
         success: true,
-        data: { saved: Math.random() > 0.5 }, // Random saved state for demo
-        message: 'Job save status updated successfully (mock data)'
+        data: { saved: Math.random() > 0.5 },
+        message: 'Job save status updated (placeholder)'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: { saved: false },
+        message: error instanceof Error ? error.message : 'Failed to save job'
       };
     }
   }
 
   /**
-   * Get saved jobs
+   * Get saved jobs (future implementation)
    */
-  async getSavedJobs(): Promise<APIResponse<Job[]>> {
-    return apiClient.get<APIResponse<Job[]>>('/jobs/saved');
+  async getSavedJobs(): Promise<APIResponse<JobDisplay[]>> {
+    try {
+      // TODO: Implement when /api/v1/me/saved-jobs is ready
+      return {
+        success: true,
+        data: [],
+        message: 'Saved jobs endpoint not implemented yet'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: [],
+        message: error instanceof Error ? error.message : 'Failed to get saved jobs'
+      };
+    }
   }
 
   /**
-   * Apply to a job
+   * Apply to a job (opens external link)
    */
-  async applyToJob(jobId: string, applicationData: {
-    coverLetter?: string;
-    customResume?: boolean;
-  }): Promise<APIResponse<{ applicationId: string }>> {
-    return apiClient.post<APIResponse<{ applicationId: string }>>(
-      `/jobs/${jobId}/apply`,
-      applicationData
-    );
-  }
-
-  /**
-   * Search jobs by query
-   */
-  async searchJobs(
-    query: string,
-    filters: Partial<JobFilters> = {},
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResponse<Job>> {
-    return this.getJobs({ ...filters, search: query }, page, limit);
+  async applyToJob(jobId: string): Promise<APIResponse<{ applied: boolean }>> {
+    try {
+      const jobResponse = await this.getJobById(jobId);
+      if (jobResponse.success && jobResponse.data.redirect_url) {
+        // Open the job application in a new window
+        window.open(jobResponse.data.redirect_url, '_blank');
+        return {
+          success: true,
+          data: { applied: true },
+          message: 'Redirected to job application'
+        };
+      }
+      
+      return {
+        success: false,
+        data: { applied: false },
+        message: 'Job application URL not available'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: { applied: false },
+        message: error instanceof Error ? error.message : 'Failed to apply to job'
+      };
+    }
   }
 }
 

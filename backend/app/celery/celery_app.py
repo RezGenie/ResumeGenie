@@ -20,7 +20,8 @@ celery_app = Celery(
     include=[
         "app.celery.tasks.resume_processing",
         "app.celery.tasks.embedding_tasks", 
-        "app.celery.tasks.recommendation_tasks"
+        "app.celery.tasks.recommendation_tasks",
+        "app.celery.tasks.job_ingestion"
     ]
 )
 

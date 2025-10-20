@@ -1,0 +1,552 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Search, 
+  Filter, 
+  MapPin, 
+  DollarSign, 
+  Calendar, 
+  Building, 
+  ExternalLink, 
+  Edit3, 
+  Trash2, 
+  Archive, 
+  CheckCircle, 
+  Bookmark,
+  Download,
+  Plus
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { savedJobsService, SavedJob, SavedJobsFilters } from '@/lib/api/savedJobs';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100
+    }
+  }
+} as const;
+
+export default function MyJobsPage() {
+  const [jobs, setJobs] = useState<SavedJob[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<SavedJob[]>([]);
+  const [filters, setFilters] = useState<SavedJobsFilters>({ status: 'all' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedJob, setSelectedJob] = useState<SavedJob | null>(null);
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [notesText, setNotesText] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [stats, setStats] = useState({ total: 0, saved: 0, applied: 0, archived: 0 });
+
+  // Load jobs on component mount
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  // Apply filters when jobs or filters change
+  useEffect(() => {
+    const filtered = savedJobsService.getFilteredJobs({ ...filters, search: searchTerm });
+    setFilteredJobs(filtered);
+  }, [jobs, filters, searchTerm]);
+
+  const loadJobs = () => {
+    const savedJobs = savedJobsService.getSavedJobs();
+    const jobStats = savedJobsService.getJobsStats();
+    setJobs(savedJobs);
+    setStats(jobStats);
+  };
+
+  const handleStatusChange = (jobId: string, status: SavedJob['status']) => {
+    if (savedJobsService.updateJobStatus(jobId, status)) {
+      loadJobs();
+    }
+  };
+
+  const handleRemoveJob = (jobId: string) => {
+    if (savedJobsService.removeSavedJob(jobId)) {
+      loadJobs();
+      if (selectedJob?.id === jobId) {
+        setSelectedJob(null);
+      }
+    }
+  };
+
+  const handleUpdateNotes = (jobId: string, notes: string) => {
+    if (savedJobsService.updateJobNotes(jobId, notes)) {
+      loadJobs();
+      setEditingNotes(null);
+      
+      // Update selected job if it's the one being edited
+      if (selectedJob?.id === jobId) {
+        setSelectedJob({ ...selectedJob, notes });
+      }
+    }
+  };
+
+  const handleExportJobs = () => {
+    const jobsData = savedJobsService.exportJobs();
+    const blob = new Blob([jobsData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `my-jobs-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const getStatusColor = (status: SavedJob['status']) => {
+    switch (status) {
+      case 'saved': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'applied': return 'bg-green-100 text-green-800 border-green-200';
+      case 'archived': return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusIcon = (status: SavedJob['status']) => {
+    switch (status) {
+      case 'saved': return <Bookmark className="w-4 h-4" />;
+      case 'applied': return <CheckCircle className="w-4 h-4" />;
+      case 'archived': return <Archive className="w-4 h-4" />;
+      default: return <Bookmark className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header />
+      <div className="p-6">
+        <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-7xl mx-auto"
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="mb-8">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                My Jobs
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage your saved job opportunities
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={handleExportJobs}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+              </Button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.total}</div>
+                <div className="text-sm text-gray-600">Total Jobs</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.saved}</div>
+                <div className="text-sm text-gray-600">Saved</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.applied}</div>
+                <div className="text-sm text-gray-600">Applied</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.archived}</div>
+                <div className="text-sm text-gray-600">Archived</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search jobs, companies, or skills..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select
+                value={filters.status || 'all'}
+                onValueChange={(value: string) => 
+                  setFilters({ ...filters, status: value === 'all' ? undefined : value as SavedJob['status'] })
+                }
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="saved">Saved</SelectItem>
+                  <SelectItem value="applied">Applied</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Advanced Filters */}
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg border"
+                >
+                  <Input
+                    placeholder="Location..."
+                    value={filters.location || ''}
+                    onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Min Salary"
+                    type="number"
+                    value={filters.salary?.min || ''}
+                    onChange={(e) => setFilters({ 
+                      ...filters, 
+                      salary: { ...filters.salary, min: e.target.value ? parseInt(e.target.value) : undefined }
+                    })}
+                  />
+                  <Input
+                    placeholder="Max Salary"
+                    type="number"
+                    value={filters.salary?.max || ''}
+                    onChange={(e) => setFilters({ 
+                      ...filters, 
+                      salary: { ...filters.salary, max: e.target.value ? parseInt(e.target.value) : undefined }
+                    })}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* Jobs List */}
+        <motion.div variants={itemVariants}>
+          {filteredJobs.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <Bookmark className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  No saved jobs yet
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Start saving jobs from the job discovery page to track your applications
+                </p>
+                <Button onClick={() => window.location.href = '/opportunities'}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Discover Jobs
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              <AnimatePresence>
+                {filteredJobs.map((job, index) => (
+                  <motion.div
+                    key={job.id}
+                    variants={itemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1" onClick={() => setSelectedJob(job)}>
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="text-xl font-semibold text-gray-900 dark:text-white hover:text-purple-600 transition-colors">
+                                {job.title}
+                              </h3>
+                              <Badge className={getStatusColor(job.status)}>
+                                {getStatusIcon(job.status)}
+                                <span className="ml-1 capitalize">{job.status}</span>
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                              <div className="flex items-center gap-1">
+                                <Building className="w-4 h-4" />
+                                {job.company}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                {job.location}
+                              </div>
+                              {job.salary && (
+                                <div className="flex items-center gap-1">
+                                  <DollarSign className="w-4 h-4" />
+                                  {job.salary}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                {new Date(job.savedAt).toLocaleDateString()}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {job.skills.slice(0, 4).map((skill, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {job.skills.length > 4 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{job.skills.length - 4} more
+                                </Badge>
+                              )}
+                            </div>
+
+                            {job.notes && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                                {job.notes}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2 ml-4">
+                            <Select
+                              value={job.status}
+                              onValueChange={(value: string) => handleStatusChange(job.id, value as SavedJob['status'])}
+                            >
+                              <SelectTrigger className="w-32 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="saved">Saved</SelectItem>
+                                <SelectItem value="applied">Applied</SelectItem>
+                                <SelectItem value="archived">Archived</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingNotes(job.id);
+                                setNotesText(job.notes || '');
+                              }}
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveJob(job.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+
+                            {job.jobUrl && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(job.jobUrl, '_blank')}
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Job Details Modal */}
+        <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            {selectedJob && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-2xl">{selectedJob.title}</DialogTitle>
+                  <DialogDescription className="text-lg">
+                    {selectedJob.company} • {selectedJob.location}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <Badge className={getStatusColor(selectedJob.status)}>
+                    {getStatusIcon(selectedJob.status)}
+                    <span className="ml-1 capitalize">{selectedJob.status}</span>
+                  </Badge>
+                  {selectedJob.salary && (
+                    <div className="text-lg font-semibold text-purple-600">
+                      {selectedJob.salary}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Skills Required</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedJob.skills.map((skill, idx) => (
+                      <Badge key={idx} variant="secondary">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Job Description</h4>
+                  <div className="prose dark:prose-invert max-w-none">
+                    <p className="whitespace-pre-wrap">{selectedJob.description}</p>
+                  </div>
+                </div>
+
+                {selectedJob.notes && (
+                  <div>
+                    <h4 className="font-semibold mb-2">My Notes</h4>
+                    <p className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                      {selectedJob.notes}
+                    </p>
+                  </div>
+                )}
+
+                <div className="text-sm text-gray-500">
+                  Saved on {new Date(selectedJob.savedAt).toLocaleDateString()} at{' '}
+                  {new Date(selectedJob.savedAt).toLocaleTimeString()}
+                </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingNotes(selectedJob.id);
+                      setNotesText(selectedJob.notes || '');
+                      setSelectedJob(null);
+                    }}
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit Notes
+                  </Button>
+                  {selectedJob.jobUrl && (
+                    <Button onClick={() => window.open(selectedJob.jobUrl, '_blank')}>
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View Original
+                    </Button>
+                  )}
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Notes Edit Modal */}
+        <Dialog open={!!editingNotes} onOpenChange={() => setEditingNotes(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Notes</DialogTitle>
+              <DialogDescription>
+                Add your thoughts, application status, or interview notes
+              </DialogDescription>
+            </DialogHeader>
+
+            <Textarea
+              placeholder="Add your notes here..."
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              rows={6}
+            />
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingNotes(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (editingNotes) {
+                    handleUpdateNotes(editingNotes, notesText);
+                  }
+                }}
+              >
+                Save Notes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </motion.div>
+      </div>
+      <Footer />
+    </div>
+  );
+}

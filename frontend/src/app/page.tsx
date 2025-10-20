@@ -91,7 +91,7 @@ export default function Home() {
                         asChild
                       >
                         <Link href="/guides">
-                          See what&apos;s new
+                          Show Me the Way
                         </Link>
                       </Button>
                     </motion.div>

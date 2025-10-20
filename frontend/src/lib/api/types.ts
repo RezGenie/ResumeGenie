@@ -1,20 +1,43 @@
 // API Types and Interfaces
 
+// Backend Job Discovery Response Type (matches JobDiscoveryResponse)
 export interface Job {
   id: string;
+  provider: string;
+  provider_job_id: string;
   title: string;
   company: string;
   location: string;
-  salary: string;
-  type: 'Full-time' | 'Part-time' | 'Contract' | 'Remote';
-  experience: string;
-  postedDate: string;
-  matchScore: number;
-  skills: string[];
-  description: string;
-  saved: boolean;
+  remote: boolean;
+  salary_min?: number;
+  salary_max?: number;
+  currency?: string;
+  snippet: string;
+  tags?: string[];
+  redirect_url: string;
+  posted_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Frontend-enriched Job type for UI display
+export interface JobDisplay extends Job {
+  saved?: boolean;
+  matchScore?: number;
+  salaryText?: string;
+  skills?: string[];
+  type?: 'Full-time' | 'Part-time' | 'Contract' | 'Remote';
+  experience?: string;
   requirements?: string[];
   benefits?: string[];
+}
+
+// Job Statistics Response Type (matches JobStatsResponse)
+export interface JobStats {
+  total_jobs: number;
+  jobs_with_embeddings: number;
+  jobs_by_provider: Record<string, number>;
+  recent_jobs_count: number;
 }
 
 export interface User {
