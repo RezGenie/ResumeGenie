@@ -2,6 +2,35 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.13.0] - 2025-10-20
+
+### CP-49 Revamp Job Discovery
+
+- **Swipeable job cards**
+  - Added draggable SwipeableJobCard with Framer Motion animations.
+  - Swipe right to apply, left to pass.
+  - Enhanced UI with job details and quick actions.
+
+- **Reusable dialog component**
+  - Built customizable Dialog with trigger, content, and footer.
+  - Supports open/close state and accessibility features.
+
+- **Select dropdown component**
+  - Added Select with context for state and value management.
+  - Includes SelectTrigger, SelectValue, and SelectItem.
+
+- **Local resume service**
+  - Manage resumes via LocalResumeService using localStorage.
+  - Supports upload, delete, update, and mock analysis.
+
+- **Saved jobs service**
+  - Created SavedJobsService for job saving, filtering, and stats.
+  - Supports job status updates and import/export data.
+
+- **User preferences service**
+  - Added UserPreferencesService for job filtering and scoring.
+  - Saves and retrieves user job preferences for better matches.
+
 ## [0.12.0] - 2025-10-14
 
 ### CP-50 Enhance Guest Experience

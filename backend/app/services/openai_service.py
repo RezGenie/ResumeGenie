@@ -49,6 +49,7 @@ class OpenAIService:
     
     def __init__(self):
         """Initialize OpenAI service."""
+        self.client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
         self.embedding_model = settings.openai_embedding_model
         self.chat_model = settings.openai_model
         self.max_retries = 3
@@ -143,8 +144,7 @@ class OpenAIService:
             try:
                 await self._rate_limit_check("embedding")
                 
-                response = await asyncio.to_thread(
-                    self.client.embeddings.create,
+                response = await self.client.embeddings.create(
                     model=self.embedding_model,
                     input=text
                 )
@@ -249,8 +249,7 @@ class OpenAIService:
             try:
                 await self._rate_limit_check("chat")
                 
-                response = await asyncio.to_thread(
-                    client.chat.completions.create,
+                response = await self.client.chat.completions.create(
                     model=self.chat_model,
                     messages=[
                         {"role": "system", "content": "You are an expert resume consultant and career advisor with deep knowledge of ATS systems, hiring practices, and resume optimization."},
@@ -321,7 +320,7 @@ class OpenAIService:
         for attempt in range(self.max_retries):
             try:
                 await self._rate_limit_check("chat")
-                response = await client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model=chosen_model,
                     messages=messages,
                     temperature=temperature,

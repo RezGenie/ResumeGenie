@@ -16,7 +16,7 @@ const plans = [
   {
     name: "Pro",
     price: "$12/mo",
-    features: ["15 wishes per day", "Advanced AI analysis", "Priority support", "Job match scoring"],
+    features: ["10 wishes per day", "Advanced AI analysis", "Priority support", "Job match scoring"],
     cta: "Upgrade to Pro",
     highlight: true
   },

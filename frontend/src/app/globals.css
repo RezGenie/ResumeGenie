@@ -185,3 +185,63 @@
   background: linear-gradient(135deg, #6A1B99 0%, #8A3FD1 100%);
   transition: background 0.3s ease;
 }
+
+/* Moving border animation for result cards */
+@keyframes border-pulse {
+  0%, 100% {
+    border-color: rgb(168 85 247 / 0.5); /* purple-500/50 */
+    box-shadow: 0 0 0 0 rgb(168 85 247 / 0.4);
+  }
+  50% {
+    border-color: rgb(168 85 247 / 0.8); /* purple-500/80 */
+    box-shadow: 0 0 0 4px rgb(168 85 247 / 0.1);
+  }
+}
+
+@keyframes border-fadeout {
+  0% {
+    border-color: rgb(168 85 247 / 0.5);
+    box-shadow: 0 0 0 4px rgb(168 85 247 / 0.1);
+  }
+  100% {
+    border-color: rgb(168 85 247 / 0.1);
+    box-shadow: 0 0 0 0 rgb(168 85 247 / 0);
+  }
+}
+
+@keyframes border-flow {
+  0% {
+    border-image-source: linear-gradient(0deg, #a855f7, #d946ef, #a855f7);
+  }
+  25% {
+    border-image-source: linear-gradient(90deg, #a855f7, #d946ef, #a855f7);
+  }
+  50% {
+    border-image-source: linear-gradient(180deg, #a855f7, #d946ef, #a855f7);
+  }
+  75% {
+    border-image-source: linear-gradient(270deg, #a855f7, #d946ef, #a855f7);
+  }
+  100% {
+    border-image-source: linear-gradient(360deg, #a855f7, #d946ef, #a855f7);
+  }
+}
+
+/* Smooth highlight animation class - consistent for all cards */
+.animate-pulse-border {
+  animation: border-pulse 2s ease-in-out infinite;
+  transition: all 0.3s ease-in-out;
+  border-width: 2px;
+}
+
+/* Smooth fade-out class for when highlighting ends */
+.animate-pulse-border-fadeout {
+  animation: border-fadeout 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  border-width: 2px;
+  transition: none; /* Let the animation handle the transition */
+}
+
+.animate-flow-border {
+  animation: border-flow 3s linear infinite;
+  border-image: linear-gradient(45deg, #a855f7, #d946ef, #a855f7) 1;
+}

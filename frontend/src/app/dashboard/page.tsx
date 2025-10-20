@@ -6,11 +6,10 @@ import { motion } from "framer-motion";
 import { 
   FileText, 
   Loader2,
-  Upload,
   Briefcase,
   Calendar,
   Eye,
-  Target,
+  Sparkles,
   TrendingUp,
   Clock,
   MapPin,
@@ -19,8 +18,7 @@ import {
   Settings,
   Bell,
   Search,
-  Bookmark,
-  Users
+  Bookmark
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,8 +28,11 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { DashboardUser, DashboardStats, Job } from "@/lib/api";
+import { DashboardUser, DashboardStats, JobDisplay } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { userPreferencesService } from '@/lib/api/userPreferences';
+import { savedJobsService } from '@/lib/api/savedJobs';
+import { localResumeService } from '@/lib/api/localResumes';
 
 // API response interfaces
 interface WishApiResponse {
@@ -116,9 +117,10 @@ export default function Dashboard() {
   const [dashboardUser, setDashboardUser] = useState<DashboardUser | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
-  const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
+  const [recommendedJobs, setRecommendedJobs] = useState<JobDisplay[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasTimedOut, setHasTimedOut] = useState(false);
+  const [savedJobsStats, setSavedJobsStats] = useState({ total: 0, saved: 0, applied: 0, archived: 0 });
+  const [resumeStats, setResumeStats] = useState({ total: 0, ready: 0, processing: 0, errors: 0, hasPrimary: false });
 
   console.log('Dashboard - Auth state:', { authUser, authLoading, isAuthenticated });
 
@@ -127,7 +129,6 @@ export default function Dashboard() {
     const timeout = setTimeout(() => {
       if (authLoading) {
         console.log('Auth loading timed out, redirecting to auth');
-        setHasTimedOut(true);
         router.replace('/auth');
       }
     }, 8000); // 8 second timeout
@@ -161,7 +162,7 @@ export default function Dashboard() {
       const { apiClient } = await import('@/lib/api/client');
       
       // Fetch all dashboard data in parallel
-      const [wishesData, resumesData, dailyUsageData, jobsData] = await Promise.allSettled([
+      const [wishesData, resumesData, , jobsData] = await Promise.allSettled([
         apiClient.get<WishApiResponse[]>('/genie/'),
         apiClient.get<ResumeApiResponse[]>('/resumes/'),
         apiClient.get<DailyUsageApiResponse>('/genie/usage/daily'),
@@ -171,11 +172,15 @@ export default function Dashboard() {
       // Process API responses
       const wishes: WishApiResponse[] = wishesData.status === 'fulfilled' ? wishesData.value : [];
       const resumes: ResumeApiResponse[] = resumesData.status === 'fulfilled' ? resumesData.value : [];
-      const usage: DailyUsageApiResponse = dailyUsageData.status === 'fulfilled' ? dailyUsageData.value : { wishes_used: 0, daily_limit: 3, remaining_wishes: 3 };
       const jobs: JobApiResponse[] = jobsData.status === 'fulfilled' ? jobsData.value : [];
-
-      // Calculate statistics
-      const completedWishes = wishes.filter((w) => w.status === 'completed');
+      
+      // Load saved jobs stats
+      const jobsStats = savedJobsService.getJobsStats();
+      setSavedJobsStats(jobsStats);
+      
+      // Load resume stats
+      const resumesStats = localResumeService.getResumeStats();
+      setResumeStats(resumesStats);
       const avgMatchScore = jobs.length > 0 
         ? jobs.reduce((acc: number, job) => acc + (job.match_score || 0), 0) / jobs.length 
         : 0;
@@ -230,20 +235,28 @@ export default function Dashboard() {
       setActivities(newActivities.slice(0, 5));
 
       // Set recommended jobs (could be enhanced with actual recommendations API)
-      const transformedJobs: Job[] = jobs.slice(0, 3).map((job) => ({
+      const transformedJobs: JobDisplay[] = jobs.slice(0, 3).map((job) => ({
+        // Base Job properties
         id: job.id,
+        provider: 'internal',
+        provider_job_id: job.id,
         title: job.job_title || 'Untitled Position',
         company: job.company_name || 'Unknown Company',
         location: job.location || 'Location TBD',
-        salary: '$50,000 - $80,000', // Default salary range since not in API response
-        type: 'Full-time', // Default type since not in API response
-        postedDate: new Date(job.created_at).toLocaleDateString(),
-        description: 'Job description not available',
-        requirements: [],
+        remote: false,
+        snippet: 'Job description not available',
+        redirect_url: '#',
+        posted_at: job.created_at,
+        created_at: job.created_at,
+        updated_at: job.created_at,
+        // JobDisplay extended properties
         matchScore: job.match_score || 0,
-        experience: 'Mid-level', // Default experience level since not in API response
-        skills: [], // Default empty skills array since not in API response
-        saved: false // Default saved state since not in API response
+        salaryText: '$50,000 - $80,000',
+        type: 'Full-time' as const,
+        experience: 'Mid-level',
+        skills: [],
+        requirements: [],
+        saved: false
       }));
       setRecommendedJobs(transformedJobs);
 
@@ -300,15 +313,21 @@ export default function Dashboard() {
         const displayName = authUser.email.split('@')[0].charAt(0).toUpperCase() + 
                            authUser.email.split('@')[0].slice(1);
         
+        // Get real profile completeness from user preferences
+        const profileCompleteness = userPreferencesService.getProfileCompleteness();
+        const preferences = userPreferencesService.getPreferences();
+        
         setDashboardUser({
           ...authUser,
           name: displayName,
           memberSince,
-          profileCompleteness: authUser.is_verified ? 75 : 25, // Basic completion based on verification
-          title: 'Job Seeker',
-          location: 'Getting Started',
-          bio: 'Welcome to RezGenie! Complete your profile to get better job matches.',
-          skills: [],
+          profileCompleteness, // Use real profile completeness
+          title: preferences.jobTitle || 'Job Seeker',
+          location: preferences.location || 'Getting Started',
+          bio: preferences.skills ? 
+            `Looking for ${preferences.jobTitle || 'new opportunities'} • ${preferences.experienceLevel} level` :
+            'Welcome to RezGenie! Complete your profile to get better job matches.',
+          skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
           experience: [],
           education: []
         });
@@ -470,7 +489,7 @@ export default function Dashboard() {
                         Complete Your Profile
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        A complete profile gets 3x more visibility
+                        Complete your profile to unlock smart job filtering and personalized recommendations
                       </p>
                     </div>
                     <Badge variant="secondary" className="bg-purple-100 text-purple-800">
@@ -478,7 +497,11 @@ export default function Dashboard() {
                     </Badge>
                   </div>
                   <Progress value={dashboardUser.profileCompleteness} className="mb-4" />
-                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-700 text-white">
+                  <Button 
+                    size="sm" 
+                    className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-700 text-white"
+                    onClick={() => router.push('/profile')}
+                  >
                     <User className="h-4 w-4 mr-2" />
                     Complete Profile
                   </Button>
@@ -490,6 +513,22 @@ export default function Dashboard() {
           {/* Stats Overview */}
           <motion.div variants={itemVariants}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/genie'}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">AI Wishes</p>
+                      <p className="text-2xl font-bold">{activities.filter(a => a.type === 'wish_granted').length}</p>
+                    </div>
+                    <Sparkles className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Ask the genie for career help
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -497,7 +536,7 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-muted-foreground">Applications</p>
                       <p className="text-2xl font-bold">{stats?.totalApplications || 0}</p>
                     </div>
-                    <Briefcase className="h-8 w-8 text-blue-600" />
+                    <Briefcase className="h-8 w-8 text-purple-600" />
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
                     {stats?.pendingApplications || 0} pending responses
@@ -505,47 +544,32 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/dashboard/my-jobs'}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Interviews</p>
-                      <p className="text-2xl font-bold">{stats?.interviewsScheduled || 0}</p>
+                      <p className="text-sm font-medium text-muted-foreground">My Jobs</p>
+                      <p className="text-2xl font-bold">{savedJobsStats.total}</p>
                     </div>
-                    <Calendar className="h-8 w-8 text-green-600" />
+                    <Bookmark className="h-8 w-8 text-purple-600" />
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
-                    Scheduled this month
+                    {savedJobsStats.saved} saved • {savedJobsStats.applied} applied
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/dashboard/resumes'}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Profile Views</p>
-                      <p className="text-2xl font-bold">{stats?.profileViews || 0}</p>
+                      <p className="text-sm font-medium text-muted-foreground">Resumes</p>
+                      <p className="text-2xl font-bold">{resumeStats.total}</p>
                     </div>
-                    <Eye className="h-8 w-8 text-purple-600" />
+                    <FileText className="h-8 w-8 text-purple-600" />
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
-                    +12% from last week
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Match Score</p>
-                      <p className="text-2xl font-bold">{stats?.matchScore || 0}%</p>
-                    </div>
-                    <Target className="h-8 w-8 text-amber-600" />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Average compatibility
+                    {resumeStats.ready} ready • {resumeStats.processing} processing
                   </div>
                 </CardContent>
               </Card>
@@ -583,13 +607,13 @@ export default function Dashboard() {
                         <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                           <div className="flex-shrink-0">
                             {(activity.type === 'application' || activity.type === 'job_comparison') && (
-                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                                <Briefcase className="h-4 w-4 text-blue-600" />
+                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                                <Briefcase className="h-4 w-4 text-purple-600" />
                               </div>
                             )}
                             {activity.type === 'interview' && (
-                              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                                <Calendar className="h-4 w-4 text-green-600" />
+                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                                <Calendar className="h-4 w-4 text-purple-600" />
                               </div>
                             )}
                             {activity.type === 'profile_view' && (
@@ -598,13 +622,13 @@ export default function Dashboard() {
                               </div>
                             )}
                             {(activity.type === 'job_match' || activity.type === 'wish_granted') && (
-                              <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
-                                <Target className="h-4 w-4 text-amber-600" />
+                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                                <Target className="h-4 w-4 text-purple-600" />
                               </div>
                             )}
                             {activity.type === 'resume_upload' && (
-                              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                                <FileText className="h-4 w-4 text-green-600" />
+                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                                <FileText className="h-4 w-4 text-purple-600" />
                               </div>
                             )}
                           </div>
@@ -686,7 +710,7 @@ export default function Dashboard() {
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between pt-2">
-                              <span className="text-xs text-muted-foreground">{job.postedDate}</span>
+                              <span className="text-xs text-muted-foreground">{new Date(job.posted_at).toLocaleDateString()}</span>
                               <div className="flex items-center gap-2">
                                 <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
                                   <Bookmark className="h-3 w-3" />
@@ -719,22 +743,28 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
-                      <a href="/genie">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Update Resume
+                      <a href="/dashboard/my-jobs">
+                        <Bookmark className="h-4 w-4 mr-2" />
+                        My Jobs ({savedJobsStats.total})
                       </a>
                     </Button>
-                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300">
-                      <Users className="h-4 w-4 mr-2" />
-                      Network Connections
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
+                      <a href="/opportunities">
+                        <Search className="h-4 w-4 mr-2" />
+                        Discover Jobs
+                      </a>
                     </Button>
-                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Application History
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
+                      <a href="/dashboard/resumes">
+                        <FileText className="h-4 w-4 mr-2" />
+                        My Resumes ({resumeStats.total})
+                      </a>
                     </Button>
-                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Interview Schedule
+                    <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
+                      <a href="/profile">
+                        <User className="h-4 w-4 mr-2" />
+                        Complete Profile
+                      </a>
                     </Button>
                   </CardContent>
                 </Card>

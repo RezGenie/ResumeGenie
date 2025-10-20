@@ -6,7 +6,7 @@ Handles AI-powered resume improvement suggestions and wishes management.
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, and_
+from sqlalchemy import select, desc, and_, text
 from pydantic import BaseModel, Field
 import logging
 from datetime import date, datetime
@@ -138,7 +138,11 @@ async def create_wish(
 
         # Craft prompts
         system_prompt = (
-            "You are an expert career coach and resume specialist. Provide actionable, specific recommendations."
+            "You are RezGenie, a mystical career genie with centuries of wisdom about resumes and careers! 🧞‍♂️ "
+            "You speak with the magical authority of someone who has guided countless professionals to their dream jobs. "
+            "You're friendly but wise, enthusiastic but professional. Start your analysis with a magical overview "
+            "that sets the stage, then provide your detailed insights. Use phrases like 'I divine that...', "
+            "'The career stars align to show...', 'My magical analysis reveals...', but keep it professional and helpful."
         )
         user_prompt = f"""
 REQUEST: {wish_request.wish_text}
@@ -165,6 +169,7 @@ Focus on making action_items a clean list of specific skill names (both technica
                 temperature=0.7,
                 max_tokens=1200,
             )
+            
         except Exception as openai_error:
             logger.error(f"OpenAI service error: {openai_error}")
             
@@ -172,26 +177,33 @@ Focus on making action_items a clean list of specific skill names (both technica
             if "insufficient_quota" in str(openai_error).lower() or "exceeded your current quota" in str(openai_error).lower():
                 logger.info("OpenAI quota exceeded, providing intelligent fallback response")
                 
-                # Generate intelligent fallback response
+                # Generate intelligent fallback response with genie personality
                 ai_raw = """{
-                    "response": "Due to high demand, our AI service is temporarily using a backup analysis system. Based on your job description, this appears to be a role requiring strong technical skills and professional experience.",
+                    "response": "🧞‍♂️ My mystical analysis reveals that while our primary divination channels are experiencing high demand, I can still provide you with wise career guidance! The career stars align to show this appears to be a role requiring strong technical skills and professional experience. Fear not, for my backup wisdom is still quite powerful!",
                     "recommendations": [
-                        "Tailor your resume to include keywords from the job posting",
-                        "Quantify your achievements with specific metrics and numbers",
-                        "Highlight relevant technical skills prominently in a dedicated section",
-                        "Include soft skills that match the role requirements",
-                        "Ensure your experience section demonstrates progression and growth"
+                        "I divine that you should tailor your resume to include keywords from the job posting - this magical technique increases your visibility to hiring managers",
+                        "The career stars align to show that quantifying your achievements with specific metrics and numbers creates powerful impact on recruiters",
+                        "My magical analysis reveals you should highlight relevant technical skills prominently in a dedicated section for maximum effect",
+                        "I divine that including soft skills matching the role requirements will demonstrate your perfect cultural fit",
+                        "The mystical career patterns show that your experience section should demonstrate clear progression and growth over time",
+                        "My wisdom suggests you should customize your professional summary to mirror the job's key requirements",
+                        "The career stars reveal that using action verbs and power words will make your accomplishments shine brighter"
                     ],
-                    "action_items": ["Python", "JavaScript", "SQL", "Leadership", "Communication", "Project Management", "Problem Solving", "Team Collaboration"],
+                    "action_items": ["Python", "JavaScript", "SQL", "Leadership", "Communication", "Project Management", "Problem Solving", "Team Collaboration", "Data Analysis", "Critical Thinking"],
                     "resources": [
                         {
-                            "title": "Resume Keywords Guide",
+                            "title": "Resume Keywords Mastery Guide",
                             "url": "https://www.indeed.com/career-advice/resumes-cover-letters/resume-keywords",
-                            "description": "Learn how to optimize your resume with relevant keywords"
+                            "description": "Learn the ancient art of optimizing your resume with powerful keywords that recruiters seek"
+                        },
+                        {
+                            "title": "Quantifying Achievements Like a Pro",
+                            "url": "https://www.glassdoor.com/blog/quantify-accomplishments-resume/",
+                            "description": "Discover how to transform your experiences into impressive, measurable achievements"
                         }
                     ],
-                    "confidence_score": 0.75,
-                    "job_match_score": 0.72
+                    "confidence_score": 0.78,
+                    "job_match_score": 0.75
                 }"""
             else:
                 # For other errors, mark as failed
@@ -213,7 +225,7 @@ Focus on making action_items a clean list of specific skill names (both technica
         try:
             ai_struct = json.loads(ai_raw)
         except json.JSONDecodeError:
-            logger.warning("AI response not JSON, wrapping into structure")
+            logger.warning(f"AI response not JSON, wrapping into structure. Raw response: {ai_raw[:200]}...")
             ai_struct = {
                 "response": ai_raw[:500],
                 "recommendations": [],
@@ -223,10 +235,51 @@ Focus on making action_items a clean list of specific skill names (both technica
                 "job_match_score": 0.7,
             }
 
-        # Persist results into response_text and mark completed
-        genie_wish.response_text = json.dumps(ai_struct)
-        genie_wish.status = "completed"
-        genie_wish.completed_at = datetime.utcnow()
+        # Store results in both response_text (for backward compatibility) and new detailed fields
+        try:
+            genie_wish.response_text = json.dumps(ai_struct)
+            genie_wish.ai_response = ai_struct.get("response", "")
+            genie_wish.recommendations = ai_struct.get("recommendations", [])
+            genie_wish.action_items = ai_struct.get("action_items", [])
+            genie_wish.resources = ai_struct.get("resources", [])
+            genie_wish.confidence_score = ai_struct.get("confidence_score", 0.8)
+            genie_wish.job_match_score = ai_struct.get("job_match_score", 0.7)
+            genie_wish.is_processed = True
+            genie_wish.processing_status = "completed"
+            genie_wish.processed_at = datetime.utcnow()
+            genie_wish.status = "completed"
+            genie_wish.completed_at = datetime.utcnow()
+        except Exception as field_error:
+            logger.error(f"Error assigning genie wish fields: {field_error}")
+            raise
+        
+        # Use direct SQL update to ensure the changes persist
+        update_query = text("""
+            UPDATE genie_wishes SET 
+                ai_response = :ai_response,
+                recommendations = :recommendations,
+                action_items = :action_items,
+                resources = :resources,
+                confidence_score = :confidence_score,
+                job_match_score = :job_match_score,
+                is_processed = true,
+                processing_status = 'completed',
+                status = 'completed',
+                processed_at = NOW(),
+                completed_at = NOW()
+            WHERE id = :wish_id
+        """)
+        
+        await db.execute(update_query, {
+            'wish_id': genie_wish.id,
+            'ai_response': ai_struct.get("response", ""),
+            'recommendations': json.dumps(ai_struct.get("recommendations", [])),
+            'action_items': json.dumps(ai_struct.get("action_items", [])),
+            'resources': json.dumps(ai_struct.get("resources", [])),
+            'confidence_score': ai_struct.get("confidence_score", 0.8),
+            'job_match_score': ai_struct.get("job_match_score", 0.7)
+        })
+        
         await db.commit()
         await db.refresh(genie_wish)
 
@@ -355,12 +408,29 @@ async def get_wish(
                 detail="Access denied"
             )
         
-        # Parse stored AI results
-        ai_response = {}
-        try:
-            ai_response = json.loads(wish.response_text or "{}")
-        except json.JSONDecodeError:
-            ai_response = {}
+        # Parse stored AI results - use new fields first, fallback to response_text
+        ai_response_text = wish.ai_response
+        recommendations = wish.recommendations
+        action_items = wish.action_items
+        resources = wish.resources
+        confidence_score = wish.confidence_score
+        job_match_score = wish.job_match_score
+        
+        logger.info(f"Retrieved wish data: ai_response={len(ai_response_text or '')}, recommendations={len(recommendations or [])}, action_items={len(action_items or [])}, confidence_score={confidence_score}, job_match_score={job_match_score}")
+        
+        # Fallback to parsing response_text if new fields are empty
+        if not ai_response_text and wish.response_text:
+            try:
+                parsed_response = json.loads(wish.response_text)
+                ai_response_text = ai_response_text or parsed_response.get("response", "")
+                recommendations = recommendations or parsed_response.get("recommendations", [])
+                action_items = action_items or parsed_response.get("action_items", [])
+                resources = resources or parsed_response.get("resources", [])
+                confidence_score = confidence_score or parsed_response.get("confidence_score", 0.8)
+                job_match_score = job_match_score or parsed_response.get("job_match_score", 0.7)
+                logger.info(f"Fallback to response_text: ai_response={len(ai_response_text or '')}, recommendations={len(recommendations or [])}, action_items={len(action_items or [])}")
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse response_text for wish {wish_id}")
 
         # Create detailed response (map model fields)
         response = GenieWishDetailResponse(
@@ -368,17 +438,17 @@ async def get_wish(
             wish_type=wish.wish_type,
             wish_text=wish.request_text or "",
             context_data=None,
-            is_processed=wish.status == "completed",
-            processing_status=wish.status or "pending",
-            processing_error=wish.error_message,
+            is_processed=wish.is_processed or wish.status == "completed",
+            processing_status=wish.processing_status or wish.status or "pending",
+            processing_error=wish.processing_error or wish.error_message,
             created_at=wish.created_at.isoformat(),
-            processed_at=wish.completed_at.isoformat() if wish.completed_at else None,
-            ai_response=ai_response.get("response"),
-            recommendations=ai_response.get("recommendations"),
-            action_items=ai_response.get("action_items"),
-            resources=ai_response.get("resources"),
-            confidence_score=ai_response.get("confidence_score"),
-            job_match_score=ai_response.get("job_match_score"),
+            processed_at=wish.processed_at.isoformat() if wish.processed_at else (wish.completed_at.isoformat() if wish.completed_at else None),
+            ai_response=ai_response_text,
+            recommendations=recommendations,
+            action_items=action_items,
+            resources=resources,
+            confidence_score=confidence_score,
+            job_match_score=job_match_score,
         )
         return response
     
@@ -646,7 +716,11 @@ async def create_guest_wish(
 
         # Craft prompts
         system_prompt = (
-            "You are an expert career coach and resume specialist. Provide actionable, specific recommendations."
+            "You are RezGenie, a mystical career genie with centuries of wisdom about resumes and careers! 🧞‍♂️ "
+            "You speak with the magical authority of someone who has guided countless professionals to their dream jobs. "
+            "You're friendly but wise, enthusiastic but professional. Start your analysis with a magical overview "
+            "that sets the stage, then provide your detailed insights. Use phrases like 'I divine that...', "
+            "'The career stars align to show...', 'My magical analysis reveals...', but keep it professional and helpful."
         )
         user_prompt = f"""
 REQUEST: {wish_request.wish_text}
@@ -665,6 +739,8 @@ Focus on making action_items a clean list of specific skill names (both technica
 
         # Call OpenAI with improved error handling and intelligent fallback
         try:
+            logger.info(f"Guest: About to call OpenAI API for session {session_id[:8]}")
+            
             ai_raw = await openai_service.get_chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -673,6 +749,8 @@ Focus on making action_items a clean list of specific skill names (both technica
                 temperature=0.7,
                 max_tokens=1200,
             )
+            
+            logger.info(f"Guest: OpenAI API call successful, response length: {len(ai_raw)}")
         except Exception as openai_error:
             logger.error(f"OpenAI service error for guest: {openai_error}")
             
@@ -723,6 +801,7 @@ Focus on making action_items a clean list of specific skill names (both technica
 
         try:
             ai_struct = json.loads(ai_raw)
+            logger.info(f"Guest: AI response parsed successfully: {list(ai_struct.keys())}")
         except json.JSONDecodeError:
             logger.warning("AI response not JSON for guest, wrapping into structure")
             ai_struct = {
@@ -734,13 +813,65 @@ Focus on making action_items a clean list of specific skill names (both technica
                 "job_match_score": 0.7,
             }
 
-        # Persist results and mark completed
-        genie_wish.response_text = json.dumps(ai_struct)
-        genie_wish.status = "completed"
-        genie_wish.completed_at = datetime.utcnow()
+        # Persist results and mark completed - store in both formats
         
-        db.add(genie_wish)
+        try:
+            genie_wish.response_text = json.dumps(ai_struct)
+            
+            genie_wish.ai_response = ai_struct.get("response", "")
+            
+            genie_wish.recommendations = ai_struct.get("recommendations", [])
+            
+            genie_wish.action_items = ai_struct.get("action_items", [])
+            
+            genie_wish.resources = ai_struct.get("resources", [])
+            
+            genie_wish.confidence_score = ai_struct.get("confidence_score", 0.8)
+            
+            genie_wish.job_match_score = ai_struct.get("job_match_score", 0.7)
+            
+            genie_wish.is_processed = True
+            genie_wish.processing_status = "completed"
+            genie_wish.processed_at = datetime.utcnow()
+            genie_wish.status = "completed"
+            genie_wish.completed_at = datetime.utcnow()
+            
+            
+        except Exception as field_error:
+            logger.error(f"Error assigning guest genie wish fields: {field_error}")
+            raise
+        
+        # Use direct SQL update to ensure the changes persist
+        update_query = text("""
+            UPDATE genie_wishes SET 
+                ai_response = :ai_response,
+                recommendations = :recommendations,
+                action_items = :action_items,
+                resources = :resources,
+                confidence_score = :confidence_score,
+                job_match_score = :job_match_score,
+                is_processed = true,
+                processing_status = 'completed',
+                status = 'completed',
+                processed_at = NOW(),
+                completed_at = NOW()
+            WHERE id = :wish_id
+        """)
+        
+        await db.execute(update_query, {
+            'wish_id': genie_wish.id,
+            'ai_response': ai_struct.get("response", ""),
+            'recommendations': json.dumps(ai_struct.get("recommendations", [])),
+            'action_items': json.dumps(ai_struct.get("action_items", [])),
+            'resources': json.dumps(ai_struct.get("resources", [])),
+            'confidence_score': ai_struct.get("confidence_score", 0.8),
+            'job_match_score': ai_struct.get("job_match_score", 0.7)
+        })
+        
         await db.commit()
+        await db.refresh(genie_wish)
+        
+        logger.info(f"Guest: Data committed successfully for guest wish ID: {genie_wish.id}")
         
         logger.info(f"Guest wish created successfully. Session: {session_id[:8]}, Wish ID: {genie_wish.id}")
         
@@ -879,29 +1010,43 @@ async def get_guest_wish(
                 detail="Wish not found"
             )
         
-        # Safely parse JSON fields
-        try:
-            recommendations = json.loads(wish.recommendations) if wish.recommendations else []
-        except json.JSONDecodeError:
-            recommendations = [wish.recommendations] if wish.recommendations else []
+        # Parse stored AI results - use new fields first, fallback to response_text
+        ai_response_text = wish.ai_response
+        recommendations = wish.recommendations
+        action_items = wish.action_items
+        resources = wish.resources
+        confidence_score = wish.confidence_score
+        job_match_score = wish.job_match_score
         
-        try:
-            action_items = json.loads(wish.action_items) if wish.action_items else []
-        except json.JSONDecodeError:
-            action_items = [wish.action_items] if wish.action_items else []
+        # Fallback to parsing response_text if new fields are empty
+        if not ai_response_text and wish.response_text:
+            try:
+                parsed_response = json.loads(wish.response_text)
+                ai_response_text = ai_response_text or parsed_response.get("response", "")
+                recommendations = recommendations or parsed_response.get("recommendations", [])
+                action_items = action_items or parsed_response.get("action_items", [])
+                resources = resources or parsed_response.get("resources", [])
+                confidence_score = confidence_score or parsed_response.get("confidence_score", 0.8)
+                job_match_score = job_match_score or parsed_response.get("job_match_score", 0.7)
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse response_text for guest wish {wish_id}")
         
         return GenieWishDetailResponse(
             id=str(wish.id),
             wish_type=wish.wish_type,
-            wish_text=wish.wish_text,
-            processing_status=wish.processing_status,
-            confidence_score=wish.confidence_score,
-            job_match_score=wish.job_match_score,
+            wish_text=wish.request_text or "",
+            context_data=None,
+            is_processed=wish.is_processed or wish.status == "completed",
+            processing_status=wish.processing_status or wish.status or "pending",
+            processing_error=wish.processing_error or wish.error_message,
+            created_at=wish.created_at.isoformat(),
+            processed_at=wish.processed_at.isoformat() if wish.processed_at else (wish.completed_at.isoformat() if wish.completed_at else None),
+            ai_response=ai_response_text,
             recommendations=recommendations,
             action_items=action_items,
-            context_data=json.loads(wish.context_data) if wish.context_data else None,
-            created_at=wish.created_at,
-            updated_at=wish.updated_at
+            resources=resources,
+            confidence_score=confidence_score,
+            job_match_score=job_match_score,
         )
         
     except HTTPException:
