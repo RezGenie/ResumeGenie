@@ -623,7 +623,7 @@ export default function Dashboard() {
                             )}
                             {(activity.type === 'job_match' || activity.type === 'wish_granted') && (
                               <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                                <Target className="h-4 w-4 text-purple-600" />
+                                <Sparkles className="h-4 w-4 text-purple-600" />
                               </div>
                             )}
                             {activity.type === 'resume_upload' && (
