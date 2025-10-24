@@ -222,10 +222,23 @@ Focus on making action_items a clean list of specific skill names (both technica
                     detail=detail
                 )
 
+        # Parse AI response - handle markdown code blocks
         try:
-            ai_struct = json.loads(ai_raw)
-        except json.JSONDecodeError:
-            logger.warning(f"AI response not JSON, wrapping into structure. Raw response: {ai_raw[:200]}...")
+            # Strip markdown code blocks if present
+            cleaned_response = ai_raw.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]  # Remove ```
+            
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]  # Remove trailing ```
+            
+            cleaned_response = cleaned_response.strip()
+            ai_struct = json.loads(cleaned_response)
+            logger.info(f"Successfully parsed AI response with {len(ai_struct.get('recommendations', []))} recommendations")
+        except json.JSONDecodeError as e:
+            logger.warning(f"AI response not valid JSON: {e}. Raw response: {ai_raw[:200]}...")
             ai_struct = {
                 "response": ai_raw[:500],
                 "recommendations": [],
@@ -237,6 +250,10 @@ Focus on making action_items a clean list of specific skill names (both technica
 
         # Store results in both response_text (for backward compatibility) and new detailed fields
         try:
+            # Log what we're about to save
+            logger.info(f"Saving wish data: recommendations={len(ai_struct.get('recommendations', []))}, action_items={len(ai_struct.get('action_items', []))}")
+            logger.info(f"AI struct keys: {ai_struct.keys()}")
+            
             genie_wish.response_text = json.dumps(ai_struct)
             genie_wish.ai_response = ai_struct.get("response", "")
             genie_wish.recommendations = ai_struct.get("recommendations", [])
@@ -249,37 +266,14 @@ Focus on making action_items a clean list of specific skill names (both technica
             genie_wish.processed_at = datetime.utcnow()
             genie_wish.status = "completed"
             genie_wish.completed_at = datetime.utcnow()
+            
+            # Log what was actually set
+            logger.info(f"Set on object: recommendations={len(genie_wish.recommendations or [])}, action_items={len(genie_wish.action_items or [])}")
         except Exception as field_error:
             logger.error(f"Error assigning genie wish fields: {field_error}")
             raise
         
-        # Use direct SQL update to ensure the changes persist
-        update_query = text("""
-            UPDATE genie_wishes SET 
-                ai_response = :ai_response,
-                recommendations = :recommendations,
-                action_items = :action_items,
-                resources = :resources,
-                confidence_score = :confidence_score,
-                job_match_score = :job_match_score,
-                is_processed = true,
-                processing_status = 'completed',
-                status = 'completed',
-                processed_at = NOW(),
-                completed_at = NOW()
-            WHERE id = :wish_id
-        """)
-        
-        await db.execute(update_query, {
-            'wish_id': genie_wish.id,
-            'ai_response': ai_struct.get("response", ""),
-            'recommendations': json.dumps(ai_struct.get("recommendations", [])),
-            'action_items': json.dumps(ai_struct.get("action_items", [])),
-            'resources': json.dumps(ai_struct.get("resources", [])),
-            'confidence_score': ai_struct.get("confidence_score", 0.8),
-            'job_match_score': ai_struct.get("job_match_score", 0.7)
-        })
-        
+        # Commit the changes - SQLAlchemy handles JSON serialization automatically
         await db.commit()
         await db.refresh(genie_wish)
 
@@ -415,6 +409,25 @@ async def get_wish(
         resources = wish.resources
         confidence_score = wish.confidence_score
         job_match_score = wish.job_match_score
+        
+        # Parse JSON fields if they come as strings (shouldn't happen with proper JSONB, but handle it)
+        if isinstance(recommendations, str):
+            try:
+                recommendations = json.loads(recommendations)
+            except (json.JSONDecodeError, TypeError):
+                recommendations = []
+        
+        if isinstance(action_items, str):
+            try:
+                action_items = json.loads(action_items)
+            except (json.JSONDecodeError, TypeError):
+                action_items = []
+        
+        if isinstance(resources, str):
+            try:
+                resources = json.loads(resources)
+            except (json.JSONDecodeError, TypeError):
+                resources = []
         
         logger.info(f"Retrieved wish data: ai_response={len(ai_response_text or '')}, recommendations={len(recommendations or [])}, action_items={len(action_items or [])}, confidence_score={confidence_score}, job_match_score={job_match_score}")
         
@@ -799,11 +812,23 @@ Focus on making action_items a clean list of specific skill names (both technica
                     detail=detail
                 )
 
+        # Parse AI response - handle markdown code blocks
         try:
-            ai_struct = json.loads(ai_raw)
-            logger.info(f"Guest: AI response parsed successfully: {list(ai_struct.keys())}")
-        except json.JSONDecodeError:
-            logger.warning("AI response not JSON for guest, wrapping into structure")
+            # Strip markdown code blocks if present
+            cleaned_response = ai_raw.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]  # Remove ```
+            
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]  # Remove trailing ```
+            
+            cleaned_response = cleaned_response.strip()
+            ai_struct = json.loads(cleaned_response)
+            logger.info(f"Guest: Successfully parsed AI response with {len(ai_struct.get('recommendations', []))} recommendations")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Guest: AI response not valid JSON: {e}. Raw response: {ai_raw[:200]}...")
             ai_struct = {
                 "response": ai_raw[:500],
                 "recommendations": [],
@@ -814,60 +839,31 @@ Focus on making action_items a clean list of specific skill names (both technica
             }
 
         # Persist results and mark completed - store in both formats
-        
         try:
+            # Log what we're about to save
+            logger.info(f"Guest: Saving wish data: recommendations={len(ai_struct.get('recommendations', []))}, action_items={len(ai_struct.get('action_items', []))}")
+            logger.info(f"Guest: AI struct keys: {ai_struct.keys()}")
+            
             genie_wish.response_text = json.dumps(ai_struct)
-            
             genie_wish.ai_response = ai_struct.get("response", "")
-            
             genie_wish.recommendations = ai_struct.get("recommendations", [])
-            
             genie_wish.action_items = ai_struct.get("action_items", [])
-            
             genie_wish.resources = ai_struct.get("resources", [])
-            
             genie_wish.confidence_score = ai_struct.get("confidence_score", 0.8)
-            
             genie_wish.job_match_score = ai_struct.get("job_match_score", 0.7)
-            
             genie_wish.is_processed = True
             genie_wish.processing_status = "completed"
             genie_wish.processed_at = datetime.utcnow()
             genie_wish.status = "completed"
             genie_wish.completed_at = datetime.utcnow()
             
-            
+            # Log what was actually set
+            logger.info(f"Guest: Set on object: recommendations={len(genie_wish.recommendations or [])}, action_items={len(genie_wish.action_items or [])}")
         except Exception as field_error:
             logger.error(f"Error assigning guest genie wish fields: {field_error}")
             raise
         
-        # Use direct SQL update to ensure the changes persist
-        update_query = text("""
-            UPDATE genie_wishes SET 
-                ai_response = :ai_response,
-                recommendations = :recommendations,
-                action_items = :action_items,
-                resources = :resources,
-                confidence_score = :confidence_score,
-                job_match_score = :job_match_score,
-                is_processed = true,
-                processing_status = 'completed',
-                status = 'completed',
-                processed_at = NOW(),
-                completed_at = NOW()
-            WHERE id = :wish_id
-        """)
-        
-        await db.execute(update_query, {
-            'wish_id': genie_wish.id,
-            'ai_response': ai_struct.get("response", ""),
-            'recommendations': json.dumps(ai_struct.get("recommendations", [])),
-            'action_items': json.dumps(ai_struct.get("action_items", [])),
-            'resources': json.dumps(ai_struct.get("resources", [])),
-            'confidence_score': ai_struct.get("confidence_score", 0.8),
-            'job_match_score': ai_struct.get("job_match_score", 0.7)
-        })
-        
+        # Commit the changes - SQLAlchemy handles JSON serialization automatically
         await db.commit()
         await db.refresh(genie_wish)
         
@@ -1017,6 +1013,25 @@ async def get_guest_wish(
         resources = wish.resources
         confidence_score = wish.confidence_score
         job_match_score = wish.job_match_score
+        
+        # Parse JSON fields if they come as strings (shouldn't happen with proper JSONB, but handle it)
+        if isinstance(recommendations, str):
+            try:
+                recommendations = json.loads(recommendations)
+            except (json.JSONDecodeError, TypeError):
+                recommendations = []
+        
+        if isinstance(action_items, str):
+            try:
+                action_items = json.loads(action_items)
+            except (json.JSONDecodeError, TypeError):
+                action_items = []
+        
+        if isinstance(resources, str):
+            try:
+                resources = json.loads(resources)
+            except (json.JSONDecodeError, TypeError):
+                resources = []
         
         # Fallback to parsing response_text if new fields are empty
         if not ai_response_text and wish.response_text:

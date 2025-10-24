@@ -652,7 +652,7 @@ export default function StudioPage() {
     // Check for authentication errors
     if (error.message.includes('401') || error.message.includes('unauthorized')) {
       return {
-        title: "The genie doesn't recognize you! 🔐",
+        title: "The genie doesn't recognize you!",
         description: "Please sign in again to continue using your magical powers."
       };
     }
@@ -660,14 +660,14 @@ export default function StudioPage() {
     // Check for rate limiting
     if (error.message.includes('429') || error.message.includes('rate limit')) {
       return {
-        title: "The genie needs a moment to recharge! ⚡",
+        title: "The genie needs a moment to recharge!",
         description: "Too many wishes at once. Please wait a moment before trying again."
       };
     }
 
     // Default fallback for unknown errors
     return {
-      title: "The genie's lamp flickered! ✨",
+      title: "The genie's lamp flickered!",
       description: "Something unexpected happened. Please try a different career question."
     };
   };
@@ -723,7 +723,7 @@ export default function StudioPage() {
         document.execCommand('copy');
         toast.success("Recommendations copied to clipboard");
       } catch {
-        toast.error("The mystical clipboard spell failed! 📋✨", {
+        toast.error("The mystical clipboard spell failed!", {
           description: "Unable to copy your divine recommendations"
         });
       }
@@ -734,7 +734,7 @@ export default function StudioPage() {
   const handleFileSelect = async (file: File) => {
     const error = validateFile(file);
     if (error) {
-      toast.error("That scroll isn't magical enough! 📜", {
+      toast.error("That scroll isn't magical enough!", {
         description: error,
       });
       return;
@@ -1099,8 +1099,8 @@ export default function StudioPage() {
                       <div
                         data-recommendations-section
                         className={`bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
-                            ? getHighlightClass(true, outputHighlightFading)
-                            : ""
+                          ? getHighlightClass(true, outputHighlightFading)
+                          : ""
                           }`}
                       >
                         <div className="flex items-center justify-between mb-3">
@@ -1132,7 +1132,7 @@ export default function StudioPage() {
                                   key={idx}
                                   className="flex items-start gap-2"
                                 >
-                                  <span className="text-green-500 mt-1">
+                                  <span className="text-purple-600 mt-1">
                                     •
                                   </span>
                                   <span>{rec}</span>
@@ -1186,10 +1186,10 @@ export default function StudioPage() {
                           >
                             <Star
                               className={`h-10 w-10 transition-all duration-300 ${i < dailyWishes
-                                  ? "fill-amber-400 text-amber-400 drop-shadow-lg animate-pulse"
-                                  : i < remainingWishes + dailyWishes
-                                    ? "text-purple-300 dark:text-purple-600 hover:text-primary/80"
-                                    : "text-gray-300 dark:text-gray-700"
+                                ? "fill-amber-400 text-amber-400 drop-shadow-lg animate-pulse"
+                                : i < remainingWishes + dailyWishes
+                                  ? "text-purple-300 dark:text-purple-600 hover:text-primary/80"
+                                  : "text-gray-300 dark:text-gray-700"
                                 }`}
                             />
                           </motion.div>
@@ -1260,8 +1260,8 @@ export default function StudioPage() {
                         <div
                           data-recommendations-section
                           className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
-                              ? getHighlightClass(true, outputHighlightFading)
-                              : ""
+                            ? getHighlightClass(true, outputHighlightFading)
+                            : ""
                             }`}
                         >
                           <div className="flex items-center justify-between mb-3">
@@ -1288,7 +1288,7 @@ export default function StudioPage() {
                                     key={idx}
                                     className="flex items-start gap-2"
                                   >
-                                    <span className="text-green-500 mt-1">
+                                    <span className="text-purple-600 mt-1">
                                       •
                                     </span>
                                     <span>{rec}</span>
@@ -1340,8 +1340,8 @@ export default function StudioPage() {
                         <div
                           data-recommendations-section
                           className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
-                              ? getHighlightClass(true, outputHighlightFading)
-                              : ""
+                            ? getHighlightClass(true, outputHighlightFading)
+                            : ""
                             }`}
                         >
                           <div className="flex items-center justify-between mb-3">
@@ -1368,7 +1368,7 @@ export default function StudioPage() {
                                     key={idx}
                                     className="flex items-start gap-2"
                                   >
-                                    <span className="text-green-500 mt-1">
+                                    <span className="text-purple-600 mt-1">
                                       •
                                     </span>
                                     <span>{rec}</span>
@@ -1406,8 +1406,8 @@ export default function StudioPage() {
             {/* Resume Upload */}
             <motion.div variants={itemVariants}>
               <Card className={`h-full ${showInitialHighlight && !analysisResults
-                  ? getHighlightClass(true, initialHighlightFading)
-                  : ""
+                ? getHighlightClass(true, initialHighlightFading)
+                : ""
                 }`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1423,11 +1423,11 @@ export default function StudioPage() {
                   {!resumeFile ? (
                     <div
                       className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all h-[400px] flex flex-col justify-center ${isDailyLimitReached
-                          ? "border-muted-foreground/15 bg-muted/20 cursor-not-allowed opacity-60"
-                          : `cursor-pointer group ${isDragOver
-                            ? "border-primary bg-primary/10 scale-105 shadow-lg"
-                            : "border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md"
-                          }`
+                        ? "border-muted-foreground/15 bg-muted/20 cursor-not-allowed opacity-60"
+                        : `cursor-pointer group ${isDragOver
+                          ? "border-primary bg-primary/10 scale-105 shadow-lg"
+                          : "border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md"
+                        }`
                         }`}
                       onDrop={isDailyLimitReached ? undefined : handleDrop}
                       onDragOver={isDailyLimitReached ? undefined : handleDragOver}
@@ -1447,10 +1447,10 @@ export default function StudioPage() {
                       >
                         <Upload
                           className={`mx-auto h-16 w-16 mb-4 transition-colors ${isDailyLimitReached
-                              ? "text-muted-foreground/30"
-                              : isDragOver
-                                ? "text-primary"
-                                : "text-muted-foreground group-hover:text-primary"
+                            ? "text-muted-foreground/30"
+                            : isDragOver
+                              ? "text-primary"
+                              : "text-muted-foreground group-hover:text-primary"
                             }`}
                         />
                         <div className="space-y-3">
@@ -1564,8 +1564,8 @@ export default function StudioPage() {
             {/* Job Posting */}
             <motion.div variants={itemVariants}>
               <Card className={`h-full ${showInitialHighlight && !analysisResults
-                  ? getHighlightClass(true, initialHighlightFading)
-                  : ""
+                ? getHighlightClass(true, initialHighlightFading)
+                : ""
                 }`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1593,8 +1593,8 @@ export default function StudioPage() {
                       }}
                       disabled={isDailyLimitReached}
                       className={`h-[400px] resize-none overflow-y-auto border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm text-sm leading-relaxed rounded-lg ${isDailyLimitReached
-                          ? "border-muted-foreground/20 opacity-60 cursor-not-allowed"
-                          : "border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        ? "border-muted-foreground/20 opacity-60 cursor-not-allowed"
+                        : "border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                         }`}
                     />
 
@@ -1646,8 +1646,8 @@ export default function StudioPage() {
           >
             {/* Resume Analysis */}
             <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
               }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1701,8 +1701,8 @@ export default function StudioPage() {
 
             {/* Job Match Score */}
             <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
               }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1738,8 +1738,8 @@ export default function StudioPage() {
 
             {/* Skill Gap Analysis */}
             <Card className={`overflow-hidden relative transition-all duration-300 ${showOutputHighlight && analysisResults
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
               }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1771,8 +1771,8 @@ export default function StudioPage() {
                               >
                                 <div
                                   className={`w-2 h-2 rounded-full ${isTechnical
-                                      ? "bg-purple-500"
-                                      : "bg-pink-500"
+                                    ? "bg-purple-500"
+                                    : "bg-pink-500"
                                     }`}
                                 ></div>
                                 <span className="text-sm font-medium flex-1">
@@ -1781,8 +1781,8 @@ export default function StudioPage() {
                                 <Badge
                                   variant="secondary"
                                   className={`text-xs ${isTechnical
-                                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                      : "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                    : "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
                                     }`}
                                 >
                                   {isTechnical ? "Technical" : "Soft Skill"}
@@ -1818,8 +1818,8 @@ export default function StudioPage() {
           {/* Wish History */}
           <motion.div variants={itemVariants}>
             <Card className={`max-w-4xl mx-auto ${showOutputHighlight && wishes.some(w => w.status === 'completed')
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
               }`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1909,8 +1909,8 @@ export default function StudioPage() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           className={`border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${wish.status === "completed"
-                              ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
-                              : "cursor-default dark:bg-card"
+                            ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                            : "cursor-default dark:bg-card"
                             }`}
                         >
                           <div className="flex items-start justify-between mb-3">
@@ -1974,10 +1974,10 @@ export default function StudioPage() {
                                       : "outline"
                                 }
                                 className={`${wish.status === "completed"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                    : wish.status === "processing"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                                      : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : wish.status === "processing"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
                                   }`}
                               >
                                 {wish.status === "processing" && (
@@ -2115,7 +2115,7 @@ export default function StudioPage() {
                         analysisResults.recommendations.length > 0
                         ? analysisResults.recommendations.map((rec, idx) => (
                           <div key={idx} className="flex items-start gap-3">
-                            <span className="text-amber-500 mt-1">•</span>
+                            <span className="text-purple-600 mt-1">•</span>
                             <div>{rec}</div>
                           </div>
                         ))
@@ -2247,26 +2247,28 @@ export default function StudioPage() {
                           </div>
                         )}
 
-                      {/* Recommendations */}
+                      {/* Skills to Highlight */}
                       {selectedWish.results?.recommendations &&
                         selectedWish.results.recommendations.length > 0 && (
                           <div className="space-y-3">
                             <h4 className="font-medium flex items-center gap-2">
-                              <Lightbulb className="h-4 w-4 text-purple-500" />
-                              AI Recommendations (
+                              <TrendingUp className="h-4 w-4 text-purple-600" />
+                              Skills to Highlight (
                               {selectedWish.results.recommendations.length})
                             </h4>
-                            <div className="space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {selectedWish.results.recommendations.map(
                                 (rec, index) => (
                                   <div
                                     key={index}
-                                    className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg"
+                                    className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-700/50 transition-colors"
                                   >
-                                    <span className="text-purple-600 mt-1">
-                                      ✨
-                                    </span>
-                                    <span className="text-sm">{rec}</span>
+                                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-800/50 flex items-center justify-center">
+                                      <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">
+                                        {index + 1}
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{rec}</span>
                                   </div>
                                 )
                               )}
@@ -2274,16 +2276,16 @@ export default function StudioPage() {
                           </div>
                         )}
 
-                      {/* Skill Gaps */}
+                      {/* Recommended Skills to Add */}
                       {selectedWish.results?.skillGaps &&
                         selectedWish.results.skillGaps.length > 0 && (
                           <div className="space-y-3">
                             <h4 className="font-medium flex items-center gap-2">
-                              <TrendingUp className="h-4 w-4 text-purple-600" />
-                              Skill Gap Analysis (
-                              {selectedWish.results.skillGaps.length} skills)
+                              <Lightbulb className="h-4 w-4 text-amber-500" />
+                              Recommended Skills to Add (
+                              {selectedWish.results.skillGaps.length})
                             </h4>
-                            <div className="grid gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                               {selectedWish.results.skillGaps.map(
                                 (skill, index: number) => {
                                   const skillName =
@@ -2298,27 +2300,22 @@ export default function StudioPage() {
                                   return (
                                     <div
                                       key={index}
-                                      className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg"
+                                      className="flex items-center gap-2 p-2.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800/30 hover:border-amber-300 dark:hover:border-amber-700/50 transition-colors"
                                     >
-                                      <div
-                                        className={`w-2 h-2 rounded-full ${isTechnical
-                                            ? "bg-purple-500"
-                                            : "bg-purple-500"
-                                          }`}
-                                      ></div>
-                                      <span className="text-sm font-medium flex-1">
+                                      <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                                      <span className="text-sm font-medium flex-1 text-gray-900 dark:text-gray-100">
                                         {skillName}
                                       </span>
                                       <Badge
                                         variant="secondary"
                                         className={`text-xs ${isTechnical
-                                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                            : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                           }`}
                                       >
                                         {isTechnical
-                                          ? "Technical"
-                                          : "Soft Skill"}
+                                          ? "Tech"
+                                          : "Soft"}
                                       </Badge>
                                     </div>
                                   );
