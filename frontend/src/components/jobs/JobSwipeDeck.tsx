@@ -35,9 +35,17 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
   const hasMoreJobsRef = useRef(true);
 
   // Fetch initial jobs and stats
-  const fetchInitialData = useCallback(async () => {
+  const fetchInitialData = useCallback(async (resetIndex = false) => {
     setLoading(true);
     setError(null);
+    
+    // Reset index if requested (for preference updates)
+    if (resetIndex) {
+      setCurrentIndex(0);
+      nextPageRef.current = 1;
+      hasMoreJobsRef.current = true;
+      prefetchingRef.current = false;
+    }
     
     try {
       const [jobsResponse, statsResponse] = await Promise.all([
@@ -138,6 +146,21 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
   // Initialize data on mount
   useEffect(() => {
     fetchInitialData();
+  }, [fetchInitialData]);
+
+  // Listen for preference changes and refresh jobs
+  useEffect(() => {
+    const handlePreferencesUpdate = () => {
+      console.log('JobSwipeDeck: Preferences updated, refreshing jobs...');
+      fetchInitialData(true); // Reset index and fetch fresh jobs
+    };
+
+    // Listen for custom event when preferences are saved
+    window.addEventListener('userPreferencesUpdated', handlePreferencesUpdate);
+
+    return () => {
+      window.removeEventListener('userPreferencesUpdated', handlePreferencesUpdate);
+    };
   }, [fetchInitialData]);
 
   // Get visible cards for rendering
