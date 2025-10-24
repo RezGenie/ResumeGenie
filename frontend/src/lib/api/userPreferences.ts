@@ -14,31 +14,60 @@ export interface UserPreferences {
 }
 
 class UserPreferencesService {
-  private readonly STORAGE_KEY = 'user_preferences';
+  private readonly STORAGE_KEY_PREFIX = 'user_preferences_';
 
-  // Save user preferences to localStorage
+  // Get user-specific storage key
+  private getUserStorageKey(): string {
+    // Get current user ID from auth token or localStorage
+    const authToken = localStorage.getItem('auth_token');
+    if (authToken) {
+      try {
+        // Decode JWT to get user ID (simple base64 decode of payload)
+        const payload = authToken.split('.')[1];
+        const decoded = JSON.parse(atob(payload));
+        const userId = decoded.sub || decoded.user_id || decoded.id;
+        return `${this.STORAGE_KEY_PREFIX}${userId}`;
+      } catch (error) {
+        console.warn('Failed to decode auth token:', error);
+      }
+    }
+    
+    // Fallback to guest session
+    return `${this.STORAGE_KEY_PREFIX}guest`;
+  }
+
+  // Save user preferences to localStorage (user-scoped)
   savePreferences(preferences: Partial<UserPreferences>): void {
     try {
+      const storageKey = this.getUserStorageKey();
       const existing = this.getPreferences();
       const updated = { ...existing, ...preferences };
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));
-      console.log('Preferences saved:', updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      console.log('Preferences saved for user:', storageKey, updated);
+
+      // Dispatch custom event to notify components about preference changes
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('userPreferencesUpdated', {
+          detail: updated
+        }));
+      }
     } catch (error) {
       console.error('Failed to save user preferences:', error);
     }
   }
 
-  // Get user preferences from localStorage
+  // Get user preferences from localStorage (user-scoped)
   getPreferences(): UserPreferences {
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const storageKey = this.getUserStorageKey();
+      const stored = localStorage.getItem(storageKey);
       if (stored) {
         return JSON.parse(stored);
       }
     } catch (error) {
       console.error('Failed to load user preferences:', error);
     }
-    
+
     // Return default preferences
     return {
       jobTitle: '',
@@ -54,10 +83,11 @@ class UserPreferencesService {
     };
   }
 
-  // Check if user has completed their profile
+  // Check if user has completed their profile (lenient check)
   hasCompletedProfile(): boolean {
     const prefs = this.getPreferences();
-    return !!(prefs.jobTitle && prefs.skills && (prefs.salaryMin || prefs.salaryMax));
+    // Only require at least ONE preference field to be filled
+    return !!(prefs.jobTitle || prefs.skills || prefs.salaryMin || prefs.salaryMax || prefs.workType !== 'hybrid');
   }
 
   // Calculate profile completion percentage
@@ -70,15 +100,15 @@ class UserPreferencesService {
       prefs.industries,
       prefs.location,
     ];
-    
+
     const completed = fields.filter(field => field && field.trim() !== '').length;
     return Math.round((completed / fields.length) * 100);
   }
 
-  // Filter jobs based on user preferences
+  // Filter jobs based on user preferences - Remove completely irrelevant jobs
   filterJobs(jobs: JobDisplay[]): JobDisplay[] {
     const prefs = this.getPreferences();
-    
+
     if (!this.hasCompletedProfile()) {
       console.log('Profile not completed, showing all jobs');
       return jobs; // Show all jobs if profile is not completed
@@ -87,83 +117,97 @@ class UserPreferencesService {
     console.log('Applying smart filters with preferences:', prefs);
 
     return jobs.filter(job => {
-      // Salary filtering
+      const jobTitle = job.title.toLowerCase();
+      const jobSnippet = (job.snippet || '').toLowerCase();
+      const jobSkills = (job.skills || []).map(s => s.toLowerCase());
+
+      // RELEVANCE CHECK: Filter out jobs with zero relevance to user's role
+      if (prefs.jobTitle && prefs.skills) {
+        const prefTitleWords = prefs.jobTitle.toLowerCase().split(' ').filter(w => w.length > 2);
+        const userSkills = prefs.skills.toLowerCase().split(',').map(s => s.trim()).filter(s => s);
+
+        // Check if job title has ANY matching words
+        const titleMatches = prefTitleWords.some(word =>
+          jobTitle.includes(word) || jobSnippet.includes(word)
+        );
+
+        // Check if job has ANY matching skills
+        const skillMatches = userSkills.some(userSkill =>
+          jobSkills.some(jobSkill => jobSkill.includes(userSkill) || userSkill.includes(jobSkill)) ||
+          jobSnippet.includes(userSkill)
+        );
+
+        // Filter out if NEITHER title NOR skills match
+        if (!titleMatches && !skillMatches) {
+          console.log(`Filtered out ${job.title} - no relevance to ${prefs.jobTitle} or skills`);
+          return false;
+        }
+      }
+
+      // SALARY FILTERING: Only filter extreme outliers
       if (prefs.salaryMin || prefs.salaryMax) {
         const jobSalary = this.extractSalaryFromJob(job);
         if (jobSalary) {
-          if (prefs.salaryMin && jobSalary < parseInt(prefs.salaryMin)) {
-            console.log(`Filtered out ${job.title} - salary too low (${jobSalary} < ${prefs.salaryMin})`);
-            return false;
+          // Filter if salary is significantly below minimum (more than 40% below)
+          if (prefs.salaryMin) {
+            const minSalary = parseInt(prefs.salaryMin);
+            if (jobSalary < minSalary * 0.6) {
+              console.log(`Filtered out ${job.title} - salary too low (${jobSalary} < ${minSalary * 0.6})`);
+              return false;
+            }
           }
-          if (prefs.salaryMax && jobSalary > parseInt(prefs.salaryMax)) {
-            console.log(`Filtered out ${job.title} - salary too high (${jobSalary} > ${prefs.salaryMax})`);
-            return false;
+          // Filter if salary is significantly above maximum (more than 60% above)
+          if (prefs.salaryMax) {
+            const maxSalary = parseInt(prefs.salaryMax);
+            if (jobSalary > maxSalary * 1.6) {
+              console.log(`Filtered out ${job.title} - salary too high (${jobSalary} > ${maxSalary * 1.6})`);
+              return false;
+            }
           }
         }
       }
 
-      // Work type filtering
-      if (prefs.workType !== 'flexible') {
+      // WORK TYPE: Only filter if user has strong remote preference
+      if (prefs.workType === 'remote' && prefs.remotePreference) {
         const isRemoteJob = this.isRemoteJob(job);
-        if (prefs.workType === 'remote' && !isRemoteJob) {
-          console.log(`Filtered out ${job.title} - not remote`);
-          return false;
-        }
-        if (prefs.workType === 'onsite' && isRemoteJob) {
-          console.log(`Filtered out ${job.title} - is remote but user prefers onsite`);
+        if (!isRemoteJob && !job.location?.toLowerCase().includes('hybrid')) {
+          console.log(`Filtered out ${job.title} - not remote/hybrid`);
           return false;
         }
       }
 
-      // Skills matching (if job has required skills, check if user has them)
-      if (prefs.skills && job.skills && job.skills.length > 0) {
-        const userSkills = prefs.skills.toLowerCase().split(',').map(s => s.trim());
-        const jobSkills = job.skills.map(s => s.toLowerCase());
-        const hasMatchingSkills = jobSkills.some(jobSkill => 
-          userSkills.some(userSkill => 
-            jobSkill.includes(userSkill) || userSkill.includes(jobSkill)
-          )
-        );
-        
-        if (!hasMatchingSkills) {
-          console.log(`Filtered out ${job.title} - no matching skills`);
-          return false;
-        }
-      }
-
-      // Experience level filtering (basic logic)
+      // EXPERIENCE LEVEL: Filter extreme mismatches
       if (prefs.experienceLevel) {
-        const jobTitle = job.title.toLowerCase();
-        const jobSnippet = (job.snippet || '').toLowerCase();
-        
         if (prefs.experienceLevel === 'entry') {
-          // Entry level should not see senior/lead positions
-          if (jobTitle.includes('senior') || jobTitle.includes('lead') || 
-              jobTitle.includes('principal') || jobTitle.includes('director') ||
-              jobSnippet.includes('5+ years') || jobSnippet.includes('7+ years')) {
+          // Filter out clearly senior positions
+          if ((jobTitle.includes('senior') || jobTitle.includes('lead') ||
+            jobTitle.includes('principal') || jobTitle.includes('director') ||
+            jobTitle.includes('vp') || jobTitle.includes('chief')) &&
+            (jobSnippet.includes('10+ years') || jobSnippet.includes('15+ years'))) {
             console.log(`Filtered out ${job.title} - too senior for entry level`);
             return false;
           }
         }
-        
+
         if (prefs.experienceLevel === 'senior' || prefs.experienceLevel === 'lead') {
-          // Senior level should not see junior positions
-          if (jobTitle.includes('junior') || jobTitle.includes('entry') ||
-              jobSnippet.includes('0-2 years') || jobSnippet.includes('no experience')) {
+          // Filter out explicitly junior/intern positions
+          if (jobTitle.includes('intern') ||
+            (jobTitle.includes('junior') && !jobTitle.includes('senior')) ||
+            (jobTitle.includes('entry') && jobSnippet.includes('no experience'))) {
             console.log(`Filtered out ${job.title} - too junior for senior level`);
             return false;
           }
         }
       }
 
-      return true; // Job passes all filters
+      return true; // Keep job if it passes all filters
     });
   }
 
   // Extract salary from job (basic implementation)
   private extractSalaryFromJob(job: JobDisplay): number | null {
     const salaryText = job.salaryText || job.snippet || '';
-    
+
     // Look for salary patterns like "$60,000", "$60K", "60000"
     const salaryMatch = salaryText.match(/\$?(\d{2,3})[,.]?(\d{3})(?:[,.](\d{3}))?[k]?/i);
     if (salaryMatch) {
@@ -173,7 +217,7 @@ class UserPreferencesService {
       }
       return salary;
     }
-    
+
     return null;
   }
 
@@ -182,60 +226,126 @@ class UserPreferencesService {
     const location = job.location?.toLowerCase() || '';
     const title = job.title?.toLowerCase() || '';
     const snippet = job.snippet?.toLowerCase() || '';
-    
+
     const remoteKeywords = ['remote', 'work from home', 'wfh', 'telecommute', 'distributed'];
-    return remoteKeywords.some(keyword => 
+    return remoteKeywords.some(keyword =>
       location.includes(keyword) || title.includes(keyword) || snippet.includes(keyword)
     );
   }
 
-  // Prioritize jobs based on preferences (for sorting)
+  // Prioritize jobs based on preferences (for sorting) - STRICT RELEVANCE
   scoreJob(job: JobDisplay): number {
     const prefs = this.getPreferences();
-    let score = 0;
+    let score = 0; // Start at 0 - jobs must earn their score
 
-    // Skills matching score
-    if (prefs.skills && job.skills) {
-      const userSkills = prefs.skills.toLowerCase().split(',').map(s => s.trim());
-      const jobSkills = job.skills.map(s => s.toLowerCase());
-      const matchingSkills = jobSkills.filter(jobSkill => 
-        userSkills.some(userSkill => 
-          jobSkill.includes(userSkill) || userSkill.includes(jobSkill)
-        )
-      );
-      score += (matchingSkills.length / Math.max(jobSkills.length, 1)) * 30;
-    }
+    const jobTitle = job.title.toLowerCase();
+    const jobSnippet = (job.snippet || '').toLowerCase();
+    const jobSkills = (job.skills || []).map(s => s.toLowerCase());
 
-    // Job title matching
+    // JOB TITLE MATCHING (40 points max - MOST IMPORTANT)
     if (prefs.jobTitle) {
-      const prefTitleWords = prefs.jobTitle.toLowerCase().split(' ');
-      const jobTitleWords = job.title.toLowerCase().split(' ');
-      const matchingWords = prefTitleWords.filter(word => 
-        jobTitleWords.some(jobWord => jobWord.includes(word) || word.includes(jobWord))
-      );
-      score += (matchingWords.length / Math.max(prefTitleWords.length, 1)) * 25;
-    }
+      const prefTitleWords = prefs.jobTitle.toLowerCase().split(' ').filter(w => w.length > 2);
+      const jobTitleWords = jobTitle.split(' ');
 
-    // Work type preference
-    if (prefs.workType === 'remote' && this.isRemoteJob(job)) {
+      // Check for exact phrase match first
+      if (jobTitle.includes(prefs.jobTitle.toLowerCase())) {
+        score += 40; // Perfect match
+      } else {
+        // Check for word matches
+        const matchingWords = prefTitleWords.filter(word =>
+          jobTitleWords.some(jobWord => jobWord.includes(word) || word.includes(jobWord))
+        );
+
+        if (matchingWords.length > 0) {
+          const matchRatio = matchingWords.length / prefTitleWords.length;
+          score += matchRatio * 40; // Proportional score
+        } else {
+          // Check if any key words appear in snippet
+          const snippetMatches = prefTitleWords.filter(word => jobSnippet.includes(word));
+          if (snippetMatches.length > 0) {
+            score += (snippetMatches.length / prefTitleWords.length) * 15; // Partial credit
+          }
+        }
+      }
+    } else {
+      // No job title preference, give base score
       score += 20;
     }
 
-    // Salary range preference
+    // SKILLS MATCHING (35 points max - VERY IMPORTANT)
+    if (prefs.skills && jobSkills.length > 0) {
+      const userSkills = prefs.skills.toLowerCase().split(',').map(s => s.trim()).filter(s => s);
+
+      // Count matching skills
+      const matchingSkills = jobSkills.filter(jobSkill =>
+        userSkills.some(userSkill =>
+          jobSkill.includes(userSkill) || userSkill.includes(jobSkill)
+        )
+      );
+
+      if (matchingSkills.length > 0) {
+        const skillMatchRatio = matchingSkills.length / Math.max(userSkills.length, 1);
+        score += skillMatchRatio * 35;
+
+        // Bonus for having ALL user skills
+        if (matchingSkills.length === userSkills.length) {
+          score += 10;
+        }
+      } else {
+        // Check if skills appear in job description
+        const snippetSkillMatches = userSkills.filter(skill => jobSnippet.includes(skill));
+        if (snippetSkillMatches.length > 0) {
+          score += (snippetSkillMatches.length / userSkills.length) * 15; // Partial credit
+        }
+      }
+    } else if (!prefs.skills) {
+      // No skills preference, give base score
+      score += 15;
+    }
+
+    // EXPERIENCE LEVEL MATCH (10 points)
+    if (prefs.experienceLevel) {
+      if (prefs.experienceLevel === 'senior' && (jobTitle.includes('senior') || jobTitle.includes('lead'))) {
+        score += 10;
+      } else if (prefs.experienceLevel === 'mid' && !jobTitle.includes('senior') && !jobTitle.includes('junior') && !jobTitle.includes('entry')) {
+        score += 10;
+      } else if (prefs.experienceLevel === 'entry' && (jobTitle.includes('junior') || jobTitle.includes('entry'))) {
+        score += 10;
+      } else if (prefs.experienceLevel === 'lead' && (jobTitle.includes('lead') || jobTitle.includes('principal') || jobTitle.includes('staff'))) {
+        score += 10;
+      } else {
+        // Partial credit if not a mismatch
+        score += 5;
+      }
+    } else {
+      score += 5;
+    }
+
+    // WORK TYPE PREFERENCE (10 points)
+    if (prefs.workType === 'remote' && this.isRemoteJob(job)) {
+      score += 10;
+    } else if (prefs.workType === 'hybrid' && job.location?.toLowerCase().includes('hybrid')) {
+      score += 8;
+    } else if (prefs.workType === 'flexible') {
+      score += 5; // Neutral
+    } else {
+      score += 3; // Small penalty for mismatch
+    }
+
+    // SALARY RANGE (5 points bonus)
     const jobSalary = this.extractSalaryFromJob(job);
-    if (jobSalary && prefs.salaryMin && prefs.salaryMax) {
-      const minSalary = parseInt(prefs.salaryMin);
-      const maxSalary = parseInt(prefs.salaryMax);
-      const midPoint = (minSalary + maxSalary) / 2;
-      
+    if (jobSalary && (prefs.salaryMin || prefs.salaryMax)) {
+      const minSalary = prefs.salaryMin ? parseInt(prefs.salaryMin) : 0;
+      const maxSalary = prefs.salaryMax ? parseInt(prefs.salaryMax) : Infinity;
+
       if (jobSalary >= minSalary && jobSalary <= maxSalary) {
-        // Job is within range, score based on how close to midpoint
-        const distance = Math.abs(jobSalary - midPoint) / (maxSalary - minSalary);
-        score += (1 - distance) * 15; // Closer to midpoint = higher score
+        score += 5; // Bonus for being in range
+      } else if (jobSalary >= minSalary * 0.8 && jobSalary <= maxSalary * 1.2) {
+        score += 3; // Smaller bonus for being close
       }
     }
 
-    return Math.min(score, 100); // Cap at 100
+    return Math.min(Math.round(score), 100); // Cap at 100
   }
 }
 

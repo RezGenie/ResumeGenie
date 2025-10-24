@@ -75,19 +75,25 @@ export function JobDetailsModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-0 sm:p-6"
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-0 sm:p-6"
       onClick={onCloseAction}
     >
       <motion.div
-        initial={{ y: '100%', opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: '100%', opacity: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="bg-card w-full h-full sm:w-full sm:max-w-3xl sm:h-auto sm:max-h-[90vh] sm:rounded-lg overflow-hidden shadow-2xl border backdrop-blur-sm flex flex-col"
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        transition={{ 
+          type: 'spring', 
+          damping: 25, 
+          stiffness: 400,
+          duration: 0.3
+        }}
+        className="bg-card w-full h-full sm:w-full sm:max-w-3xl sm:h-auto sm:max-h-[90vh] sm:rounded-lg overflow-hidden shadow-2xl border border-purple-200/50 dark:border-purple-700/50 backdrop-blur-sm flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b flex-shrink-0">
+        <div className="p-6 border-b border-purple-100 dark:border-purple-800/50 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center p-1">
@@ -105,8 +111,9 @@ export function JobDetailsModal({
               size="sm"
               variant="ghost"
               onClick={onCloseAction}
+              className="hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-full h-8 w-8 p-0 transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
           
@@ -260,7 +267,7 @@ export function JobDetailsModal({
         </div>
 
         {/* Action Buttons */}
-        <div className="border-t p-6 flex-shrink-0">
+        <div className="border-t border-purple-100 dark:border-purple-800/50 p-6 flex-shrink-0 bg-gradient-to-r from-purple-50/30 to-pink-50/30 dark:from-purple-900/10 dark:to-pink-900/10">
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -268,7 +275,7 @@ export function JobDetailsModal({
                 onPassAction(job.id);
                 onCloseAction();
               }}
-              className="flex-1 gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-400 hover:text-red-700"
+              className="flex-1 gap-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-400 hover:text-red-700 transition-all"
             >
               <X className="w-4 h-4" />
               Pass
@@ -276,7 +283,7 @@ export function JobDetailsModal({
             
             <Button
               onClick={() => window.open(job.redirect_url, '_blank')}
-              className="gap-2"
+              className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all"
             >
               <ExternalLink className="w-4 h-4" />
               Apply Now
@@ -288,7 +295,7 @@ export function JobDetailsModal({
                 onLikeAction(job.id);
                 onCloseAction();
               }}
-              className="flex-1 gap-2 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"
+              className="flex-1 gap-2 border-purple-200 dark:border-purple-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-400 hover:text-purple-700 transition-all"
             >
               <Heart className="w-4 h-4" />
               Save Job

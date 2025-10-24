@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { 
-  FileText, 
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  FileText,
   Loader2,
   Briefcase,
   Calendar,
@@ -15,8 +15,6 @@ import {
   MapPin,
   Building2,
   User,
-  Settings,
-  Bell,
   Search,
   Bookmark
 } from "lucide-react";
@@ -31,8 +29,10 @@ import { Footer } from "@/components/footer";
 import { DashboardUser, DashboardStats, JobDisplay } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { userPreferencesService } from '@/lib/api/userPreferences';
+import { userProfileService } from '@/lib/api/userProfile';
 import { savedJobsService } from '@/lib/api/savedJobs';
 import { localResumeService } from '@/lib/api/localResumes';
+import { ProfileOnboarding } from '@/components/onboarding/ProfileOnboarding';
 
 // API response interfaces
 interface WishApiResponse {
@@ -121,6 +121,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [savedJobsStats, setSavedJobsStats] = useState({ total: 0, saved: 0, applied: 0, archived: 0 });
   const [resumeStats, setResumeStats] = useState({ total: 0, ready: 0, processing: 0, errors: 0, hasPrimary: false });
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [activityTab, setActivityTab] = useState<'all' | 'jobs' | 'resumes'>('all');
 
   console.log('Dashboard - Auth state:', { authUser, authLoading, isAuthenticated });
 
@@ -132,20 +134,20 @@ export default function Dashboard() {
         router.replace('/auth');
       }
     }, 8000); // 8 second timeout
-    
+
     return () => clearTimeout(timeout);
   }, [authLoading, router]);
 
   // Immediate redirect if not authenticated and not loading
   useEffect(() => {
     console.log('Dashboard redirect check:', { authLoading, authUser, isAuthenticated });
-    
+
     if (!authLoading && !authUser) {
       console.log('No user and not loading - redirecting immediately to login');
       router.replace('/auth');
       return;
     }
-    
+
     // Add a timeout fallback in case auth check hangs
     const fallbackTimeout = setTimeout(() => {
       if (!authUser && !authLoading) {
@@ -153,14 +155,14 @@ export default function Dashboard() {
         router.replace('/auth');
       }
     }, 10000); // 10 second fallback
-    
+
     return () => clearTimeout(fallbackTimeout);
   }, [authUser, authLoading, router, isAuthenticated]);
 
   const fetchRealDashboardData = async () => {
     try {
       const { apiClient } = await import('@/lib/api/client');
-      
+
       // Fetch all dashboard data in parallel
       const [wishesData, resumesData, , jobsData] = await Promise.allSettled([
         apiClient.get<WishApiResponse[]>('/genie/'),
@@ -173,16 +175,16 @@ export default function Dashboard() {
       const wishes: WishApiResponse[] = wishesData.status === 'fulfilled' ? wishesData.value : [];
       const resumes: ResumeApiResponse[] = resumesData.status === 'fulfilled' ? resumesData.value : [];
       const jobs: JobApiResponse[] = jobsData.status === 'fulfilled' ? jobsData.value : [];
-      
+
       // Load saved jobs stats
       const jobsStats = savedJobsService.getJobsStats();
       setSavedJobsStats(jobsStats);
-      
+
       // Load resume stats
       const resumesStats = localResumeService.getResumeStats();
       setResumeStats(resumesStats);
-      const avgMatchScore = jobs.length > 0 
-        ? jobs.reduce((acc: number, job) => acc + (job.match_score || 0), 0) / jobs.length 
+      const avgMatchScore = jobs.length > 0
+        ? jobs.reduce((acc: number, job) => acc + (job.match_score || 0), 0) / jobs.length
         : 0;
 
       setStats({
@@ -196,7 +198,7 @@ export default function Dashboard() {
 
       // Create recent activity from real data
       const newActivities: RecentActivity[] = [];
-      
+
       // Add recent wishes
       wishes.slice(0, 3).forEach((wish) => {
         newActivities.push({
@@ -282,41 +284,88 @@ export default function Dashboard() {
     }
   };
 
+  // Listen for profile updates
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      console.log('Profile updated, refreshing dashboard user...');
+      if (authUser) {
+        const profile = userProfileService.getProfile();
+        const displayName = profile.name ||
+          (authUser.email.split('@')[0].charAt(0).toUpperCase() +
+            authUser.email.split('@')[0].slice(1));
+
+        const preferences = userPreferencesService.getPreferences();
+        const profileCompleteness = userPreferencesService.getProfileCompleteness();
+
+        setDashboardUser(prev => prev ? {
+          ...prev,
+          name: displayName,
+          profileCompleteness,
+          title: preferences.jobTitle || 'Job Seeker',
+          location: preferences.location || 'Getting Started',
+          bio: preferences.skills ?
+            `Looking for ${preferences.jobTitle || 'new opportunities'} • ${preferences.experienceLevel} level` :
+            'Welcome to RezGenie! Complete your profile to get better job matches.',
+          skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
+        } : null);
+      }
+    };
+
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    window.addEventListener('userPreferencesUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+      window.removeEventListener('userPreferencesUpdated', handleProfileUpdate);
+    };
+  }, [authUser]);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         console.log('Dashboard useEffect - authUser:', authUser, 'authLoading:', authLoading);
-        
+
         // Don't proceed if auth is still loading
         if (authLoading) {
           console.log('Auth still loading, waiting...');
           return;
         }
-        
+
         // Don't proceed if no user (redirect is handled in separate useEffect)
         if (!authUser) {
           console.log('No authUser - skipping dashboard setup');
           return;
         }
-        
+
         // If we have a user, set up the dashboard
         setLoading(true);
-        
+
         // Convert real user data to dashboard user format
         console.log('Creating dashboard user from:', authUser);
         const memberSince = new Date(authUser.created_at).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long'
         });
-        
-        // Create display name from email (until we add profile fields)
-        const displayName = authUser.email.split('@')[0].charAt(0).toUpperCase() + 
-                           authUser.email.split('@')[0].slice(1);
-        
+
+        // Get saved profile or create display name from email
+        const profile = userProfileService.getProfile();
+        const displayName = profile.name ||
+          (authUser.email.split('@')[0].charAt(0).toUpperCase() +
+            authUser.email.split('@')[0].slice(1));
+
         // Get real profile completeness from user preferences
         const profileCompleteness = userPreferencesService.getProfileCompleteness();
         const preferences = userPreferencesService.getPreferences();
-        
+        const resumes = localResumeService.getResumes();
+
+        // Show onboarding only if profile is significantly incomplete
+        // Check if user has NO job title AND NO skills (truly incomplete)
+        const hasNoPreferences = !preferences.jobTitle && !preferences.skills;
+
+        if (hasNoPreferences && resumes.length === 0) {
+          setShowOnboarding(true);
+        }
+
         setDashboardUser({
           ...authUser,
           name: displayName,
@@ -324,7 +373,7 @@ export default function Dashboard() {
           profileCompleteness, // Use real profile completeness
           title: preferences.jobTitle || 'Job Seeker',
           location: preferences.location || 'Getting Started',
-          bio: preferences.skills ? 
+          bio: preferences.skills ?
             `Looking for ${preferences.jobTitle || 'new opportunities'} • ${preferences.experienceLevel} level` :
             'Welcome to RezGenie! Complete your profile to get better job matches.',
           skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
@@ -335,7 +384,7 @@ export default function Dashboard() {
         // Fetch real dashboard data from APIs
         await fetchRealDashboardData();
         setLoading(false);
-        
+
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
         setLoading(false);
@@ -413,73 +462,41 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-    
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <motion.div
-        initial="hidden"
-        animate="visible"  
-        variants={containerVariants}
-        className="space-y-8"
-      >
+      <div className={showOnboarding ? 'opacity-0 pointer-events-none' : ''}>
+        <Header />
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+          className="space-y-8"
+        >
           {/* Header with User Info */}
           <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={dashboardUser?.profilePicture} alt={dashboardUser?.name} />
-                <AvatarFallback className="bg-purple-100 text-purple-700 text-lg font-semibold">
+              <Avatar
+                className="h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => router.push('/profile')}
+              >
+                <AvatarFallback className="bg-purple-600 text-white text-lg font-semibold">
                   {dashboardUser?.name?.split(' ').map(n => n[0]).join('') || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
-                  Welcome back, {dashboardUser?.name?.split(' ')[0] || 'User'}!
+                  Welcome back, <span>{dashboardUser?.name?.split(' ')[0] || 'User'}</span>!
                 </h1>
                 <p className="text-muted-foreground">
                   Member since {dashboardUser?.memberSince} • Profile {dashboardUser?.profileCompleteness}% complete
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm" className="hover:bg-gray-50 hover:border-gray-300 dark:hover:bg-gray-800 dark:hover:border-gray-600">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-gray-50 hover:border-gray-300 dark:hover:bg-gray-800 dark:hover:border-gray-600">
-                <Bell className="h-4 w-4 mr-2" />
-                Notifications
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* WIP Notice */}
-          <motion.div 
-            variants={itemVariants}
-            className="mb-8"
-          >
-            <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-amber-600">
-                    Dashboard Under Development
-                  </h3>
-                  <div className="mt-2 text-sm text-amber-600">
-                    <p>
-                      We&apos;re actively building your personalized dashboard. Some features are still being developed and will be available soon!
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </motion.div>
 
           {/* Profile Progress */}
-          {dashboardUser && dashboardUser.profileCompleteness < 100 && (
+          {dashboardUser && dashboardUser.profileCompleteness < 80 && (
             <motion.div variants={itemVariants}>
               <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
                 <CardContent className="p-6">
@@ -497,10 +514,10 @@ export default function Dashboard() {
                     </Badge>
                   </div>
                   <Progress value={dashboardUser.profileCompleteness} className="mb-4" />
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-700 text-white"
-                    onClick={() => router.push('/profile')}
+                    onClick={() => setShowOnboarding(true)}
                   >
                     <User className="h-4 w-4 mr-2" />
                     Complete Profile
@@ -512,37 +529,7 @@ export default function Dashboard() {
 
           {/* Stats Overview */}
           <motion.div variants={itemVariants}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/genie'}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">AI Wishes</p>
-                      <p className="text-2xl font-bold">{activities.filter(a => a.type === 'wish_granted').length}</p>
-                    </div>
-                    <Sparkles className="h-8 w-8 text-purple-600" />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Ask the genie for career help
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Applications</p>
-                      <p className="text-2xl font-bold">{stats?.totalApplications || 0}</p>
-                    </div>
-                    <Briefcase className="h-8 w-8 text-purple-600" />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    {stats?.pendingApplications || 0} pending responses
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
               <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/dashboard/my-jobs'}>
                 <CardContent className="p-6">
@@ -563,7 +550,7 @@ export default function Dashboard() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Resumes</p>
+                      <p className="text-sm font-medium text-muted-foreground">My Resumes</p>
                       <p className="text-2xl font-bold">{resumeStats.total}</p>
                     </div>
                     <FileText className="h-8 w-8 text-purple-600" />
@@ -573,12 +560,27 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/genie'}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-muted-foreground">My Wishes</p>
+                      <p className="text-2xl font-bold">{activities.filter(a => a.type === 'wish_granted').length}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Get personalized career guidance
+                      </p>
+                    </div>
+                    <Sparkles className="h-10 w-10 text-purple-600" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </motion.div>
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+
             {/* Recent Activity */}
             <motion.div variants={itemVariants} className="lg:col-span-2">
               <Card className="h-full flex flex-col">
@@ -588,77 +590,193 @@ export default function Dashboard() {
                     Recent Activity
                   </CardTitle>
                   <CardDescription>
-                    Your latest job search activities and updates
+                    Your saved jobs, resumes, and career insights
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col">
-                  <div className="space-y-4 flex-1">
-                    {activities.length === 0 ? (
-                      <div className="text-center py-8 flex-1 flex flex-col justify-center">
-                        <Clock className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                        <p className="text-muted-foreground">No recent activity</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Start applying to jobs to see your activity here
+                  {/* Activity Tabs */}
+                  <div className="flex gap-2 mb-4 border-b">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-none border-b-2 ${activityTab === 'all'
+                        ? 'border-purple-600 text-purple-600'
+                        : 'border-transparent'
+                        }`}
+                      onClick={() => setActivityTab('all')}
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-none border-b-2 ${activityTab === 'jobs'
+                        ? 'border-purple-600 text-purple-600'
+                        : 'border-transparent'
+                        }`}
+                      onClick={() => setActivityTab('jobs')}
+                    >
+                      <Bookmark className="h-3 w-3 mr-1" />
+                      Saved Jobs ({savedJobsStats.total})
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-none border-b-2 ${activityTab === 'resumes'
+                        ? 'border-purple-600 text-purple-600'
+                        : 'border-transparent'
+                        }`}
+                      onClick={() => setActivityTab('resumes')}
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      Resumes ({resumeStats.total})
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3 flex-1 overflow-y-auto">
+                    {activityTab === 'all' && activities.length === 0 && (
+                      <div className="text-center py-12 flex flex-col items-center justify-center">
+                        <Sparkles className="h-12 w-12 text-purple-400 mb-4" />
+                        <p className="text-muted-foreground font-medium">Start Your Career Journey</p>
+                        <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+                          Upload a resume, save jobs, or ask the genie for career advice to see your activity here
                         </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4 flex-1">
-                        {activities.map((activity) => (
-                        <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex-shrink-0">
-                            {(activity.type === 'application' || activity.type === 'job_comparison') && (
-                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                                <Briefcase className="h-4 w-4 text-purple-600" />
-                              </div>
-                            )}
-                            {activity.type === 'interview' && (
-                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                                <Calendar className="h-4 w-4 text-purple-600" />
-                              </div>
-                            )}
-                            {activity.type === 'profile_view' && (
-                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                                <Eye className="h-4 w-4 text-purple-600" />
-                              </div>
-                            )}
-                            {(activity.type === 'job_match' || activity.type === 'wish_granted') && (
-                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                                <Sparkles className="h-4 w-4 text-purple-600" />
-                              </div>
-                            )}
-                            {activity.type === 'resume_upload' && (
-                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                                <FileText className="h-4 w-4 text-purple-600" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground">{activity.title}</p>
-                            <p className="text-sm text-muted-foreground">{activity.description}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{activity.timestamp}</p>
-                          </div>
-                          {activity.status && (
-                            <Badge 
-                              variant={activity.status === 'completed' ? 'default' : 
-                                     activity.status === 'pending' ? 'secondary' : 'outline'}
-                              className="text-xs"
-                            >
-                              {activity.status}
-                            </Badge>
-                          )}
+                        <div className="flex gap-2 mt-4">
+                          <Button size="sm" variant="outline" onClick={() => router.push('/dashboard/resumes')}>
+                            <FileText className="h-4 w-4 mr-1" />
+                            Upload Resume
+                          </Button>
+                          <Button size="sm" onClick={() => router.push('/opportunities')}>
+                            <Search className="h-4 w-4 mr-1" />
+                            Find Jobs
+                          </Button>
                         </div>
-                        ))}
                       </div>
                     )}
+
+                    {activityTab === 'jobs' && savedJobsStats.total === 0 && (
+                      <div className="text-center py-12">
+                        <Bookmark className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                        <p className="text-muted-foreground">No saved jobs yet</p>
+                        <Button size="sm" className="mt-4" onClick={() => router.push('/opportunities')}>
+                          <Search className="h-4 w-4 mr-1" />
+                          Discover Jobs
+                        </Button>
+                      </div>
+                    )}
+
+                    {activityTab === 'resumes' && resumeStats.total === 0 && (
+                      <div className="text-center py-12">
+                        <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                        <p className="text-muted-foreground">No resumes uploaded</p>
+                        <Button size="sm" className="mt-4" onClick={() => router.push('/dashboard/resumes')}>
+                          <FileText className="h-4 w-4 mr-1" />
+                          Upload Resume
+                        </Button>
+                      </div>
+                    )}
+
+                    {(activityTab === 'all' || activityTab === 'jobs') && savedJobsStats.total > 0 && (
+                      <>
+                        {savedJobsService.getSavedJobs().slice(0, activityTab === 'jobs' ? 10 : 3).map((job) => (
+                          <div
+                            key={job.id}
+                            className="border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer hover:border-purple-300"
+                            onClick={() => router.push('/dashboard/my-jobs')}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Bookmark className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                                  <h4 className="font-medium text-sm truncate">{job.title}</h4>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Building2 className="h-3 w-3" />
+                                  <span className="truncate">{job.company}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  <span className="truncate">{job.location}</span>
+                                </div>
+                              </div>
+                              <Badge variant="secondary" className="text-xs ml-2">
+                                Saved
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {(activityTab === 'all' || activityTab === 'resumes') && resumeStats.total > 0 && (
+                      <>
+                        {localResumeService.getResumes().slice(0, activityTab === 'resumes' ? 10 : 3).map((resume) => (
+                          <div
+                            key={resume.id}
+                            className="border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer hover:border-purple-300"
+                            onClick={() => router.push('/dashboard/resumes')}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <FileText className="h-4 w-4 text-purple-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-sm truncate">{resume.fileName}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  Uploaded {new Date(resume.uploadedAt).toLocaleDateString()}
+                                </p>
+                                {resume.analysisData && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      <Sparkles className="h-3 w-3 mr-1" />
+                                      Score: {resume.analysisData.overallScore}%
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                              <Badge
+                                variant={resume.status === 'ready' ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {resume.status === 'ready' ? 'Ready' : resume.status === 'processing' ? 'Processing' : 'Error'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
-                  {/* Add a "View All Activity" button at the bottom */}
-                  <div className="mt-6 pt-4 border-t">
-                    <Button variant="outline" className="w-full hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
-                      <a href="/activity">
-                        <Clock className="h-4 w-4 mr-2" />
-                        View All Activity
-                      </a>
-                    </Button>
+
+                  {/* Quick Action Buttons */}
+                  <div className="mt-4 pt-4 border-t flex gap-2">
+                    {activityTab === 'jobs' && savedJobsStats.total > 0 && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20"
+                        onClick={() => router.push('/dashboard/my-jobs')}
+                      >
+                        View All Jobs
+                      </Button>
+                    )}
+                    {activityTab === 'resumes' && resumeStats.total > 0 && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20"
+                        onClick={() => router.push('/dashboard/resumes')}
+                      >
+                        View All Resumes
+                      </Button>
+                    )}
+                    {activityTab === 'all' && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20"
+                        onClick={() => router.push('/genie')}
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Ask Genie
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -666,7 +784,7 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <div className="space-y-6 flex flex-col h-full">
-              
+
               {/* Recommended Jobs */}
               <motion.div variants={itemVariants} className="flex-1">
                 <Card className="h-full flex flex-col">
@@ -692,35 +810,35 @@ export default function Dashboard() {
                       ) : (
                         <div className="space-y-4 flex-1 overflow-y-auto">
                           {recommendedJobs.map((job) => (
-                          <div key={job.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <h4 className="font-medium text-sm">{job.title}</h4>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                  <Building2 className="h-3 w-3" />
-                                  {job.company}
+                            <div key={job.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-sm">{job.title}</h4>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                    <Building2 className="h-3 w-3" />
+                                    {job.company}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <MapPin className="h-3 w-3" />
+                                    {job.location}
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <MapPin className="h-3 w-3" />
-                                  {job.location}
+                                <Badge variant="secondary" className="text-xs">
+                                  {job.matchScore}% match
+                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between pt-2">
+                                <span className="text-xs text-muted-foreground">{new Date(job.posted_at).toLocaleDateString()}</span>
+                                <div className="flex items-center gap-2">
+                                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
+                                    <Bookmark className="h-3 w-3" />
+                                  </Button>
+                                  <Button size="sm" className="h-6 px-2 text-xs">
+                                    View
+                                  </Button>
                                 </div>
                               </div>
-                              <Badge variant="secondary" className="text-xs">
-                                {job.matchScore}% match
-                              </Badge>
                             </div>
-                            <div className="flex items-center justify-between pt-2">
-                              <span className="text-xs text-muted-foreground">{new Date(job.posted_at).toLocaleDateString()}</span>
-                              <div className="flex items-center gap-2">
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
-                                  <Bookmark className="h-3 w-3" />
-                                </Button>
-                                <Button size="sm" className="h-6 px-2 text-xs">
-                                  View
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
                           ))}
                         </div>
                       )}
@@ -773,7 +891,40 @@ export default function Dashboard() {
           </div>
         </motion.div>
       </div>
-      <Footer />
+      <div className={showOnboarding ? 'opacity-0 pointer-events-none' : ''}>
+        <Footer />
+      </div>
+
+      {/* Profile Onboarding Modal */}
+      <AnimatePresence mode="wait">
+        {showOnboarding && (
+          <ProfileOnboarding
+            onComplete={() => {
+              setShowOnboarding(false);
+              // Refresh dashboard data without full reload
+              const fetchData = async () => {
+                const preferences = userPreferencesService.getPreferences();
+                const profileCompleteness = userPreferencesService.getProfileCompleteness();
+
+                if (dashboardUser) {
+                  setDashboardUser({
+                    ...dashboardUser,
+                    profileCompleteness,
+                    title: preferences.jobTitle || 'Job Seeker',
+                    location: preferences.location || 'Getting Started',
+                    bio: preferences.skills ?
+                      `Looking for ${preferences.jobTitle || 'new opportunities'} • ${preferences.experienceLevel} level` :
+                      'Welcome to RezGenie! Complete your profile to get better job matches.',
+                    skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
+                  });
+                }
+              };
+              fetchData();
+            }}
+            onSkip={() => setShowOnboarding(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

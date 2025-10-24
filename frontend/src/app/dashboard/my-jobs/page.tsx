@@ -152,7 +152,7 @@ export default function MyJobsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <Header />
       <div className="p-6">
         <motion.div
@@ -165,10 +165,10 @@ export default function MyJobsPage() {
         <motion.div variants={itemVariants} className="mb-8">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2">
                 My Jobs
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Manage your saved job opportunities
               </p>
             </div>
@@ -225,12 +225,12 @@ export default function MyJobsPage() {
           <div className="space-y-4">
             <div className="flex gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search jobs, companies, or skills..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
                 />
               </div>
               <Select
@@ -258,7 +258,7 @@ export default function MyJobsPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg border"
+                  className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-card rounded-lg border"
                 >
                   <Input
                     placeholder="Location..."
@@ -294,14 +294,14 @@ export default function MyJobsPage() {
           {filteredJobs.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
-                <Bookmark className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                <Bookmark className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   No saved jobs yet
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   Start saving jobs from the job discovery page to track your applications
                 </p>
-                <Button onClick={() => window.location.href = '/opportunities'}>
+                <Button onClick={() => window.location.href = '/opportunities'} className="bg-purple-600 hover:bg-purple-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Discover Jobs
                 </Button>
@@ -324,7 +324,7 @@ export default function MyJobsPage() {
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1" onClick={() => setSelectedJob(job)}>
                             <div className="flex items-start justify-between mb-2">
-                              <h3 className="text-xl font-semibold text-gray-900 dark:text-white hover:text-purple-600 transition-colors">
+                              <h3 className="text-xl font-semibold text-foreground hover:text-purple-600 transition-colors">
                                 {job.title}
                               </h3>
                               <Badge className={getStatusColor(job.status)}>
@@ -333,7 +333,7 @@ export default function MyJobsPage() {
                               </Badge>
                             </div>
                             
-                            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                               <div className="flex items-center gap-1">
                                 <Building className="w-4 h-4" />
                                 {job.company}
@@ -368,7 +368,7 @@ export default function MyJobsPage() {
                             </div>
 
                             {job.notes && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                              <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
                                 {job.notes}
                               </p>
                             )}
@@ -430,120 +430,183 @@ export default function MyJobsPage() {
         </motion.div>
 
         {/* Job Details Modal */}
-        <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            {selectedJob && (
-              <>
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">{selectedJob.title}</DialogTitle>
-                  <DialogDescription className="text-lg">
-                    {selectedJob.company} • {selectedJob.location}
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <Badge className={getStatusColor(selectedJob.status)}>
-                    {getStatusIcon(selectedJob.status)}
-                    <span className="ml-1 capitalize">{selectedJob.status}</span>
-                  </Badge>
-                  {selectedJob.salary && (
-                    <div className="text-lg font-semibold text-purple-600">
-                      {selectedJob.salary}
+        <AnimatePresence mode="wait">
+          {selectedJob && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                onClick={() => setSelectedJob(null)}
+              />
+              
+              {/* Modal Content */}
+              <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  className="pointer-events-auto w-full max-w-4xl max-h-[80vh] overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Card className="shadow-2xl bg-card border-purple-200 dark:border-purple-800 flex flex-col max-h-[80vh]">
+                    <div className="p-6 border-b border-border flex-shrink-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h2 className="text-2xl font-bold text-foreground">{selectedJob.title}</h2>
+                          <p className="text-lg text-muted-foreground">
+                            {selectedJob.company} • {selectedJob.location}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedJob(null)}
+                          className="rounded-full h-8 w-8 p-0"
+                        >
+                          <span className="text-xl">×</span>
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                <div>
-                  <h4 className="font-semibold mb-2">Skills Required</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedJob.skills.map((skill, idx) => (
-                      <Badge key={idx} variant="secondary">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+                    <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                      <div className="flex items-center justify-between">
+                        <Badge className={getStatusColor(selectedJob.status)}>
+                          {getStatusIcon(selectedJob.status)}
+                          <span className="ml-1 capitalize">{selectedJob.status}</span>
+                        </Badge>
+                        {selectedJob.salary && (
+                          <div className="text-lg font-semibold text-purple-600">
+                            {selectedJob.salary}
+                          </div>
+                        )}
+                      </div>
 
-                <div>
-                  <h4 className="font-semibold mb-2">Job Description</h4>
-                  <div className="prose dark:prose-invert max-w-none">
-                    <p className="whitespace-pre-wrap">{selectedJob.description}</p>
-                  </div>
-                </div>
+                      <div>
+                        <h4 className="font-semibold mb-2">Skills Required</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedJob.skills.map((skill, idx) => (
+                            <Badge key={idx} variant="secondary">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
 
-                {selectedJob.notes && (
-                  <div>
-                    <h4 className="font-semibold mb-2">My Notes</h4>
-                    <p className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                      {selectedJob.notes}
-                    </p>
-                  </div>
-                )}
+                      <div>
+                        <h4 className="font-semibold mb-2">Job Description</h4>
+                        <div className="prose dark:prose-invert max-w-none">
+                          <p className="whitespace-pre-wrap">{selectedJob.description}</p>
+                        </div>
+                      </div>
 
-                <div className="text-sm text-gray-500">
-                  Saved on {new Date(selectedJob.savedAt).toLocaleDateString()} at{' '}
-                  {new Date(selectedJob.savedAt).toLocaleTimeString()}
-                </div>
-                </div>
+                      {selectedJob.notes && (
+                        <div>
+                          <h4 className="font-semibold mb-2">My Notes</h4>
+                          <p className="bg-muted p-3 rounded">
+                            {selectedJob.notes}
+                          </p>
+                        </div>
+                      )}
 
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setEditingNotes(selectedJob.id);
-                      setNotesText(selectedJob.notes || '');
-                      setSelectedJob(null);
-                    }}
-                  >
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Edit Notes
-                  </Button>
-                  {selectedJob.jobUrl && (
-                    <Button onClick={() => window.open(selectedJob.jobUrl, '_blank')}>
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      View Original
-                    </Button>
-                  )}
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+                      <div className="text-sm text-muted-foreground">
+                        Saved on {new Date(selectedJob.savedAt).toLocaleDateString()} at{' '}
+                        {new Date(selectedJob.savedAt).toLocaleTimeString()}
+                      </div>
+                    </div>
+
+                    <div className="p-6 border-t border-border flex-shrink-0 flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setEditingNotes(selectedJob.id);
+                          setNotesText(selectedJob.notes || '');
+                          setSelectedJob(null);
+                        }}
+                      >
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Edit Notes
+                      </Button>
+                      {selectedJob.jobUrl && (
+                        <Button onClick={() => window.open(selectedJob.jobUrl, '_blank')} className="bg-purple-600 hover:bg-purple-700">
+                          <ExternalLink className="w-4 w-4 mr-2" />
+                          View Original
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                </motion.div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Notes Edit Modal */}
-        <Dialog open={!!editingNotes} onOpenChange={() => setEditingNotes(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Notes</DialogTitle>
-              <DialogDescription>
-                Add your thoughts, application status, or interview notes
-              </DialogDescription>
-            </DialogHeader>
+        <AnimatePresence mode="wait">
+          {editingNotes && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                onClick={() => setEditingNotes(null)}
+              />
+              
+              {/* Modal Content */}
+              <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  className="pointer-events-auto w-full max-w-md"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Card className="shadow-2xl bg-card">
+                    <div className="p-6 border-b border-border">
+                      <h2 className="text-xl font-bold text-foreground">Edit Notes</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Add your thoughts, application status, or interview notes
+                      </p>
+                    </div>
 
-            <Textarea
-              placeholder="Add your notes here..."
-              value={notesText}
-              onChange={(e) => setNotesText(e.target.value)}
-              rows={6}
-            />
+                    <div className="p-6">
+                      <Textarea
+                        placeholder="Add your notes here..."
+                        value={notesText}
+                        onChange={(e) => setNotesText(e.target.value)}
+                        rows={6}
+                      />
+                    </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingNotes(null)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (editingNotes) {
-                    handleUpdateNotes(editingNotes, notesText);
-                  }
-                }}
-              >
-                Save Notes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                    <div className="p-6 border-t border-border flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setEditingNotes(null)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (editingNotes) {
+                            handleUpdateNotes(editingNotes, notesText);
+                          }
+                        }}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        Save Notes
+                      </Button>
+                    </div>
+                  </Card>
+                </motion.div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>
       </motion.div>
       </div>
       <Footer />

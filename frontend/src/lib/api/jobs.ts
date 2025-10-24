@@ -64,6 +64,14 @@ export class JobService {
         }));
         
         console.log(`Smart filtering: ${originalCount} → ${jobsDisplay.length} jobs (${originalCount - jobsDisplay.length} filtered out)`);
+        
+        // Log top 5 matches for debugging
+        if (jobsDisplay.length > 0) {
+          console.log('Top 5 job matches:');
+          jobsDisplay.slice(0, 5).forEach((job, idx) => {
+            console.log(`  ${idx + 1}. ${job.title} (${job.matchScore}%) - ${job.company}`);
+          });
+        }
       } else {
         console.log('Profile incomplete, showing all jobs without filtering');
       }
