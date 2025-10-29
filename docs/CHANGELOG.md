@@ -2,6 +2,38 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.14.0] - 2025-10-29
+
+### CP-19 Dashboard Enhancements
+
+- **Dashboard UI Improvements**
+  - Redesigned dashboard layout for better usability and accessibility
+  - Added new widgets for quick access to key features
+  - Improved loading states and error handling for dashboard components
+
+### CP-22 Enhance Profile Settings
+
+- **Profile Management**
+  - Added Profile page for viewing and editing user information
+  - Integrated with backend API for updating user data
+  - Added password change functionality with strength meter
+  - Implemented account deletion with confirmation modal
+  - Improved UI/UX with responsive design and accessibility features
+
+### CP-24 OpenAI Analysis Integration
+
+- **OpenAI Integration**
+  - Integrated OpenAI API for enhanced resume and job analysis
+  - Added new endpoints for AI-powered recommendations
+  - Improved error handling and rate limiting for OpenAI requests
+
+### CP-23 Background Processing Integration
+
+- **Background Task Management**
+  - Implemented Celery for handling long-running tasks
+  - Added Redis as a message broker for task queuing
+  - Created monitoring dashboard with Flower for real-time task tracking
+
 ## [0.13.0] - 2025-10-20
 
 ### CP-49 Revamp Job Discovery
