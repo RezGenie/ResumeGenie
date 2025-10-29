@@ -341,3 +341,34 @@ async def change_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Password change failed"
         )
+
+
+@router.delete("/delete-account", status_code=status.HTTP_200_OK)
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Delete user account permanently.
+    
+    This action is irreversible and will delete all user data.
+    Requires valid access token.
+    """
+    try:
+        user_email = current_user.email
+        
+        # Delete the user account
+        await db.delete(current_user)
+        await db.commit()
+        
+        logger.info(f"User account deleted: {user_email}")
+        
+        return {"message": "Account deleted successfully"}
+        
+    except Exception as e:
+        logger.error(f"Account deletion error: {e}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Account deletion failed"
+        )

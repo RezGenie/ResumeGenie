@@ -8,6 +8,8 @@ interface SelectContextType {
   onValueChange?: (value: string) => void
   open: boolean
   setOpen: (open: boolean) => void
+  selectedLabel?: string
+  setSelectedLabel?: (label: string) => void
 }
 
 const SelectContext = React.createContext<SelectContextType | null>(null)
@@ -20,9 +22,10 @@ interface SelectProps {
 
 const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const [open, setOpen] = React.useState(false)
+  const [selectedLabel, setSelectedLabel] = React.useState<string>("")
   
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
+    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, selectedLabel, setSelectedLabel }}>
       <div className="relative">{children}</div>
     </SelectContext.Provider>
   )
@@ -64,7 +67,7 @@ const SelectValue = React.forwardRef<
       className={cn("block truncate", className)}
       {...props}
     >
-      {context?.value || placeholder}
+      {context?.selectedLabel || placeholder}
     </span>
   )
 })
@@ -82,7 +85,7 @@ const SelectContent = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "absolute top-full z-50 w-full mt-1 max-h-96 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
+        "absolute top-full z-50 w-full mt-1 max-h-96 overflow-auto rounded-md border bg-white dark:bg-purple-950 text-popover-foreground shadow-md",
         className
       )}
       {...props}
@@ -105,15 +108,29 @@ const SelectItem = React.forwardRef<
 >(({ className, children, value, ...props }, ref) => {
   const context = React.useContext(SelectContext)
   
+  // Extract text content from children for label
+  const getTextContent = (node: React.ReactNode): string => {
+    if (typeof node === 'string') return node
+    if (typeof node === 'number') return String(node)
+    if (React.isValidElement(node) && node.props.children) {
+      return getTextContent(node.props.children)
+    }
+    if (Array.isArray(node)) {
+      return node.map(getTextContent).join(' ')
+    }
+    return ''
+  }
+  
   return (
     <div
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-purple-50 dark:hover:bg-purple-900/30 focus:bg-purple-50 dark:focus:bg-purple-900/30 transition-colors",
         className
       )}
       onClick={() => {
         context?.onValueChange?.(value)
+        context?.setSelectedLabel?.(getTextContent(children))
         context?.setOpen(false)
       }}
       {...props}
