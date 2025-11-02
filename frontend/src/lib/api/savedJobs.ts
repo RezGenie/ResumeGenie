@@ -24,12 +24,33 @@ export interface SavedJobsFilters {
 }
 
 class SavedJobsService {
-  private readonly STORAGE_KEY = 'savedJobs';
+  private readonly STORAGE_KEY_PREFIX = 'savedJobs_';
 
-  // Get all saved jobs
+  // Get user-specific storage key
+  private getUserStorageKey(): string {
+    // Get current user ID from auth token or localStorage
+    const authToken = localStorage.getItem('auth_token');
+    if (authToken) {
+      try {
+        // Decode JWT to get user ID (simple base64 decode of payload)
+        const payload = authToken.split('.')[1];
+        const decoded = JSON.parse(atob(payload));
+        const userId = decoded.sub || decoded.user_id || decoded.id;
+        return `${this.STORAGE_KEY_PREFIX}${userId}`;
+      } catch (error) {
+        console.warn('Failed to decode auth token:', error);
+      }
+    }
+    
+    // Fallback to guest session
+    return `${this.STORAGE_KEY_PREFIX}guest`;
+  }
+
+  // Get all saved jobs (user-scoped)
   getSavedJobs(): SavedJob[] {
     try {
-      const saved = localStorage.getItem(this.STORAGE_KEY);
+      const storageKey = this.getUserStorageKey();
+      const saved = localStorage.getItem(storageKey);
       return saved ? JSON.parse(saved) : [];
     } catch (error) {
       console.error('Error retrieving saved jobs:', error);
@@ -37,7 +58,7 @@ class SavedJobsService {
     }
   }
 
-  // Save a job
+  // Save a job (user-scoped)
   saveJob(job: Omit<SavedJob, 'savedAt' | 'status'>): boolean {
     try {
       const savedJobs = this.getSavedJobs();
@@ -54,7 +75,9 @@ class SavedJobsService {
       };
 
       savedJobs.push(newSavedJob);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(savedJobs));
+      const storageKey = this.getUserStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(savedJobs));
+      console.log('Job saved for user:', storageKey);
       return true;
     } catch (error) {
       console.error('Error saving job:', error);
@@ -62,14 +85,16 @@ class SavedJobsService {
     }
   }
 
-  // Remove a saved job
+  // Remove a saved job (user-scoped)
   removeSavedJob(jobId: string): boolean {
     try {
       const savedJobs = this.getSavedJobs();
       const filteredJobs = savedJobs.filter(job => job.id !== jobId);
       
       if (filteredJobs.length !== savedJobs.length) {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredJobs));
+        const storageKey = this.getUserStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify(filteredJobs));
+        console.log('Job removed for user:', storageKey);
         return true;
       }
       return false;
@@ -87,7 +112,8 @@ class SavedJobsService {
       
       if (jobIndex !== -1) {
         savedJobs[jobIndex].status = status;
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(savedJobs));
+        const storageKey = this.getUserStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify(savedJobs));
         return true;
       }
       return false;
@@ -105,7 +131,8 @@ class SavedJobsService {
       
       if (jobIndex !== -1) {
         savedJobs[jobIndex].notes = notes;
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(savedJobs));
+        const storageKey = this.getUserStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify(savedJobs));
         return true;
       }
       return false;
@@ -215,7 +242,8 @@ class SavedJobsService {
       const newJobs = jobs.filter(job => !existingIds.has(job.id));
       const mergedJobs = [...existingJobs, ...newJobs];
       
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(mergedJobs));
+      const storageKey = this.getUserStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(mergedJobs));
       return true;
     } catch (error) {
       console.error('Error importing jobs:', error);

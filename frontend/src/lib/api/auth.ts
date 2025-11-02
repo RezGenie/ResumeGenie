@@ -115,6 +115,54 @@ class AuthService {
     return this.client.get('/auth/me');
   }
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    const token = this.getAccessToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/change-password`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Password change failed');
+    }
+
+    return response.json();
+  }
+
+  async deleteAccount(): Promise<{ message: string }> {
+    const token = this.getAccessToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/delete-account`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Account deletion failed');
+    }
+
+    return response.json();
+  }
+
   // Token management utilities
   setTokens(accessToken: string, refreshToken: string): void {
     localStorage.setItem('auth_token', accessToken);

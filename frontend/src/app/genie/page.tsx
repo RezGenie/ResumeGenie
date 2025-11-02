@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { UserStorage } from "@/lib/utils/userStorage";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -63,10 +64,10 @@ interface Wish {
     skillGaps?: Array<
       | string
       | {
-          skill: string;
-          level?: string;
-          importance?: string;
-        }
+        skill: string;
+        level?: string;
+        importance?: string;
+      }
     >;
   };
 }
@@ -253,6 +254,26 @@ export default function StudioPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper function to parse recommendations if they come as JSON string
+  const parseRecommendations = useCallback((data: any): string[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) return parsed;
+        // If it's an object with a recommendations field
+        if (parsed.recommendations && Array.isArray(parsed.recommendations)) {
+          return parsed.recommendations;
+        }
+      } catch {
+        // If parsing fails, return the string as a single item
+        return [data];
+      }
+    }
+    return [];
+  }, []);
+
   // Progressive highlighting states for user guidance
   const [showInitialHighlight, setShowInitialHighlight] = useState(true);
   const [isResumeUploading, setIsResumeUploading] = useState(false);
@@ -332,7 +353,7 @@ export default function StudioPage() {
   // For guests: Ensure latest recommendations are shown when they've used all wishes
   useEffect(() => {
     if (!isAuthenticated && dailyWishes >= maxWishes && maxWishes < 999 && !analysisResults) {
-      const savedWishes = localStorage.getItem('genie_wishes');
+      const savedWishes = UserStorage.getItem('genie_wishes');
       if (savedWishes) {
         try {
           const parsedWishes = JSON.parse(savedWishes);
@@ -341,18 +362,21 @@ export default function StudioPage() {
               ...wish,
               timestamp: new Date(wish.timestamp)
             }));
-            
+
             const mostRecentCompletedWish = wishesWithDates
               .filter(wish => wish.status === 'completed' && wish.results)
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-            
+
             if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+              const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
+              const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
+
               setAnalysisResults({
                 resumeScore: mostRecentCompletedWish.results.score || 0,
                 matchScore: mostRecentCompletedWish.results.score || 0,
-                skillGaps: mostRecentCompletedWish.results.recommendations || [],
-                insights: mostRecentCompletedWish.results.insights || [],
-                recommendations: mostRecentCompletedWish.results.insights || [],
+                skillGaps: parsedRecommendations,
+                insights: parsedInsights,
+                recommendations: parsedInsights,
               });
             }
           }
@@ -376,7 +400,7 @@ export default function StudioPage() {
         if (!isAuthenticated) {
           // Load wishes from localStorage for guest users
           try {
-            const savedWishes = localStorage.getItem('genie_wishes');
+            const savedWishes = UserStorage.getItem('genie_wishes');
             if (savedWishes) {
               const parsedWishes = JSON.parse(savedWishes);
               if (Array.isArray(parsedWishes)) {
@@ -386,19 +410,22 @@ export default function StudioPage() {
                   timestamp: new Date(wish.timestamp)
                 }));
                 setWishes(wishesWithDates);
-                
+
                 // For guests: Set analysisResults to the most recent completed wish
                 const mostRecentCompletedWish = wishesWithDates
                   .filter(wish => wish.status === 'completed' && wish.results)
                   .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-                
+
                 if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+                  const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
+                  const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
+
                   setAnalysisResults({
                     resumeScore: mostRecentCompletedWish.results.score || 0,
                     matchScore: mostRecentCompletedWish.results.score || 0, // Use same score if no separate match score
-                    skillGaps: mostRecentCompletedWish.results.recommendations || [],
-                    insights: mostRecentCompletedWish.results.insights || [],
-                    recommendations: mostRecentCompletedWish.results.insights || [],
+                    skillGaps: parsedRecommendations,
+                    insights: parsedInsights,
+                    recommendations: parsedInsights,
                   });
                 }
               }
@@ -443,16 +470,16 @@ export default function StudioPage() {
                 status: wish.is_processed
                   ? "completed"
                   : wish.processing_status === "processing"
-                  ? "processing"
-                  : "pending",
+                    ? "processing"
+                    : "pending",
                 results: detailedData
                   ? {
-                      score: Math.round(
-                        (detailedData.confidence_score || 0) * 100
-                      ),
-                      insights: detailedData.recommendations || [],
-                      recommendations: detailedData.action_items || [],
-                    }
+                    score: Math.round(
+                      (detailedData.confidence_score || 0) * 100
+                    ),
+                    insights: parseRecommendations(detailedData.recommendations),
+                    recommendations: parseRecommendations(detailedData.action_items),
+                  }
                   : undefined,
               } as Wish;
             })
@@ -509,13 +536,13 @@ export default function StudioPage() {
 
   // Filter wishes based on search query and status
   const filteredWishes = wishes.filter((wish) => {
-    const matchesSearch = 
+    const matchesSearch =
       wish.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       wish.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = 
+
+    const matchesStatus =
       statusFilter === "all" || wish.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -547,22 +574,22 @@ export default function StudioPage() {
       // Update local state for immediate UI feedback (always do this regardless of backend result)
       setWishes((prevWishes) => {
         const updatedWishes = prevWishes.filter((wish) => wish.id !== wishId);
-        
+
         // For guest users, persist to localStorage
         if (!isAuthenticated) {
           try {
-            localStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
+            UserStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
           } catch (error) {
             console.warn('Failed to save wishes to localStorage:', error);
           }
         }
-        
+
         return updatedWishes;
       });
     } catch (error) {
       console.error('Failed to delete wish:', error);
-      toast.error("The wish couldn't be erased from history! 🕰️✨", { 
-        description: "Please try again later" 
+      toast.error("The wish couldn't be erased from history! 🕰️✨", {
+        description: "Please try again later"
       });
     }
   }, [isAuthenticated]);
@@ -577,7 +604,7 @@ export default function StudioPage() {
         if (match) {
           const errorData = JSON.parse(match[0]);
           const detail = errorData.detail?.[0];
-          
+
           if (detail?.type === 'string_too_short') {
             const minLength = detail.ctx?.min_length || 10;
             return {
@@ -585,7 +612,7 @@ export default function StudioPage() {
               description: `Please write at least ${minLength} characters for the genie to understand your request.`
             };
           }
-          
+
           if (detail?.type === 'string_too_long') {
             const maxLength = detail.ctx?.max_length || 5000;
             return {
@@ -593,7 +620,7 @@ export default function StudioPage() {
               description: `Please keep your request under ${maxLength} characters.`
             };
           }
-          
+
           if (detail?.loc?.includes('wish_text')) {
             return {
               title: "The genie couldn't read your wish! 🔮",
@@ -605,7 +632,7 @@ export default function StudioPage() {
         console.warn('Failed to parse API error:', parseError);
       }
     }
-    
+
     // Check for network/connection errors
     if (error.message.includes('fetch') || error.message.includes('network')) {
       return {
@@ -613,7 +640,7 @@ export default function StudioPage() {
         description: "Please check your internet connection and try again."
       };
     }
-    
+
     // Check for timeout errors
     if (error.message.includes('timeout') || error.message.includes('timed out')) {
       return {
@@ -621,26 +648,26 @@ export default function StudioPage() {
         description: "The magical analysis is overloaded. Please try again in a moment."
       };
     }
-    
+
     // Check for authentication errors
     if (error.message.includes('401') || error.message.includes('unauthorized')) {
       return {
-        title: "The genie doesn't recognize you! 🔐",
+        title: "The genie doesn't recognize you!",
         description: "Please sign in again to continue using your magical powers."
       };
     }
-    
+
     // Check for rate limiting
     if (error.message.includes('429') || error.message.includes('rate limit')) {
       return {
-        title: "The genie needs a moment to recharge! ⚡",
+        title: "The genie needs a moment to recharge!",
         description: "Too many wishes at once. Please wait a moment before trying again."
       };
     }
-    
+
     // Default fallback for unknown errors
     return {
-      title: "The genie's lamp flickered! ✨",
+      title: "The genie's lamp flickered!",
       description: "Something unexpected happened. Please try a different career question."
     };
   };
@@ -696,7 +723,7 @@ export default function StudioPage() {
         document.execCommand('copy');
         toast.success("Recommendations copied to clipboard");
       } catch {
-        toast.error("The mystical clipboard spell failed! 📋✨", {
+        toast.error("The mystical clipboard spell failed!", {
           description: "Unable to copy your divine recommendations"
         });
       }
@@ -707,7 +734,7 @@ export default function StudioPage() {
   const handleFileSelect = async (file: File) => {
     const error = validateFile(file);
     if (error) {
-      toast.error("That scroll isn't magical enough! 📜", {
+      toast.error("That scroll isn't magical enough!", {
         description: error,
       });
       return;
@@ -810,14 +837,14 @@ export default function StudioPage() {
   const handleSubmit = async () => {
     // Enhanced validation with better user guidance
     const trimmedWish = jobPosting.trim();
-    
+
     if (!trimmedWish) {
       toast.error("Your genie needs more details! 🧞‍♂️📝", {
         description: "Please enter your career question, job posting, or wish text.",
       });
       return;
     }
-    
+
     // Check minimum length (backend requires 10 characters)
     if (trimmedWish.length < 10) {
       toast.error("Your wish needs more magic words! ✨", {
@@ -825,7 +852,7 @@ export default function StudioPage() {
       });
       return;
     }
-    
+
     // Check for overly simple inputs
     const simpleInputs = ['hello', 'hi', 'test', 'testing', 'help me', 'please help'];
     if (simpleInputs.includes(trimmedWish.toLowerCase())) {
@@ -834,7 +861,7 @@ export default function StudioPage() {
       });
       return;
     }
-    
+
     // Check for very repetitive content
     if (/^(.)\1{9,}$/.test(trimmedWish) || /^(.{1,3})\1{4,}$/.test(trimmedWish)) {
       toast.error("The genie detected magical interference! 🌟", {
@@ -842,7 +869,7 @@ export default function StudioPage() {
       });
       return;
     }
-    
+
     if (maxWishes < 999 && dailyWishes >= maxWishes) {
       toast.error("The genie's magic is exhausted for today! 🧞‍♂️💤", {
         description:
@@ -868,28 +895,28 @@ export default function StudioPage() {
         id: data.id,
         type: "resume_analysis",
         title: resumeFile ? "Resume & Job Match Analysis" : "Career Guidance",
-        description: resumeFile 
+        description: resumeFile
           ? `Analysis of ${resumeFile.name} against job posting`
           : "Career advice and recommendations",
         timestamp: new Date(),
         status: "processing",
       };
-      
+
       setWishes((prev) => {
         const updatedWishes = [newWish, ...prev];
-        
+
         // Persist to localStorage
         try {
-          localStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
+          UserStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
         } catch (error) {
           console.warn('Failed to save wishes to localStorage:', error);
         }
-        
+
         return updatedWishes;
       });
 
       // Poll for wish completion (simplified)
-      let wishDetails = null;
+      let wishDetails: WishDetailsResponse | null = null;
       for (let i = 0; i < 30; i++) {
         // up to 30s
         try {
@@ -899,60 +926,63 @@ export default function StudioPage() {
           );
           if (wishDetails && wishDetails.processing_status === "completed")
             break;
-        } catch {}
+        } catch { }
         await new Promise((r) => setTimeout(r, 1000));
       }
       if (!wishDetails || wishDetails.processing_status !== "completed") {
         throw new Error("Wish processing timed out");
       }
 
+      const parsedRecommendations = parseRecommendations(wishDetails.recommendations);
+      const parsedActionItems = parseRecommendations(wishDetails.action_items);
+
       // Update the wish with real results
       setWishes((prev) => {
         const updatedWishes = prev.map((wish) =>
           wish.id === data.id
             ? {
-                ...wish,
-                status: "completed" as const,
-                results: {
-                  score: Math.round((wishDetails.confidence_score || 0) * 100),
-                  insights: wishDetails.recommendations || [],
-                  recommendations: wishDetails.action_items || [],
-                },
-              }
+              ...wish,
+              status: "completed" as const,
+              results: {
+                score: Math.round((wishDetails!.confidence_score || 0) * 100),
+                insights: parsedRecommendations,
+                recommendations: parsedActionItems,
+              },
+            }
             : wish
         );
-        
+
         // Persist to localStorage
         try {
-          localStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
+          UserStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
         } catch (error) {
           console.warn('Failed to save wishes to localStorage:', error);
         }
-        
+
         return updatedWishes;
       });
       setAnalysisResults({
-        resumeScore: Math.round((wishDetails.confidence_score || 0) * 100),
-        matchScore: Math.round((wishDetails.job_match_score || 0) * 100),
-        skillGaps: wishDetails.action_items || [],
-        insights: wishDetails.recommendations || [],
-        recommendations: wishDetails.recommendations || [],
+        resumeScore: Math.round((wishDetails!.confidence_score || 0) * 100),
+        matchScore: Math.round((wishDetails!.job_match_score || 0) * 100),
+        skillGaps: parsedActionItems,
+        insights: parsedRecommendations,
+        recommendations: parsedRecommendations,
       });
       // Enable output highlighting after successful analysis
       setShowButtonHighlight(false);
       setShowOutputHighlight(true);
-      
+
       // Auto-scroll to show recommendations after a brief delay
       setTimeout(() => {
         const recommendationsElement = document.querySelector('[data-recommendations-section]');
         if (recommendationsElement) {
-          recommendationsElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
+          recommendationsElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
           });
         }
       }, 500);
-      
+
       // Automatically disable highlighting after 10 seconds with smooth fade-out
       setTimeout(() => {
         setOutputHighlightFading(true);
@@ -962,30 +992,30 @@ export default function StudioPage() {
           setOutputHighlightFading(false);
         }, 1200); // Match CSS transition duration
       }, 10000);
-      
+
       // Refresh usage count after successful wish
       await refreshDailyUsage();
     } catch (error) {
       // Remove the temporary wish if it failed
       setWishes((prev) => {
         const updatedWishes = prev.filter((wish) => wish.status !== "processing");
-        
+
         // Persist to localStorage
         try {
-          localStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
+          UserStorage.setItem('genie_wishes', JSON.stringify(updatedWishes));
         } catch (error) {
           console.warn('Failed to save wishes to localStorage:', error);
         }
-        
+
         return updatedWishes;
       });
-      
+
       // Parse the error and show user-friendly message
       const { title, description } = parseApiError(error as Error);
-      toast.error(title, { 
+      toast.error(title, {
         description: description
       });
-      
+
       // Refresh usage count even after error to get accurate count
       await refreshDailyUsage();
     } finally {
@@ -1053,8 +1083,7 @@ export default function StudioPage() {
                   ) : maxWishes >= 999 ? (
                     "You have unlimited wishes available!"
                   ) : remainingWishes > 0 ? (
-                    `You have ${remainingWishes} wish${
-                      remainingWishes > 1 ? "es" : ""
+                    `You have ${remainingWishes} wish${remainingWishes > 1 ? "es" : ""
                     } remaining today`
                   ) : (
                     "No wishes remaining today. Come back tomorrow for more."
@@ -1067,13 +1096,12 @@ export default function StudioPage() {
                   <div className="space-y-4">
                     {/* Expanded AI Recommendations Section */}
                     <div>
-                      <div 
+                      <div
                         data-recommendations-section
-                        className={`bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${
-                          showOutputHighlight && analysisResults?.insights?.length 
-                            ? getHighlightClass(true, outputHighlightFading)
-                            : ""
-                        }`}
+                        className={`bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
+                          ? getHighlightClass(true, outputHighlightFading)
+                          : ""
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-3">
                           <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -1097,36 +1125,36 @@ export default function StudioPage() {
                         </div>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                           {analysisResults?.insights &&
-                          analysisResults.insights.length > 0
+                            analysisResults.insights.length > 0
                             ? analysisResults.insights.map(
-                                (rec, idx) => (
-                                  <li
-                                    key={idx}
-                                    className="flex items-start gap-2"
-                                  >
-                                    <span className="text-green-500 mt-1">
-                                      •
-                                    </span>
-                                    <span>{rec}</span>
-                                  </li>
-                                )
-                              )
-                            : [
-                                "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
-                                "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
-                                "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
-                                "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
-                              ].map((mock, idx) => (
+                              (rec, idx) => (
                                 <li
                                   key={idx}
                                   className="flex items-start gap-2"
                                 >
-                                  <span className="text-muted-foreground mt-1">
+                                  <span className="text-purple-600 mt-1">
                                     •
                                   </span>
-                                  <span>{mock}</span>
+                                  <span>{rec}</span>
                                 </li>
-                              ))}
+                              )
+                            )
+                            : [
+                              "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
+                              "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
+                              "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
+                              "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
+                            ].map((mock, idx) => (
+                              <li
+                                key={idx}
+                                className="flex items-start gap-2"
+                              >
+                                <span className="text-muted-foreground mt-1">
+                                  •
+                                </span>
+                                <span>{mock}</span>
+                              </li>
+                            ))}
                         </ul>
                       </div>
                     </div>
@@ -1157,13 +1185,12 @@ export default function StudioPage() {
                             }}
                           >
                             <Star
-                              className={`h-10 w-10 transition-all duration-300 ${
-                                i < dailyWishes
-                                  ? "fill-amber-400 text-amber-400 drop-shadow-lg animate-pulse"
-                                  : i < remainingWishes + dailyWishes
+                              className={`h-10 w-10 transition-all duration-300 ${i < dailyWishes
+                                ? "fill-amber-400 text-amber-400 drop-shadow-lg animate-pulse"
+                                : i < remainingWishes + dailyWishes
                                   ? "text-purple-300 dark:text-purple-600 hover:text-primary/80"
                                   : "text-gray-300 dark:text-gray-700"
-                              }`}
+                                }`}
                             />
                           </motion.div>
                         ))}
@@ -1230,13 +1257,12 @@ export default function StudioPage() {
                         className="text-center"
                       >
                         {/* Show recommendations first for guests who've used all wishes */}
-                        <div 
+                        <div
                           data-recommendations-section
-                          className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${
-                            showOutputHighlight && analysisResults?.insights?.length 
-                              ? getHighlightClass(true, outputHighlightFading)
-                              : ""
-                          }`}
+                          className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
+                            ? getHighlightClass(true, outputHighlightFading)
+                            : ""
+                            }`}
                         >
                           <div className="flex items-center justify-between mb-3">
                             <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -1255,38 +1281,38 @@ export default function StudioPage() {
                           </div>
                           <ul className="space-y-2 text-sm text-muted-foreground">
                             {analysisResults?.insights &&
-                            analysisResults.insights.length > 0
+                              analysisResults.insights.length > 0
                               ? analysisResults.insights.map(
-                                  (rec, idx) => (
-                                    <li
-                                      key={idx}
-                                      className="flex items-start gap-2"
-                                    >
-                                      <span className="text-green-500 mt-1">
-                                        •
-                                      </span>
-                                      <span>{rec}</span>
-                                    </li>
-                                  )
-                                )
-                              : [
-                                  "🧞‍♂️ You've used all your daily wishes! Your genie insights are waiting here",
-                                  "✨ Sign up for unlimited access to career magic and personalized recommendations",
-                                  "🔮 Your completed wishes hold valuable career insights - check your wish history below!",
-                                ].map((mock, idx) => (
+                                (rec, idx) => (
                                   <li
                                     key={idx}
                                     className="flex items-start gap-2"
                                   >
-                                    <span className="text-muted-foreground mt-1">
+                                    <span className="text-purple-600 mt-1">
                                       •
                                     </span>
-                                    <span>{mock}</span>
+                                    <span>{rec}</span>
                                   </li>
-                                ))}
+                                )
+                              )
+                              : [
+                                "🧞‍♂️ You've used all your daily wishes! Your genie insights are waiting here",
+                                "✨ Sign up for unlimited access to career magic and personalized recommendations",
+                                "🔮 Your completed wishes hold valuable career insights - check your wish history below!",
+                              ].map((mock, idx) => (
+                                <li
+                                  key={idx}
+                                  className="flex items-start gap-2"
+                                >
+                                  <span className="text-muted-foreground mt-1">
+                                    •
+                                  </span>
+                                  <span>{mock}</span>
+                                </li>
+                              ))}
                           </ul>
                         </div>
-                        
+
                         {/* Status message below recommendations */}
                         <div className="pt-4 border-t border-primary/20 mt-4">
                           <div className="flex items-center justify-center gap-2 text-sm text-amber-600 dark:text-amber-400 mb-2">
@@ -1298,7 +1324,7 @@ export default function StudioPage() {
                               href="/auth"
                               className="text-primary hover:underline"
                             >
-                            Sign up
+                              Sign up
                             </Link>{" "}
                             for unlimited wishes with Pro!
                           </p>
@@ -1311,13 +1337,12 @@ export default function StudioPage() {
                         className="text-center"
                       >
                         {/* Expanded recommendations panel */}
-                        <div 
+                        <div
                           data-recommendations-section
-                          className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${
-                            showOutputHighlight && analysisResults?.insights?.length 
-                              ? getHighlightClass(true, outputHighlightFading)
-                              : ""
-                          }`}
+                          className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
+                            ? getHighlightClass(true, outputHighlightFading)
+                            : ""
+                            }`}
                         >
                           <div className="flex items-center justify-between mb-3">
                             <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -1336,36 +1361,36 @@ export default function StudioPage() {
                           </div>
                           <ul className="space-y-2 text-sm text-muted-foreground">
                             {analysisResults?.insights &&
-                            analysisResults.insights.length > 0
+                              analysisResults.insights.length > 0
                               ? analysisResults.insights.map(
-                                  (rec, idx) => (
-                                    <li
-                                      key={idx}
-                                      className="flex items-start gap-2"
-                                    >
-                                      <span className="text-green-500 mt-1">
-                                        •
-                                      </span>
-                                      <span>{rec}</span>
-                                    </li>
-                                  )
-                                )
-                              : [
-                                  "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
-                                  "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
-                                  "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
-                                  "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
-                                ].map((mock, idx) => (
+                                (rec, idx) => (
                                   <li
                                     key={idx}
                                     className="flex items-start gap-2"
                                   >
-                                    <span className="text-muted-foreground mt-1">
+                                    <span className="text-purple-600 mt-1">
                                       •
                                     </span>
-                                    <span>{mock}</span>
+                                    <span>{rec}</span>
                                   </li>
-                                ))}
+                                )
+                              )
+                              : [
+                                "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
+                                "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
+                                "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
+                                "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
+                              ].map((mock, idx) => (
+                                <li
+                                  key={idx}
+                                  className="flex items-start gap-2"
+                                >
+                                  <span className="text-muted-foreground mt-1">
+                                    •
+                                  </span>
+                                  <span>{mock}</span>
+                                </li>
+                              ))}
                           </ul>
                         </div>
                       </motion.div>
@@ -1380,33 +1405,30 @@ export default function StudioPage() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Resume Upload */}
             <motion.div variants={itemVariants}>
-              <Card className={`h-full ${
-                showInitialHighlight && !analysisResults
-                  ? getHighlightClass(true, initialHighlightFading)
-                  : ""
-              }`}>
+              <Card className={`h-full ${showInitialHighlight && !analysisResults
+                ? getHighlightClass(true, initialHighlightFading)
+                : ""
+                }`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
                     Your Resume <span className="text-sm text-muted-foreground font-normal">(Optional)</span>
                   </CardTitle>
                 </CardHeader>
-                                  
-                  <CardDescription className="text-sm text-muted-foreground mb-2 px-4">
-                    Upload for personalized resume analysis, or skip for general career advice
-                  </CardDescription>
+
+                <CardDescription className="text-sm text-muted-foreground mb-2 px-4">
+                  Upload for personalized resume analysis, or skip for general career advice
+                </CardDescription>
                 <CardContent className="space-y-4">
                   {!resumeFile ? (
                     <div
-                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all h-[400px] flex flex-col justify-center ${
-                        isDailyLimitReached 
-                          ? "border-muted-foreground/15 bg-muted/20 cursor-not-allowed opacity-60"
-                          : `cursor-pointer group ${
-                              isDragOver
-                                ? "border-primary bg-primary/10 scale-105 shadow-lg"
-                                : "border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md"
-                            }`
-                      }`}
+                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all h-[400px] flex flex-col justify-center ${isDailyLimitReached
+                        ? "border-muted-foreground/15 bg-muted/20 cursor-not-allowed opacity-60"
+                        : `cursor-pointer group ${isDragOver
+                          ? "border-primary bg-primary/10 scale-105 shadow-lg"
+                          : "border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md"
+                        }`
+                        }`}
                       onDrop={isDailyLimitReached ? undefined : handleDrop}
                       onDragOver={isDailyLimitReached ? undefined : handleDragOver}
                       onDragLeave={isDailyLimitReached ? undefined : handleDragLeave}
@@ -1424,13 +1446,12 @@ export default function StudioPage() {
                         }}
                       >
                         <Upload
-                          className={`mx-auto h-16 w-16 mb-4 transition-colors ${
-                            isDailyLimitReached
-                              ? "text-muted-foreground/30"
-                              : isDragOver
+                          className={`mx-auto h-16 w-16 mb-4 transition-colors ${isDailyLimitReached
+                            ? "text-muted-foreground/30"
+                            : isDragOver
                               ? "text-primary"
                               : "text-muted-foreground group-hover:text-primary"
-                          }`}
+                            }`}
                         />
                         <div className="space-y-3">
                           <div>
@@ -1438,8 +1459,8 @@ export default function StudioPage() {
                               {isDailyLimitReached
                                 ? "Daily limit reached"
                                 : isDragOver
-                                ? "Drop it here!"
-                                : "Drop your resume here"}
+                                  ? "Drop it here!"
+                                  : "Drop your resume here"}
                             </p>
                             <p className="text-base text-muted-foreground mt-2">
                               {isDailyLimitReached
@@ -1529,7 +1550,7 @@ export default function StudioPage() {
                         <div className="text-sm text-muted-foreground">
                           Status:{" "}
                           {resumeFile.resumeData.processing_status ===
-                          "completed"
+                            "completed"
                             ? "✅ Ready for analysis"
                             : "⏳ Processing..."}
                         </div>
@@ -1542,25 +1563,24 @@ export default function StudioPage() {
 
             {/* Job Posting */}
             <motion.div variants={itemVariants}>
-              <Card className={`h-full ${
-                showInitialHighlight && !analysisResults
-                  ? getHighlightClass(true, initialHighlightFading)
-                  : ""
-              }`}>
+              <Card className={`h-full ${showInitialHighlight && !analysisResults
+                ? getHighlightClass(true, initialHighlightFading)
+                : ""
+                }`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
                     Your Career Wish
                   </CardTitle>
-                  
+
                 </CardHeader>
                 <CardDescription className="text-sm text-muted-foreground mb-2 px-4">
-                    Paste a job description, ask career questions, or request resume advice
-                  </CardDescription>
+                  Paste a job description, ask career questions, or request resume advice
+                </CardDescription>
                 <CardContent className="space-y-4">
                   <div className="relative">
                     <Textarea
-                      placeholder={isDailyLimitReached 
+                      placeholder={isDailyLimitReached
                         ? `Daily limit reached (${dailyWishes}/${maxWishes}). Come back tomorrow!`
                         : "Ask me anything about your career! (At least 10 characters)\n\nExamples:\n• Paste a job description for match analysis\n• 'How can I improve my resume for software engineering roles?'\n• 'What skills should I develop for data science?'\n• 'Review my career goals and suggest next steps'\n• 'Analyze this job posting: [paste job description]'"}
                       value={jobPosting}
@@ -1572,11 +1592,10 @@ export default function StudioPage() {
                         }
                       }}
                       disabled={isDailyLimitReached}
-                      className={`h-[400px] resize-none overflow-y-auto border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm text-sm leading-relaxed rounded-lg ${
-                        isDailyLimitReached
-                          ? "border-muted-foreground/20 opacity-60 cursor-not-allowed"
-                          : "border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                      }`}
+                      className={`h-[400px] resize-none overflow-y-auto border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm text-sm leading-relaxed rounded-lg ${isDailyLimitReached
+                        ? "border-muted-foreground/20 opacity-60 cursor-not-allowed"
+                        : "border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        }`}
                     />
 
                     {/* Character count indicator */}
@@ -1626,11 +1645,10 @@ export default function StudioPage() {
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {/* Resume Analysis */}
-            <Card className={`relative transition-all duration-300 ${
-              showOutputHighlight && analysisResults 
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
-            }`}>
+            <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
+              }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Bot className="h-5 w-5 text-purple-600" />
@@ -1682,11 +1700,10 @@ export default function StudioPage() {
             </Card>
 
             {/* Job Match Score */}
-            <Card className={`relative transition-all duration-300 ${
-              showOutputHighlight && analysisResults 
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
-            }`}>
+            <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
+              }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Target className="h-5 w-5 text-purple-600" />
@@ -1720,11 +1737,10 @@ export default function StudioPage() {
             </Card>
 
             {/* Skill Gap Analysis */}
-            <Card className={`overflow-hidden relative transition-all duration-300 ${
-              showOutputHighlight && analysisResults 
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
-            }`}>
+            <Card className={`overflow-hidden relative transition-all duration-300 ${showOutputHighlight && analysisResults
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
+              }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
@@ -1754,22 +1770,20 @@ export default function StudioPage() {
                                 className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-muted"
                               >
                                 <div
-                                  className={`w-2 h-2 rounded-full ${
-                                    isTechnical
-                                      ? "bg-purple-500"
-                                      : "bg-pink-500"
-                                  }`}
+                                  className={`w-2 h-2 rounded-full ${isTechnical
+                                    ? "bg-purple-500"
+                                    : "bg-pink-500"
+                                    }`}
                                 ></div>
                                 <span className="text-sm font-medium flex-1">
                                   {skill}
                                 </span>
                                 <Badge
                                   variant="secondary"
-                                  className={`text-xs ${
-                                    isTechnical
-                                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                      : "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
-                                  }`}
+                                  className={`text-xs ${isTechnical
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                    : "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
+                                    }`}
                                 >
                                   {isTechnical ? "Technical" : "Soft Skill"}
                                 </Badge>
@@ -1791,7 +1805,7 @@ export default function StudioPage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center py-4 text-muted-foreground flex-1">
-                      
+
                     </div>
                   )}
                 </div>
@@ -1803,11 +1817,10 @@ export default function StudioPage() {
 
           {/* Wish History */}
           <motion.div variants={itemVariants}>
-            <Card className={`max-w-4xl mx-auto ${
-              showOutputHighlight && wishes.some(w => w.status === 'completed')
-                ? getHighlightClass(true, outputHighlightFading)
-                : ""
-            }`}>
+            <Card className={`max-w-4xl mx-auto ${showOutputHighlight && wishes.some(w => w.status === 'completed')
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
+              }`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -1820,7 +1833,7 @@ export default function StudioPage() {
                     </CardDescription>
                   </div>
                 </div>
-                
+
                 {/* Search and Filter Section */}
                 {wishes.length > 0 && (
                   <div className="flex flex-col sm:flex-row gap-3 mt-4">
@@ -1867,11 +1880,11 @@ export default function StudioPage() {
                     <div className="text-center py-8 text-muted-foreground flex-1 flex flex-col justify-center">
                       <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>
-                        {wishes.length === 0 
+                        {wishes.length === 0
                           ? "No wishes yet! Make your first wish above."
                           : searchQuery || statusFilter !== "all"
-                          ? "No wishes match your current filters."
-                          : "No wishes found."
+                            ? "No wishes match your current filters."
+                            : "No wishes found."
                         }
                       </p>
                       {(searchQuery || statusFilter !== "all") && wishes.length > 0 && (
@@ -1895,14 +1908,13 @@ export default function StudioPage() {
                           key={wish.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${
-                            wish.status === "completed"
-                              ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
-                              : "cursor-default dark:bg-card"
-                          }`}
+                          className={`border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${wish.status === "completed"
+                            ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                            : "cursor-default dark:bg-card"
+                            }`}
                         >
                           <div className="flex items-start justify-between mb-3">
-                            <div 
+                            <div
                               className="flex items-start gap-3 flex-1"
                               onClick={() => {
                                 if (wish.status === "completed") {
@@ -1958,16 +1970,15 @@ export default function StudioPage() {
                                   wish.status === "completed"
                                     ? "default"
                                     : wish.status === "processing"
-                                    ? "secondary"
-                                    : "outline"
+                                      ? "secondary"
+                                      : "outline"
                                 }
-                                className={`${
-                                  wish.status === "completed"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                    : wish.status === "processing"
+                                className={`${wish.status === "completed"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : wish.status === "processing"
                                     ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
                                     : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
-                                }`}
+                                  }`}
                               >
                                 {wish.status === "processing" && (
                                   <Zap className="h-3 w-3 mr-1 animate-pulse" />
@@ -1978,7 +1989,7 @@ export default function StudioPage() {
                                 {wish.status.charAt(0).toUpperCase() +
                                   wish.status.slice(1)}
                               </Badge>
-                              
+
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -2101,26 +2112,26 @@ export default function StudioPage() {
                     </div>
                     <div className="space-y-3 max-h-[60vh] overflow-auto text-sm text-muted-foreground">
                       {analysisResults?.recommendations &&
-                      analysisResults.recommendations.length > 0
+                        analysisResults.recommendations.length > 0
                         ? analysisResults.recommendations.map((rec, idx) => (
-                            <div key={idx} className="flex items-start gap-3">
-                              <span className="text-amber-500 mt-1">•</span>
-                              <div>{rec}</div>
-                            </div>
-                          ))
+                          <div key={idx} className="flex items-start gap-3">
+                            <span className="text-purple-600 mt-1">•</span>
+                            <div>{rec}</div>
+                          </div>
+                        ))
                         : [
-                            "The cosmic forces are still aligning your personalized insights ✨",
-                            "Your genie is crafting magical recommendations just for you 🔮",
-                            "The stars haven't revealed your perfect guidance yet - try again! 🌟",
-                            "Your wishes deserve divine attention - let me divine deeper insights! 💫",
-                          ].map((mock, idx) => (
-                            <div key={idx} className="flex items-start gap-3">
-                              <span className="text-muted-foreground mt-1">
-                                •
-                              </span>
-                              <div>{mock}</div>
-                            </div>
-                          ))}
+                          "The cosmic forces are still aligning your personalized insights ✨",
+                          "Your genie is crafting magical recommendations just for you 🔮",
+                          "The stars haven't revealed your perfect guidance yet - try again! 🌟",
+                          "Your wishes deserve divine attention - let me divine deeper insights! 💫",
+                        ].map((mock, idx) => (
+                          <div key={idx} className="flex items-start gap-3">
+                            <span className="text-muted-foreground mt-1">
+                              •
+                            </span>
+                            <div>{mock}</div>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 </motion.div>
@@ -2236,26 +2247,28 @@ export default function StudioPage() {
                           </div>
                         )}
 
-                      {/* Recommendations */}
+                      {/* Skills to Highlight */}
                       {selectedWish.results?.recommendations &&
                         selectedWish.results.recommendations.length > 0 && (
                           <div className="space-y-3">
                             <h4 className="font-medium flex items-center gap-2">
-                              <Lightbulb className="h-4 w-4 text-purple-500" />
-                              AI Recommendations (
+                              <TrendingUp className="h-4 w-4 text-purple-600" />
+                              Skills to Highlight (
                               {selectedWish.results.recommendations.length})
                             </h4>
-                            <div className="space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {selectedWish.results.recommendations.map(
                                 (rec, index) => (
                                   <div
                                     key={index}
-                                    className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg"
+                                    className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-700/50 transition-colors"
                                   >
-                                    <span className="text-purple-600 mt-1">
-                                      ✨
-                                    </span>
-                                    <span className="text-sm">{rec}</span>
+                                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-800/50 flex items-center justify-center">
+                                      <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">
+                                        {index + 1}
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{rec}</span>
                                   </div>
                                 )
                               )}
@@ -2263,16 +2276,16 @@ export default function StudioPage() {
                           </div>
                         )}
 
-                      {/* Skill Gaps */}
+                      {/* Recommended Skills to Add */}
                       {selectedWish.results?.skillGaps &&
                         selectedWish.results.skillGaps.length > 0 && (
                           <div className="space-y-3">
                             <h4 className="font-medium flex items-center gap-2">
-                              <TrendingUp className="h-4 w-4 text-purple-600" />
-                              Skill Gap Analysis (
-                              {selectedWish.results.skillGaps.length} skills)
+                              <Lightbulb className="h-4 w-4 text-amber-500" />
+                              Recommended Skills to Add (
+                              {selectedWish.results.skillGaps.length})
                             </h4>
-                            <div className="grid gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                               {selectedWish.results.skillGaps.map(
                                 (skill, index: number) => {
                                   const skillName =
@@ -2287,29 +2300,22 @@ export default function StudioPage() {
                                   return (
                                     <div
                                       key={index}
-                                      className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg"
+                                      className="flex items-center gap-2 p-2.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800/30 hover:border-amber-300 dark:hover:border-amber-700/50 transition-colors"
                                     >
-                                      <div
-                                        className={`w-2 h-2 rounded-full ${
-                                          isTechnical
-                                            ? "bg-purple-500"
-                                            : "bg-purple-500"
-                                        }`}
-                                      ></div>
-                                      <span className="text-sm font-medium flex-1">
+                                      <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                                      <span className="text-sm font-medium flex-1 text-gray-900 dark:text-gray-100">
                                         {skillName}
                                       </span>
                                       <Badge
                                         variant="secondary"
-                                        className={`text-xs ${
-                                          isTechnical
-                                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                            : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                        }`}
+                                        className={`text-xs ${isTechnical
+                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                          }`}
                                       >
                                         {isTechnical
-                                          ? "Technical"
-                                          : "Soft Skill"}
+                                          ? "Tech"
+                                          : "Soft"}
                                       </Badge>
                                     </div>
                                   );

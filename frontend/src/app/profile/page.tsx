@@ -3,16 +3,25 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  Shield, 
-  Settings,
-  Camera,
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  User,
+  Mail,
+  Calendar,
+  Shield,
   Edit3,
   Save,
-  X
+  X,
+  Lock,
+  Trash2,
+  Briefcase,
+  TrendingUp,
+  DollarSign,
+  MapPin,
+  Code,
+  Building2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +37,29 @@ import { Footer } from "@/components/footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { userPreferencesService } from "@/lib/api/userPreferences";
+import { userProfileService } from "@/lib/api/userProfile";
+import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
+import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
+import { EnhancedSelect } from "@/components/profile/EnhancedSelect";
+
+// Form validation schema
+const profileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  phone: z.string().optional(),
+  location: z.string().optional(),
+  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
+  jobTitle: z.string().optional(),
+  experienceLevel: z.enum(['entry', 'mid', 'senior', 'lead']),
+  salaryMin: z.string().optional(),
+  salaryMax: z.string().optional(),
+  workType: z.enum(['remote', 'hybrid', 'onsite', 'flexible']),
+  industries: z.string().optional(),
+  skills: z.string().optional(),
+  remotePreference: z.boolean(),
+  willingToRelocate: z.boolean(),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -48,39 +80,42 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    bio: '',
-    location: '',
-    phone: '',
-    // Job Preferences
-    jobTitle: '',
-    experienceLevel: 'mid',
-    salaryMin: '',
-    salaryMax: '',
-    workType: 'hybrid',
-    industries: '',
-    skills: '',
-    remotePreference: true,
-    willingToRelocate: false,
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: '',
+      phone: '',
+      location: '',
+      bio: '',
+      jobTitle: '',
+      experienceLevel: 'mid',
+      salaryMin: '',
+      salaryMax: '',
+      workType: 'hybrid',
+      industries: '',
+      skills: '',
+      remotePreference: true,
+      willingToRelocate: false,
+    },
   });
 
   useEffect(() => {
     if (user) {
-      // Load existing preferences
       const preferences = userPreferencesService.getPreferences();
-      
-      const userName = user.email.split('@')[0] || '';
+      const profile = userProfileService.getProfile();
+
+      // Use saved profile name, or fallback to email-derived name
+      const userName = profile.name || user.email.split('@')[0] || '';
       setDisplayName(userName);
-      
-      setFormData({
-        name: userName, // Extract name from email as fallback
-        email: user.email,
-        bio: '',
-        location: preferences.location || '',
-        phone: '',
-        // Job Preferences - Load from saved preferences
+
+      form.reset({
+        name: userName,
+        phone: profile.phone || '',
+        location: profile.location || preferences.location || '',
+        bio: profile.bio || '',
         jobTitle: preferences.jobTitle || '',
         experienceLevel: preferences.experienceLevel || 'mid',
         salaryMin: preferences.salaryMin || '',
@@ -92,67 +127,54 @@ export default function ProfilePage() {
         willingToRelocate: preferences.willingToRelocate ?? false,
       });
     }
-  }, [user]);
+  }, [user, form]);
 
-  const handleSave = () => {
-    // Save job preferences to localStorage for immediate filtering
-    userPreferencesService.savePreferences({
-      jobTitle: formData.jobTitle,
-      experienceLevel: formData.experienceLevel as 'entry' | 'mid' | 'senior' | 'lead',
-      salaryMin: formData.salaryMin,
-      salaryMax: formData.salaryMax,
-      workType: formData.workType as 'remote' | 'hybrid' | 'onsite' | 'flexible',
-      industries: formData.industries,
-      skills: formData.skills,
-      remotePreference: formData.remotePreference,
-      willingToRelocate: formData.willingToRelocate,
-      location: formData.location,
+  const onSubmit = (data: ProfileFormData) => {
+    // Save personal information
+    userProfileService.saveProfile({
+      name: data.name,
+      phone: data.phone || '',
+      location: data.location || '',
+      bio: data.bio || '',
     });
 
-    // Update display name
-    setDisplayName(formData.name);
+    // Save job preferences
+    userPreferencesService.savePreferences({
+      jobTitle: data.jobTitle || '',
+      experienceLevel: data.experienceLevel,
+      salaryMin: data.salaryMin || '',
+      salaryMax: data.salaryMax || '',
+      workType: data.workType,
+      industries: data.industries || '',
+      skills: data.skills || '',
+      remotePreference: data.remotePreference,
+      willingToRelocate: data.willingToRelocate,
+      location: data.location || '',
+    });
 
-    // Here you would typically make an API call to update the profile
-    console.log('Saving profile and preferences:', formData);
+    setDisplayName(data.name);
     setIsEditing(false);
-    
-    // Show success toast
-    toast.success('Profile updated successfully! Job recommendations will now be personalized.');
+
+    toast.success('Profile saved successfully!', {
+      description: 'Your profile and job preferences have been updated.',
+      duration: 4000,
+    });
   };
 
   const handleCancel = () => {
-    // Reset form data
-    if (user) {
-      setFormData({
-        name: displayName,
-        email: user.email,
-        bio: '',
-        location: '',
-        phone: '',
-        // Job Preferences - Reset to defaults
-        jobTitle: '',
-        experienceLevel: 'mid',
-        salaryMin: '',
-        salaryMax: '',
-        workType: 'hybrid',
-        industries: '',
-        skills: '',
-        remotePreference: true,
-        willingToRelocate: false,
-      });
-    }
+    form.reset();
     setIsEditing(false);
   };
 
   if (!user) {
-    return null; // ProtectedRoute will handle redirect
+    return null;
   }
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background">
         <Header />
-        
+
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <motion.div
             variants={containerVariants}
@@ -165,30 +187,16 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader className="text-center">
                   <div className="flex flex-col items-center space-y-4">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src="" alt="Profile" />
-                        <AvatarFallback className="text-2xl">
-                          {displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="absolute bottom-0 right-0 rounded-full h-8 w-8 p-0"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Avatar className="h-24 w-24">
+                      <AvatarFallback className="text-2xl bg-purple-600 text-white">
+                        {displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
-                      <h1 className="text-2xl font-bold">{displayName || 'User'}</h1>
+                      <h1 className="text-2xl font-bold ">{displayName || 'User'}</h1>
                       <p className="text-muted-foreground">{user.email}</p>
                       <div className="flex items-center justify-center gap-2 mt-2">
-                        <Badge variant={user.is_verified ? "default" : "secondary"}>
-                          <Shield className="h-3 w-3 mr-1" />
-                          {user.is_verified ? "Verified" : "Unverified"}
-                        </Badge>
-                        <Badge variant={user.is_active ? "default" : "destructive"}>
+                        <Badge variant={user.is_active ? "default" : "destructive"} className="bg-purple-600 hover:bg-purple-700">
                           {user.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </div>
@@ -215,7 +223,7 @@ export default function ProfilePage() {
                     </Button>
                   ) : (
                     <div className="flex gap-2">
-                      <Button onClick={handleSave} size="sm">
+                      <Button onClick={form.handleSubmit(onSubmit)} size="sm">
                         <Save className="h-4 w-4 mr-2" />
                         Save
                       </Button>
@@ -231,13 +239,17 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
                       {isEditing ? (
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Enter your full name"
-                          className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
-                        />
+                        <>
+                          <Input
+                            id="name"
+                            {...form.register("name")}
+                            placeholder="Enter your full name"
+                            className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
+                          />
+                          {form.formState.errors.name && (
+                            <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                          )}
+                        </>
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md">{displayName || 'Not set'}</p>
                       )}
@@ -256,13 +268,12 @@ export default function ProfilePage() {
                       {isEditing ? (
                         <Input
                           id="phone"
-                          value={formData.phone}
-                          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                          {...form.register("phone")}
                           placeholder="Enter your phone number"
                           className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
                         />
                       ) : (
-                        <p className="py-2 px-3 bg-muted rounded-md">{formData.phone || 'Not set'}</p>
+                        <p className="py-2 px-3 bg-muted rounded-md">{form.watch("phone") || 'Not set'}</p>
                       )}
                     </div>
 
@@ -271,29 +282,32 @@ export default function ProfilePage() {
                       {isEditing ? (
                         <Input
                           id="location"
-                          value={formData.location}
-                          onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                          {...form.register("location")}
                           placeholder="Enter your location"
                           className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
                         />
                       ) : (
-                        <p className="py-2 px-3 bg-muted rounded-md">{formData.location || 'Not set'}</p>
+                        <p className="py-2 px-3 bg-muted rounded-md">{form.watch("location") || 'Not set'}</p>
                       )}
                     </div>
 
                     <div className="md:col-span-2 space-y-2">
                       <Label htmlFor="bio">Bio</Label>
                       {isEditing ? (
-                        <textarea
-                          id="bio"
-                          value={formData.bio}
-                          onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                          placeholder="Tell us about yourself..."
-                          className="w-full min-h-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-input text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600"
-                        />
+                        <>
+                          <textarea
+                            id="bio"
+                            {...form.register("bio")}
+                            placeholder="Tell us about yourself..."
+                            className="w-full min-h-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-input text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600"
+                          />
+                          {form.formState.errors.bio && (
+                            <p className="text-sm text-red-500">{form.formState.errors.bio.message}</p>
+                          )}
+                        </>
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md min-h-[100px]">
-                          {formData.bio || 'No bio added yet'}
+                          {form.watch("bio") || 'No bio added yet'}
                         </p>
                       )}
                     </div>
@@ -315,46 +329,44 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="jobTitle">Preferred Job Title</Label>
                       {isEditing ? (
                         <Input
                           id="jobTitle"
-                          value={formData.jobTitle}
-                          onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                          {...form.register("jobTitle")}
                           placeholder="e.g., Frontend Developer, Data Scientist"
-                          className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
+                          className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50 hover:border-purple-400 transition-colors"
                         />
                       ) : (
-                        <p className="py-2 px-3 bg-muted rounded-md">{formData.jobTitle || 'Not specified'}</p>
+                        <p className="py-2 px-3 bg-muted rounded-md">{form.watch("jobTitle") || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="experienceLevel">Experience Level</Label>
                       {isEditing ? (
-                        <Select
-                          value={formData.experienceLevel}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, experienceLevel: value }))}
-                        >
-                          <SelectTrigger className="bg-white dark:bg-input">
-                            <SelectValue placeholder="Select experience level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="entry">Entry Level (0-2 years)</SelectItem>
-                            <SelectItem value="mid">Mid Level (2-5 years)</SelectItem>
-                            <SelectItem value="senior">Senior Level (5-10 years)</SelectItem>
-                            <SelectItem value="lead">Lead/Principal (10+ years)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <EnhancedSelect
+                          value={form.watch("experienceLevel")}
+                          onValueChange={(value) => form.setValue("experienceLevel", value as any)}
+                          options={[
+                            { value: "entry", label: "Entry Level (0-2 years)" },
+                            { value: "mid", label: "Mid Level (2-5 years)" },
+                            { value: "senior", label: "Senior Level (5-10 years)" },
+                            { value: "lead", label: "Lead/Principal (10+ years)" }
+                          ]}
+                          placeholder="Select experience level"
+                          className="bg-white dark:bg-input border-gray-300 dark:border-gray-600"
+                        />
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md">
-                          {formData.experienceLevel === 'entry' && 'Entry Level (0-2 years)'}
-                          {formData.experienceLevel === 'mid' && 'Mid Level (2-5 years)'}
-                          {formData.experienceLevel === 'senior' && 'Senior Level (5-10 years)'}
-                          {formData.experienceLevel === 'lead' && 'Lead/Principal (10+ years)'}
+                          {form.watch("experienceLevel") === "entry" && "Entry Level (0-2 years)"}
+                          {form.watch("experienceLevel") === "mid" && "Mid Level (2-5 years)"}
+                          {form.watch("experienceLevel") === "senior" && "Senior Level (5-10 years)"}
+                          {form.watch("experienceLevel") === "lead" && "Lead/Principal (10+ years)"}
+                          {!form.watch("experienceLevel") && "Not specified"}
                         </p>
                       )}
                     </div>
@@ -365,14 +377,13 @@ export default function ProfilePage() {
                         <Input
                           id="salaryMin"
                           type="number"
-                          value={formData.salaryMin}
-                          onChange={(e) => setFormData(prev => ({ ...prev, salaryMin: e.target.value }))}
+                          {...form.register("salaryMin")}
                           placeholder="e.g., 60000"
                           className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
                         />
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md">
-                          {formData.salaryMin ? `$${parseInt(formData.salaryMin).toLocaleString()}` : 'Not specified'}
+                          {form.watch("salaryMin") ? `$${parseInt(form.watch("salaryMin") || '0').toLocaleString()}` : 'Not specified'}
                         </p>
                       )}
                     </div>
@@ -383,14 +394,13 @@ export default function ProfilePage() {
                         <Input
                           id="salaryMax"
                           type="number"
-                          value={formData.salaryMax}
-                          onChange={(e) => setFormData(prev => ({ ...prev, salaryMax: e.target.value }))}
+                          {...form.register("salaryMax")}
                           placeholder="e.g., 120000"
                           className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
                         />
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md">
-                          {formData.salaryMax ? `$${parseInt(formData.salaryMax).toLocaleString()}` : 'Not specified'}
+                          {form.watch("salaryMax") ? `$${parseInt(form.watch("salaryMax") || '0').toLocaleString()}` : 'Not specified'}
                         </p>
                       )}
                     </div>
@@ -398,26 +408,25 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <Label htmlFor="workType">Work Type Preference</Label>
                       {isEditing ? (
-                        <Select
-                          value={formData.workType}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, workType: value }))}
-                        >
-                          <SelectTrigger className="bg-white dark:bg-input">
-                            <SelectValue placeholder="Select work type preference" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="remote">Remote Only</SelectItem>
-                            <SelectItem value="hybrid">Hybrid (Remote + Office)</SelectItem>
-                            <SelectItem value="onsite">On-site Only</SelectItem>
-                            <SelectItem value="flexible">Flexible</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <EnhancedSelect
+                          value={form.watch("workType")}
+                          onValueChange={(value) => form.setValue("workType", value as any)}
+                          options={[
+                            { value: "remote", label: "Remote Only" },
+                            { value: "hybrid", label: "Hybrid (Remote + Office)" },
+                            { value: "onsite", label: "On-site Only" },
+                            { value: "flexible", label: "Flexible" }
+                          ]}
+                          placeholder="Select work type preference"
+                          className="bg-white dark:bg-input border-gray-300 dark:border-gray-600"
+                        />
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md">
-                          {formData.workType === 'remote' && 'Remote Only'}
-                          {formData.workType === 'hybrid' && 'Hybrid (Remote + Office)'}
-                          {formData.workType === 'onsite' && 'On-site Only'}
-                          {formData.workType === 'flexible' && 'Flexible'}
+                          {form.watch("workType") === "remote" && "Remote Only"}
+                          {form.watch("workType") === "hybrid" && "Hybrid (Remote + Office)"}
+                          {form.watch("workType") === "onsite" && "On-site Only"}
+                          {form.watch("workType") === "flexible" && "Flexible"}
+                          {!form.watch("workType") && "Not specified"}
                         </p>
                       )}
                     </div>
@@ -427,13 +436,12 @@ export default function ProfilePage() {
                       {isEditing ? (
                         <Input
                           id="industries"
-                          value={formData.industries}
-                          onChange={(e) => setFormData(prev => ({ ...prev, industries: e.target.value }))}
+                          {...form.register("industries")}
                           placeholder="e.g., Technology, Healthcare, Finance"
-                          className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
+                          className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50 hover:border-purple-400 transition-colors"
                         />
                       ) : (
-                        <p className="py-2 px-3 bg-muted rounded-md">{formData.industries || 'Not specified'}</p>
+                        <p className="py-2 px-3 bg-muted rounded-md">{form.watch("industries") || 'Not specified'}</p>
                       )}
                     </div>
 
@@ -442,14 +450,13 @@ export default function ProfilePage() {
                       {isEditing ? (
                         <textarea
                           id="skills"
-                          value={formData.skills}
-                          onChange={(e) => setFormData(prev => ({ ...prev, skills: e.target.value }))}
+                          {...form.register("skills")}
                           placeholder="List your key skills (e.g., React, Python, Machine Learning, Project Management)"
-                          className="w-full min-h-[80px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-input text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600"
+                          className="w-full min-h-[80px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-input text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 hover:border-purple-400 transition-colors"
                         />
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md min-h-[80px]">
-                          {formData.skills || 'No skills listed yet'}
+                          {form.watch("skills") || 'No skills listed yet'}
                         </p>
                       )}
                     </div>
@@ -461,8 +468,7 @@ export default function ProfilePage() {
                           <input
                             type="checkbox"
                             id="remotePreference"
-                            checked={formData.remotePreference}
-                            onChange={(e) => setFormData(prev => ({ ...prev, remotePreference: e.target.checked }))}
+                            {...form.register("remotePreference")}
                             disabled={!isEditing}
                             className="rounded border-gray-300"
                           />
@@ -474,8 +480,7 @@ export default function ProfilePage() {
                           <input
                             type="checkbox"
                             id="willingToRelocate"
-                            checked={formData.willingToRelocate}
-                            onChange={(e) => setFormData(prev => ({ ...prev, willingToRelocate: e.target.checked }))}
+                            {...form.register("willingToRelocate")}
                             disabled={!isEditing}
                             className="rounded border-gray-300"
                           />
@@ -536,23 +541,68 @@ export default function ProfilePage() {
               </Card>
             </motion.div>
 
-            {/* Account Actions */}
+            {/* Security Settings */}
             <motion.div variants={itemVariants}>
               <Card>
                 <CardHeader>
-                  <CardTitle>Account Actions</CardTitle>
-                  <CardDescription>Manage your account settings</CardDescription>
+                  <CardTitle className="flex items-center gap-2">
+                    Security Settings
+                  </CardTitle>
+                  <CardDescription>Manage your password and account security</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Button variant="outline" className="flex-1 bg-white dark:bg-transparent text-black dark:text-white border-gray-300 dark:border-gray-600 hover:border-purple-600 dark:hover:border-purple-600 hover:bg-white dark:hover:bg-transparent">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Account Settings
-                    </Button>
-                    <Button variant="outline" className="flex-1 bg-white dark:bg-transparent text-black dark:text-white border-gray-300 dark:border-gray-600 hover:border-purple-600 dark:hover:border-purple-600 hover:bg-white dark:hover:bg-transparent">
-                      <Shield className="h-4 w-4 mr-2" />
-                      Security Settings
-                    </Button>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-700 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Lock className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Change Password</h3>
+                          <p className="text-sm text-muted-foreground">Update your password to keep your account secure</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => setShowPasswordDialog(true)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Account Settings */}
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Danger Zone
+                  </CardTitle>
+                  <CardDescription>Irreversible account actions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border border-red-200 dark:border-red-900/50 rounded-lg bg-red-50/50 dark:bg-red-900/10">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Trash2 className="h-5 w-5 text-red-600 dark:text-red-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-red-900 dark:text-red-200">Delete Account</h3>
+                          <p className="text-sm text-red-700 dark:text-red-400">Permanently delete your account and all data</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => setShowDeleteDialog(true)}
+                        variant="destructive"
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -561,6 +611,16 @@ export default function ProfilePage() {
         </div>
 
         <Footer />
+
+        {/* Dialogs */}
+        <ChangePasswordDialog
+          open={showPasswordDialog}
+          onOpenChange={setShowPasswordDialog}
+        />
+        <DeleteAccountDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+        />
       </div>
     </ProtectedRoute>
   );

@@ -43,12 +43,33 @@ export interface ResumeUploadResult {
 }
 
 class LocalResumeService {
-  private readonly STORAGE_KEY = 'dashboardResumes';
+  private readonly STORAGE_KEY_PREFIX = 'dashboardResumes_';
 
-  // Get all resumes from localStorage
+  // Get user-specific storage key
+  private getUserStorageKey(): string {
+    // Get current user ID from auth token or localStorage
+    const authToken = localStorage.getItem('auth_token');
+    if (authToken) {
+      try {
+        // Decode JWT to get user ID (simple base64 decode of payload)
+        const payload = authToken.split('.')[1];
+        const decoded = JSON.parse(atob(payload));
+        const userId = decoded.sub || decoded.user_id || decoded.id;
+        return `${this.STORAGE_KEY_PREFIX}${userId}`;
+      } catch (error) {
+        console.warn('Failed to decode auth token:', error);
+      }
+    }
+    
+    // Fallback to guest session
+    return `${this.STORAGE_KEY_PREFIX}guest`;
+  }
+
+  // Get all resumes from localStorage (user-scoped)
   getResumes(): LocalResume[] {
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const storageKey = this.getUserStorageKey();
+      const stored = localStorage.getItem(storageKey);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error('Error retrieving resumes:', error);
@@ -56,10 +77,12 @@ class LocalResumeService {
     }
   }
 
-  // Save resumes to localStorage
+  // Save resumes to localStorage (user-scoped)
   private saveResumes(resumes: LocalResume[]): void {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(resumes));
+      const storageKey = this.getUserStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(resumes));
+      console.log('Resumes saved for user:', storageKey);
     } catch (error) {
       console.error('Error saving resumes:', error);
     }
@@ -313,7 +336,8 @@ class LocalResumeService {
 
   // Clear all (for development)
   clearAllResumes(): void {
-    localStorage.removeItem(this.STORAGE_KEY);
+    const storageKey = this.getUserStorageKey();
+    localStorage.removeItem(storageKey);
   }
 }
 

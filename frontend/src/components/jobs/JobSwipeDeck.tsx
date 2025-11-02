@@ -35,9 +35,17 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
   const hasMoreJobsRef = useRef(true);
 
   // Fetch initial jobs and stats
-  const fetchInitialData = useCallback(async () => {
+  const fetchInitialData = useCallback(async (resetIndex = false) => {
     setLoading(true);
     setError(null);
+    
+    // Reset index if requested (for preference updates)
+    if (resetIndex) {
+      setCurrentIndex(0);
+      nextPageRef.current = 1;
+      hasMoreJobsRef.current = true;
+      prefetchingRef.current = false;
+    }
     
     try {
       const [jobsResponse, statsResponse] = await Promise.all([
@@ -140,6 +148,21 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     fetchInitialData();
   }, [fetchInitialData]);
 
+  // Listen for preference changes and refresh jobs
+  useEffect(() => {
+    const handlePreferencesUpdate = () => {
+      console.log('JobSwipeDeck: Preferences updated, refreshing jobs...');
+      fetchInitialData(true); // Reset index and fetch fresh jobs
+    };
+
+    // Listen for custom event when preferences are saved
+    window.addEventListener('userPreferencesUpdated', handlePreferencesUpdate);
+
+    return () => {
+      window.removeEventListener('userPreferencesUpdated', handlePreferencesUpdate);
+    };
+  }, [fetchInitialData]);
+
   // Get visible cards for rendering
   const visibleCards = jobs.slice(currentIndex, currentIndex + CARDS_TO_SHOW).reverse();
   const hasCards = visibleCards.length > 0;
@@ -196,13 +219,13 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
           animate={{ scale: 1, opacity: 1 }}
           className="text-center space-y-4"
         >
-          <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-            <Heart className="w-10 h-10 text-white" />
+          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center">
+            <Heart className="w-10 h-10 text-purple-600" />
           </div>
           
           <div>
             <h3 className="text-xl font-bold mb-2">
-              🧞‍♂️ Great work! You&apos;ve reviewed all available opportunities
+              You&apos;ve reviewed all available opportunities
             </h3>
             <p className="text-muted-foreground mb-4">
               The Genie has shown you all current job matches. Check back later for new opportunities!
@@ -212,7 +235,7 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
           {/* Swipe statistics */}
           <div className="flex gap-4 justify-center">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{swipeStats.liked}</div>
+              <div className="text-2xl font-bold text-purple-600">{swipeStats.liked}</div>
               <div className="text-sm text-muted-foreground">Liked</div>
             </div>
             <div className="text-center">
