@@ -93,7 +93,7 @@ export function JobDetailsModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-purple-100 dark:border-purple-800/50 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 flex-shrink-0">
+        <div className="p-6 border-b border-purple-100 dark:border-purple-800/50 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center p-1">
@@ -267,7 +267,7 @@ export function JobDetailsModal({
         </div>
 
         {/* Action Buttons */}
-        <div className="border-t border-purple-100 dark:border-purple-800/50 p-6 flex-shrink-0 bg-gradient-to-r from-purple-50/30 to-pink-50/30 dark:from-purple-900/10 dark:to-pink-900/10">
+        <div className="border-t border-purple-100 dark:border-purple-800/50 p-6 flex-shrink-0">
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -283,7 +283,7 @@ export function JobDetailsModal({
             
             <Button
               onClick={() => window.open(job.redirect_url, '_blank')}
-              className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all"
+              className="gap-2 bg-purple-600 hover:bg-purple-700 shadow-lg hover:shadow-xl transition-all"
             >
               <ExternalLink className="w-4 h-4" />
               Apply Now

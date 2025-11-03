@@ -146,7 +146,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
                     placeholder="Type DELETE here"
-                    className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus-visible:!border-red-600 focus-visible:!ring-red-600/50"
+                    className="bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-red-600 focus-visible:!ring-red-600/50"
                     disabled={isLoading}
                   />
                 </div>

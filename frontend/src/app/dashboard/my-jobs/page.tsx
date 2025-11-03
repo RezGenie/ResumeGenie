@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
-  Filter, 
   MapPin, 
   DollarSign, 
   Calendar, 
@@ -72,7 +71,6 @@ export default function MyJobsPage() {
   const [selectedJob, setSelectedJob] = useState<SavedJob | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [stats, setStats] = useState({ total: 0, saved: 0, applied: 0, archived: 0 });
 
   // Load jobs on component mount
@@ -121,12 +119,33 @@ export default function MyJobsPage() {
   };
 
   const handleExportJobs = () => {
-    const jobsData = savedJobsService.exportJobs();
-    const blob = new Blob([jobsData], { type: 'application/json' });
+    // Convert jobs to CSV format for better user experience
+    const headers = ['Title', 'Company', 'Location', 'Salary', 'Status', 'Saved Date', 'Skills', 'Notes', 'Job URL'];
+    
+    const csvRows = [
+      headers.join(','),
+      ...jobs.map(job => {
+        const row = [
+          `"${job.title.replace(/"/g, '""')}"`,
+          `"${job.company.replace(/"/g, '""')}"`,
+          `"${job.location.replace(/"/g, '""')}"`,
+          `"${job.salary || 'Not specified'}"`,
+          job.status.charAt(0).toUpperCase() + job.status.slice(1),
+          new Date(job.savedAt).toLocaleDateString(),
+          `"${job.skills.join(', ')}"`,
+          `"${(job.notes || '').replace(/"/g, '""')}"`,
+          job.jobUrl || ''
+        ];
+        return row.join(',');
+      })
+    ];
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `my-jobs-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `my-jobs-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -173,24 +192,13 @@ export default function MyJobsPage() {
               </p>
             </div>
             
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handleExportJobs}
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filters
-              </Button>
-            </div>
+            <Button
+              onClick={handleExportJobs}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+            >
+              <Download className="w-4 h-4" />
+              Export to CSV
+            </Button>
           </div>
 
           {/* Stats */}
@@ -222,15 +230,15 @@ export default function MyJobsPage() {
           </div>
 
           {/* Search and Filters */}
-          <div className="space-y-4">
-            <div className="flex gap-4">
+          <Card className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border-purple-200/50 dark:border-purple-700/50 shadow-lg">
+            <div className="flex flex-col md:flex-row gap-4 p-6">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5" />
                 <Input
                   placeholder="Search jobs, companies, or skills..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
+                  className="pl-12 bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-sm focus:shadow-md placeholder:text-purple-400 dark:placeholder:text-purple-500 h-12 text-base"
                 />
               </div>
               <Select
@@ -239,8 +247,8 @@ export default function MyJobsPage() {
                   setFilters({ ...filters, status: value === 'all' ? undefined : value as SavedJob['status'] })
                 }
               >
-                <SelectTrigger className="w-40">
-                  <SelectValue />
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
@@ -249,44 +257,14 @@ export default function MyJobsPage() {
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
+              <Input
+                placeholder="Location..."
+                value={filters.location || ''}
+                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                className="w-full md:w-[180px] bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-sm focus:shadow-md placeholder:text-purple-400 dark:placeholder:text-purple-500 h-12 text-base"
+              />
             </div>
-
-            {/* Advanced Filters */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-card rounded-lg border"
-                >
-                  <Input
-                    placeholder="Location..."
-                    value={filters.location || ''}
-                    onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Min Salary"
-                    type="number"
-                    value={filters.salary?.min || ''}
-                    onChange={(e) => setFilters({ 
-                      ...filters, 
-                      salary: { ...filters.salary, min: e.target.value ? parseInt(e.target.value) : undefined }
-                    })}
-                  />
-                  <Input
-                    placeholder="Max Salary"
-                    type="number"
-                    value={filters.salary?.max || ''}
-                    onChange={(e) => setFilters({ 
-                      ...filters, 
-                      salary: { ...filters.salary, max: e.target.value ? parseInt(e.target.value) : undefined }
-                    })}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          </Card>
         </motion.div>
 
         {/* Jobs List */}

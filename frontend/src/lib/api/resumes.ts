@@ -71,11 +71,53 @@ export class ResumeService {
         }
       }
 
-      const response = await fetch(uploadURL, {
-        method: 'POST',
-        body: formData,
-        headers,
-        mode: 'cors'
+      // Use XMLHttpRequest for progress tracking
+      const response = await new Promise<Response>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            options?.onProgress?.(percentComplete);
+          }
+        });
+        
+        xhr.addEventListener('load', () => {
+          // Create a Response object from XMLHttpRequest
+          const response = new Response(xhr.responseText, {
+            status: xhr.status,
+            statusText: xhr.statusText,
+            headers: new Headers(
+              xhr.getAllResponseHeaders()
+                .split('\r\n')
+                .filter(line => line)
+                .reduce((acc, line) => {
+                  const [key, value] = line.split(': ');
+                  if (key && value) acc[key] = value;
+                  return acc;
+                }, {} as Record<string, string>)
+            )
+          });
+          resolve(response);
+        });
+        
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error during upload'));
+        });
+        
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload cancelled'));
+        });
+        
+        xhr.open('POST', uploadURL);
+        
+        // Set headers
+        Object.entries(headers).forEach(([key, value]) => {
+          xhr.setRequestHeader(key, value);
+        });
+        
+        xhr.send(formData);
       });
 
       console.log('[ResumeService] Upload response:', {
