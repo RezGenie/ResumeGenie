@@ -2,6 +2,18 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.15.0] - 2025-11-03
+
+### CP-50 Production polish and bug fixes
+
+- **Bug Fixes**
+  - Resolved minor UI glitches in dashboard and profile settings
+  - Refactored job export functionality to support CSV format
+
+- **Performance Improvements**
+  - Enhanced user experience with smoother animations and transitions
+  - Optimized API response times for profile updates and dashboard data fetching
+
 ## [0.14.0] - 2025-10-29
 
 ### CP-19 Dashboard Enhancements

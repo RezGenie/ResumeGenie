@@ -38,7 +38,8 @@ export function EnhancedSelect({
         type="button"
         disabled={disabled}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 hover:border-purple-400 transition-colors",
+          "flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 hover:border-purple-400 transition-colors",
+          "bg-white dark:bg-[#2d1b3d] border-gray-300 dark:border-gray-600 text-foreground",
           className
         )}
         onClick={() => !disabled && setOpen(!open)}
@@ -50,7 +51,7 @@ export function EnhancedSelect({
       </button>
 
       {open && !disabled && (
-        <div className="absolute top-full z-50 w-full mt-1 max-h-96 overflow-auto rounded-md border border-border bg-white dark:bg-[#2d1b3d] text-popover-foreground shadow-md">
+        <div className="absolute top-full z-50 w-full mt-1 max-h-96 overflow-auto rounded-md border shadow-md bg-white dark:bg-[#2d1b3d] border-gray-300 dark:border-gray-600 text-foreground">
           <div className="p-1">
             {options.map((option) => (
               <div

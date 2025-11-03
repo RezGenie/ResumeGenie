@@ -422,9 +422,27 @@ export default function ResumesPage() {
           </motion.div>
 
           {/* Upload Modal Overlay */}
-          {showUploadDialog && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <Card className="w-full max-w-md">
+          <AnimatePresence mode="wait">
+            {showUploadDialog && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                  onClick={() => !isUploading && setShowUploadDialog(false)}
+                />
+                <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="pointer-events-auto w-full max-w-md"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Card className="shadow-2xl bg-card">
                 <CardHeader>
                   <CardTitle>Upload Resume</CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -483,9 +501,12 @@ export default function ResumesPage() {
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
-            </div>
-          )}
+                    </Card>
+                  </motion.div>
+                </div>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Enhanced Resume Details Modal with Genie Theme */}
           <AnimatePresence>
@@ -798,9 +819,27 @@ export default function ResumesPage() {
           </AnimatePresence>
 
           {/* Edit Resume Modal */}
-          {editingResume && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <Card className="w-full max-w-md">
+          <AnimatePresence mode="wait">
+            {editingResume && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                  onClick={() => setEditingResume(null)}
+                />
+                <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="pointer-events-auto w-full max-w-md"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Card className="shadow-2xl bg-card">
                 <CardHeader>
                   <CardTitle>Edit Resume</CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -837,9 +876,12 @@ export default function ResumesPage() {
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
-            </div>
-          )}
+                    </Card>
+                  </motion.div>
+                </div>
+              </>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
       <Footer />

@@ -465,7 +465,7 @@ export default function StudioPage() {
                 id: wish.id,
                 type: "resume_analysis" as const,
                 title: "Resume & Job Match Analysis",
-                description: `Analysis of resume against job posting`,
+                description: `Career guidance and resume optimization analysis`,
                 timestamp: new Date(wish.created_at),
                 status: wish.is_processed
                   ? "completed"
@@ -896,8 +896,8 @@ export default function StudioPage() {
         type: "resume_analysis",
         title: resumeFile ? "Resume & Job Match Analysis" : "Career Guidance",
         description: resumeFile
-          ? `Analysis of ${resumeFile.name} against job posting`
-          : "Career advice and recommendations",
+          ? `AI-powered analysis of ${resumeFile.name} with personalized recommendations`
+          : "Career advice and personalized recommendations",
         timestamp: new Date(),
         status: "processing",
       };
