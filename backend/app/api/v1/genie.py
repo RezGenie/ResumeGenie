@@ -614,7 +614,7 @@ async def _check_daily_limits(user: User, db: AsyncSession) -> None:
     else:
         daily_limit = 10  # Regular members get 10 wishes per day
     
-    if current_count >= daily_limit:
+    if daily_limit != -1 and current_count >= daily_limit:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Daily wish limit exceeded ({daily_limit} wishes per day)"
