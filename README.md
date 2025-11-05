@@ -63,27 +63,23 @@ RezGenie/
 ## 🚀 Quick Start
 
 ```powershell
-# 1. Clone and setup (one-time setup)
+# 1. Clone the repository
 git clone https://github.com/RezGenie/ResumeGenie.git
 cd ResumeGenie
-# For Windows
-.\infra\setup_dev_env.ps1
-# For MacOS
-cd infra
-chmod +x setup.sh
-./setup.sh
 
+# 2. Set up environment variables
+cp backend/.env.example backend/.env
+# Edit backend/.env with your OpenAI API key
 
-# 2. Start services
-docker-compose up -d                          # Infrastructure
-cd frontend && npm run dev                    # Frontend (port 3000/3001)
-cd backend && conda activate rezgenie && uvicorn main:app --reload  # Backend (port 8000)
+# 3. Start all services with Docker
+docker-compose up -d
 
-# 3. Test everything
-.\infra\test-application.ps1 -TestType all
+# 4. Access the application
+# Frontend: http://localhost:3000
+# API Docs: http://localhost:8000/docs
 ```
 
-**📚 New Developer Resources:**
+**📚 Documentation:**
 
 - 📖 [Complete Setup Guide](docs/DEV_SETUP.md) - Detailed setup instructions
 - 🧪 [Testing Guide](docs/TESTING_GUIDE.md) - Comprehensive testing procedures  

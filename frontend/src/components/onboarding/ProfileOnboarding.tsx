@@ -116,8 +116,17 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
         onProgress: (progress) => {
           console.log('Upload progress:', progress);
         },
-        onComplete: (response) => {
+        onComplete: async (response) => {
           setUploadedResume(response);
+
+          // Save to local storage for dashboard display
+          try {
+            await localResumeService.addResume(file, response.original_filename);
+            console.log('Resume saved to local storage');
+          } catch (localError) {
+            console.error('Failed to save to local storage:', localError);
+            // Don't block the flow if local storage fails
+          }
 
           // Auto-fill from resume if data is available
           // Note: This would need backend support for extraction
@@ -132,10 +141,16 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
         },
         onError: (error) => {
           console.error('Upload failed:', error);
+          toast.error('Upload failed', {
+            description: error.message || 'Please check your connection and try again.'
+          });
         }
       });
     } catch (error) {
       console.error('Upload error:', error);
+      toast.error('Upload failed', {
+        description: error instanceof Error ? error.message : 'Please check your connection and try again.'
+      });
     } finally {
       setIsUploading(false);
     }

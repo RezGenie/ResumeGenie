@@ -284,7 +284,7 @@ export default function Dashboard() {
     }
   };
 
-  // Listen for profile updates
+  // Listen for profile updates and resume processing
   useEffect(() => {
     const handleProfileUpdate = () => {
       console.log('Profile updated, refreshing dashboard user...');
@@ -311,12 +311,24 @@ export default function Dashboard() {
       }
     };
 
+    const handleResumeProcessed = () => {
+      console.log('Resume processed, refreshing dashboard stats...');
+      // Refresh resume stats
+      const resumesStats = localResumeService.getResumeStats();
+      setResumeStats(resumesStats);
+      
+      // Refresh activities
+      fetchRealDashboardData();
+    };
+
     window.addEventListener('userProfileUpdated', handleProfileUpdate);
     window.addEventListener('userPreferencesUpdated', handleProfileUpdate);
+    window.addEventListener('resumeProcessed', handleResumeProcessed);
 
     return () => {
       window.removeEventListener('userProfileUpdated', handleProfileUpdate);
       window.removeEventListener('userPreferencesUpdated', handleProfileUpdate);
+      window.removeEventListener('resumeProcessed', handleResumeProcessed);
     };
   }, [authUser]);
 
@@ -905,6 +917,14 @@ export default function Dashboard() {
               const fetchData = async () => {
                 const preferences = userPreferencesService.getPreferences();
                 const profileCompleteness = userPreferencesService.getProfileCompleteness();
+                
+                // Refresh resume stats
+                const resumesStats = localResumeService.getResumeStats();
+                setResumeStats(resumesStats);
+                
+                // Refresh saved jobs stats
+                const jobsStats = savedJobsService.getJobsStats();
+                setSavedJobsStats(jobsStats);
 
                 if (dashboardUser) {
                   setDashboardUser({
@@ -918,6 +938,9 @@ export default function Dashboard() {
                     skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
                   });
                 }
+                
+                // Refresh activities to show new resume
+                await fetchRealDashboardData();
               };
               fetchData();
             }}
