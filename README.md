@@ -56,21 +56,20 @@ RezGenie/
 ├── frontend/               # React frontend
 ├── infra/                  # Infrastructure as code
 ├── docker-compose.yml      # Development environment setup
-├── docs/                   # Project documentation
-└── README.md
+└── docs/                   # Project documentation
 ```
 
 ## 📚 Documentation
 
 - 🍑 [Backend Documentation](backend/README.md) - Detailed technical documentation
-- 🖼️ [Changelog](docs/CHANGELOG.md) - Project progress and completed features
-- 📖 [Complete Setup Guide](docs/DEV_SETUP.md) - Detailed setup instructions
+- 📝 [Changelog](docs/changelog.md) - Project progress and completed features
+- 📖 [Complete Setup Guide](docs/setup.md) - Detailed setup instructions
 - 🏗️ [Design Document](docs/design.md) - System architecture
 - 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and design system
 - 🚀 [Quick Reference](docs/QUICK_REFERENCE.md) - Daily workflow commands
 - 📋 [Requirements](docs/requirements.md) - Functional requirements  
-- 🔄 [Task Tracking](docs/tasks.md) - Development progress
-- 🧪 [Testing Guide](docs/TESTING_GUIDE.md) - Comprehensive testing procedures  
+- ✅ [Task Tracking](docs/tasks.md) - Development progress
+- 🧪 [Testing Guide](docs/testing.md) - Comprehensive testing procedures  
 
 ## ⚡ Quick Start
 

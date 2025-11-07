@@ -8,7 +8,7 @@
 
 # 2. Start services (daily workflow)
 docker-compose up -d                    # Infrastructure
-cd frontend; npm run dev                 # Frontend (port 3000/3001)
+cd frontend; npm run dev                # Frontend (port 3000/3001)
 .\infra\start-backend.ps1               # Backend (port 8000)
 
 # 3. Validate everything works
