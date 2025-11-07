@@ -7,11 +7,12 @@ interface LogoProps {
 
 export function Logo({ size = 48, className }: LogoProps) {
   return (
-    <div 
-      className={cn("flex items-center justify-center", className)}
-      style={{ fontSize: `${size}px`, lineHeight: 1 }}
-    >
-      🧞‍♂️
-    </div>
+    <img
+      src="/logo.png"
+      alt="RezGenie Logo"
+      width={size}
+      height={size}
+      className={cn("object-contain", className)}
+    />
   )
 }
