@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { localResumeService, LocalResume } from '@/lib/api/localResumes';
+import { DeleteResumeDialog } from '@/components/resumes/DeleteResumeDialog';
 import { toast } from 'sonner';
 import { userPreferencesService } from '@/lib/api/userPreferences';
 
@@ -66,6 +67,8 @@ export default function ResumesPage() {
   const [editName, setEditName] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [stats, setStats] = useState({ total: 0, ready: 0, processing: 0, errors: 0, hasPrimary: false });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [resumeToDelete, setResumeToDelete] = useState<LocalResume | null>(null);
 
   // Load resumes
   const loadResumes = useCallback(() => {
@@ -139,20 +142,53 @@ export default function ResumesPage() {
   };
 
   // Handle resume deletion
-  const handleDeleteResume = (resumeId: string) => {
-    if (window.confirm('Are you sure you want to delete this resume?')) {
-      if (localResumeService.deleteResume(resumeId)) {
-        loadResumes();
-        if (selectedResume?.id === resumeId) {
-          setSelectedResume(null);
+  const handleDeleteResume = (resume: LocalResume) => {
+    setResumeToDelete(resume);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteResume = () => {
+    if (!resumeToDelete) return;
+    
+    const wasDeleted = localResumeService.deleteResume(resumeToDelete.id);
+    
+    if (wasDeleted) {
+      toast.success("Resume deleted successfully", {
+        description: `"${resumeToDelete.name}" has been removed`,
+      });
+      
+      loadResumes();
+      
+      if (selectedResume?.id === resumeToDelete.id) {
+        setSelectedResume(null);
+      }
+      
+      // If deleted resume was primary, auto-set another resume as primary
+      if (resumeToDelete.isPrimary) {
+        const remainingResumes = localResumeService.getResumes();
+        if (remainingResumes.length > 0) {
+          const firstReadyResume = remainingResumes.find(r => r.status === 'ready');
+          if (firstReadyResume) {
+            localResumeService.setPrimaryResume(firstReadyResume.id);
+            toast.info("Primary resume updated", {
+              description: `"${firstReadyResume.name}" is now your primary resume`,
+            });
+            loadResumes();
+          }
         }
       }
     }
+    
+    setResumeToDelete(null);
   };
 
   // Handle setting primary resume
   const handleSetPrimary = (resumeId: string) => {
+    const resume = resumes.find(r => r.id === resumeId);
     if (localResumeService.setPrimaryResume(resumeId)) {
+      toast.success("Primary resume updated", {
+        description: `"${resume?.name}" is now your primary resume`,
+      });
       loadResumes();
     }
   };
@@ -422,7 +458,7 @@ export default function ResumesPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleDeleteResume(resume.id)}
+                                  onClick={() => handleDeleteResume(resume)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -918,6 +954,14 @@ export default function ResumesPage() {
         </motion.div>
       </div>
       <Footer />
+      
+      {/* Delete Resume Dialog */}
+      <DeleteResumeDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        resumeName={resumeToDelete?.name || ''}
+        onConfirm={confirmDeleteResume}
+      />
     </div>
   );
 }

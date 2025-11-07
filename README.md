@@ -17,7 +17,6 @@
 - 🚀 [Quick Start](#-quick-start)
 - 📚 [Documentation](#-documentation)
 - 🗺️ [Application Structure](#️-application-structure)
-- 🧪 [Testing](#-testing)
 - 🤝 [Contributing](#-contributing)
 - 📄 [License](#-license)
 - 🌟 [Acknowledgments](#-acknowledgments)
@@ -74,7 +73,7 @@ RezGenie is an intelligent resume analysis and optimization platform that levera
 RezGenie/
 ├── backend/                # FastAPI backend application
 ├── frontend/               # React frontend
-├── infra/                  # Infrastructure as code
+├── scripts/                # Utility scripts for setup and deployment
 ├── docker-compose.yml      # Development environment setup
 └── docs/                   # Project documentation
 ```

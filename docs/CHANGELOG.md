@@ -2,7 +2,7 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
-## [0.17.0] - 2025-11-07
+### [0.17.0] - 2025-11-07
 
 ### CP-31 Final documentation
 
@@ -16,6 +16,15 @@ All notable changes to the RezGenie project will be documented in this file.
   - Organized documentation with clear sections and improved readability
   - Added new script files for testing and environment management
   - Enhanced project metadata and documentation structure
+
+### CP-64: Enhance resume management
+
+- **Resume management workflow enhancement**
+  - Added DeleteResumeDialog component for improved user experience
+  - Implemented robust resume deletion workflow with toast notifications
+  - Updated resumes page to handle primary resume auto-selection after deletion
+  - Improved error handling and user feedback during resume management
+  - Refactored resume deletion logic to be more modular and user-friendly
 
 ## [0.16.0] - 2025-11-06
 
