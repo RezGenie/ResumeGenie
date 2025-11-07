@@ -93,15 +93,27 @@ class UserPreferencesService {
   // Calculate profile completion percentage
   getProfileCompleteness(): number {
     const prefs = this.getPreferences();
+    
+    // Check if user has at least one resume
+    let hasResume = false;
+    try {
+      const { localResumeService } = require('@/lib/api/localResumes');
+      const resumes = localResumeService.getResumes();
+      hasResume = resumes.length > 0;
+    } catch (error) {
+      console.warn('Could not check resume status:', error);
+    }
+    
     const fields = [
       prefs.jobTitle,
       prefs.skills,
       prefs.salaryMin || prefs.salaryMax,
       prefs.industries,
       prefs.location,
+      hasResume, // Add resume as a required field
     ];
 
-    const completed = fields.filter(field => field && field.trim() !== '').length;
+    const completed = fields.filter(field => field && (typeof field === 'boolean' ? field : field.trim() !== '')).length;
     return Math.round((completed / fields.length) * 100);
   }
 
