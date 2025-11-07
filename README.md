@@ -7,24 +7,20 @@
 
 > AI-powered resume optimization platform that helps job seekers land their dream jobs
 
----
-
 ## 📑 Table of Contents
 
-- [Project Overview](#-project-overview)
-- [Key Features](#-key-features)
-- [Team](#-team)
-- [Technology Stack](#️-technology-stack)
-- [Project Structure](#️-project-structure)
-- [Quick Start](#-quick-start)
-- [Documentation](#-documentation)
-- [Application Structure](#️-application-structure)
-- [Testing](#-testing)
-- [Contributing](#-contributing)
-- [License](#-license)
-- [Acknowledgments](#-acknowledgments)
-
----
+- 🎯 [Project Overview](#-project-overview)
+- ✨ [Key Features](#-key-features)
+- 👯 [Team](#-team)
+- 🛠️ [Technology Stack](#️-technology-stack)
+- 🎯 [Project Structure](#️-project-structure)
+- 🚀 [Quick Start](#-quick-start)
+- 📚 [Documentation](#-documentation)
+- 🗺️ [Application Structure](#️-application-structure)
+- 🧪 [Testing](#-testing)
+- 🤝 [Contributing](#-contributing)
+- 📄 [License](#-license)
+- 🌟 [Acknowledgments](#-acknowledgments)
 
 ## 🎯 Project Overview
 
@@ -81,7 +77,7 @@ RezGenie/
 ├── infra/                  # Infrastructure as code
 ├── docker-compose.yml      # Development environment setup
 └── docs/                   # Project documentation
-can w```
+```
 
 ## 🚀 Quick Start
 
