@@ -2,7 +2,7 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
-### [0.17.0] = 2025-11-07
+## [0.17.0] - 2025-11-07
 
 ### CP-31 Final documentation
 
