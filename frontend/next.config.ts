@@ -1,12 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: __dirname,
-  },
+  // Turbopack disabled for production builds (Netlify compatibility)
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Output standalone for better performance
+  output: 'standalone',
 };
 
 export default nextConfig;
