@@ -493,7 +493,7 @@ export default function Dashboard() {
                 onClick={() => router.push('/profile')}
               >
                 <AvatarFallback className="bg-purple-600 text-white text-lg font-semibold">
-                  {dashboardUser?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  {dashboardUser?.name?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -596,22 +596,22 @@ export default function Dashboard() {
             {/* Recent Activity */}
             <motion.div variants={itemVariants} className="lg:col-span-2">
               <Card className="h-full flex flex-col">
-                <CardHeader className="flex-shrink-0">
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Recent Activity
+                <CardHeader className="flex-shrink-0 p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Clock className="h-5 w-5 flex-shrink-0" />
+                    <span>Recent Activity</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm">
                     Your saved jobs, resumes, and career insights
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
+                <CardContent className="flex-1 flex flex-col p-4 sm:p-6 pt-0">
                   {/* Activity Tabs */}
-                  <div className="flex gap-2 mb-4 border-b">
+                  <div className="flex gap-1 sm:gap-2 mb-4 border-b overflow-x-auto">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`rounded-none border-b-2 ${activityTab === 'all'
+                      className={`rounded-none border-b-2 whitespace-nowrap text-xs sm:text-sm ${activityTab === 'all'
                         ? 'border-purple-600 text-purple-600'
                         : 'border-transparent'
                         }`}
@@ -622,26 +622,28 @@ export default function Dashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`rounded-none border-b-2 ${activityTab === 'jobs'
+                      className={`rounded-none border-b-2 whitespace-nowrap text-xs sm:text-sm ${activityTab === 'jobs'
                         ? 'border-purple-600 text-purple-600'
                         : 'border-transparent'
                         }`}
                       onClick={() => setActivityTab('jobs')}
                     >
-                      <Bookmark className="h-3 w-3 mr-1" />
-                      Saved Jobs ({savedJobsStats.total})
+                      <Bookmark className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <span className="hidden sm:inline">Saved Jobs</span>
+                      <span className="sm:hidden">Jobs</span>
+                      <span className="ml-1">({savedJobsStats.total})</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`rounded-none border-b-2 ${activityTab === 'resumes'
+                      className={`rounded-none border-b-2 whitespace-nowrap text-xs sm:text-sm ${activityTab === 'resumes'
                         ? 'border-purple-600 text-purple-600'
                         : 'border-transparent'
                         }`}
                       onClick={() => setActivityTab('resumes')}
                     >
-                      <FileText className="h-3 w-3 mr-1" />
-                      Resumes ({resumeStats.total})
+                      <FileText className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <span>Resumes ({resumeStats.total})</span>
                     </Button>
                   </div>
 
@@ -696,22 +698,24 @@ export default function Dashboard() {
                             className="border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer hover:border-purple-300"
                             onClick={() => router.push('/dashboard/my-jobs')}
                           >
-                            <div className="flex items-start justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Bookmark className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                                  <h4 className="font-medium text-sm truncate">{job.title}</h4>
+                                  <h4 className="font-medium text-sm break-words">{job.title}</h4>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <Building2 className="h-3 w-3" />
-                                  <span className="truncate">{job.company}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <MapPin className="h-3 w-3" />
-                                  <span className="truncate">{job.location}</span>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Building2 className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{job.company}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{job.location}</span>
+                                  </div>
                                 </div>
                               </div>
-                              <Badge variant="secondary" className="text-xs ml-2">
+                              <Badge variant="secondary" className="text-xs w-fit">
                                 Saved
                               </Badge>
                             </div>
@@ -728,18 +732,18 @@ export default function Dashboard() {
                             className="border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer hover:border-purple-300"
                             onClick={() => router.push('/dashboard/resumes')}
                           >
-                            <div className="flex items-start gap-3">
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                               <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                 <FileText className="h-4 w-4 text-purple-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-sm truncate">{resume.fileName}</h4>
-                                <p className="text-xs text-muted-foreground">
+                                <h4 className="font-medium text-sm break-words">{resume.fileName}</h4>
+                                <p className="text-xs text-muted-foreground whitespace-nowrap">
                                   Uploaded {new Date(resume.uploadedAt).toLocaleDateString()}
                                 </p>
                                 {resume.analysisData && (
                                   <div className="flex items-center gap-2 mt-1">
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-xs whitespace-nowrap">
                                       <Sparkles className="h-3 w-3 mr-1" />
                                       Score: {resume.analysisData.overallScore}%
                                     </Badge>
@@ -748,7 +752,7 @@ export default function Dashboard() {
                               </div>
                               <Badge
                                 variant={resume.status === 'ready' ? 'default' : 'secondary'}
-                                className="text-xs"
+                                className="text-xs w-fit"
                               >
                                 {resume.status === 'ready' ? 'Ready' : resume.status === 'processing' ? 'Processing' : 'Error'}
                               </Badge>

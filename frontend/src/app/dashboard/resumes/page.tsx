@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { localResumeService, LocalResume } from '@/lib/api/localResumes';
@@ -57,6 +58,7 @@ export default function ResumesPage() {
   const [resumes, setResumes] = useState<LocalResume[]>([]);
   const [filteredResumes, setFilteredResumes] = useState<LocalResume[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searching, setSearching] = useState(false);
   const [selectedResume, setSelectedResume] = useState<LocalResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -73,21 +75,27 @@ export default function ResumesPage() {
     setStats(resumeStats);
   }, []);
 
-  // Filter resumes based on search
+  // Filter resumes based on search with debounce
   useEffect(() => {
-    let filtered = resumes;
+    setSearching(true);
+    const timeoutId = setTimeout(() => {
+      let filtered = resumes;
 
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = resumes.filter(resume =>
-        resume.name.toLowerCase().includes(term) ||
-        resume.fileName.toLowerCase().includes(term) ||
-        resume.tags?.some(tag => tag.toLowerCase().includes(term)) ||
-        resume.extractedData?.skills?.some(skill => skill.toLowerCase().includes(term))
-      );
-    }
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        filtered = resumes.filter(resume =>
+          resume.name.toLowerCase().includes(term) ||
+          resume.fileName.toLowerCase().includes(term) ||
+          resume.tags?.some(tag => tag.toLowerCase().includes(term)) ||
+          resume.extractedData?.skills?.some(skill => skill.toLowerCase().includes(term))
+        );
+      }
 
-    setFilteredResumes(filtered);
+      setFilteredResumes(filtered);
+      setSearching(false);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [resumes, searchTerm]);
 
   // Load data on mount
@@ -246,23 +254,48 @@ export default function ResumesPage() {
               </Card>
             </div>
 
-            {/* Search */}
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search resumes, skills, or tags..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white dark:bg-input border-gray-300 dark:border-gray-600 focus-visible:!border-purple-600 focus-visible:!ring-purple-600/50"
-                />
+            {/* Search and Filters */}
+            <Card className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border-purple-200/50 dark:border-purple-700/50 shadow-lg">
+              <div className="flex flex-col md:flex-row gap-4 p-6">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5" />
+                  <Input
+                    placeholder="Search resumes, skills, or tags..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-12 bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-sm focus:shadow-md placeholder:text-purple-400 dark:placeholder:text-purple-500 h-12 text-base"
+                  />
+                </div>
               </div>
-            </div>
+            </Card>
           </motion.div>
 
           {/* Resumes List */}
           <motion.div variants={itemVariants}>
-            {filteredResumes.length === 0 ? (
+            {searching ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-6 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-6 w-16" />
+                          <Skeleton className="h-6 w-20" />
+                          <Skeleton className="h-6 w-16" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredResumes.length === 0 ? (
               <Card className="text-center py-12">
                 <CardContent>
                   <FileText className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
@@ -299,28 +332,28 @@ export default function ResumesPage() {
                         transition={{ delay: index * 0.05 }}
                       >
                         <Card className="hover:shadow-lg transition-shadow">
-                          <CardContent className="p-6">
-                            <div className="flex justify-between items-start mb-4">
-                              <div className="flex-1 cursor-pointer" onClick={() => setSelectedResume(resume)}>
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="text-2xl">
+                          <CardContent className="p-4 sm:p-6">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedResume(resume)}>
+                                <div className="flex items-start gap-3 mb-2">
+                                  <div className="text-2xl flex-shrink-0">
                                     {localResumeService.getFileTypeIcon(resume.fileType)}
                                   </div>
-                                  <div>
-                                    <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                                      {resume.name}
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="text-lg sm:text-xl font-semibold text-foreground flex items-center gap-2 break-words">
+                                      <span className="break-all">{resume.name}</span>
                                       {resume.isPrimary && (
-                                        <Star className="w-4 h-4 text-purple-600 fill-current" />
+                                        <Star className="w-4 h-4 text-purple-600 fill-current flex-shrink-0" />
                                       )}
                                     </h3>
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                      <span>{resume.fileName}</span>
-                                      <span>{localResumeService.formatFileSize(resume.fileSize)}</span>
-                                      <div className={`flex items-center gap-1 ${statusDisplay.color}`}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground mt-1">
+                                      <span className="truncate">{resume.fileName}</span>
+                                      <span className="whitespace-nowrap">{localResumeService.formatFileSize(resume.fileSize)}</span>
+                                      <div className={`flex items-center gap-1 ${statusDisplay.color} whitespace-nowrap`}>
                                         {statusDisplay.icon}
                                         {statusDisplay.text}
                                       </div>
-                                      <span>{new Date(resume.uploadedAt).toLocaleDateString()}</span>
+                                      <span className="whitespace-nowrap">{new Date(resume.uploadedAt).toLocaleDateString()}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -341,14 +374,14 @@ export default function ResumesPage() {
                                     </div>
 
                                     {resume.analysisData && (
-                                      <div className="flex items-center gap-4 text-sm">
+                                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
                                         <div className="flex items-center gap-2">
-                                          <Target className="w-4 h-4 text-blue-500" />
-                                          <span>Score: {resume.analysisData.overallScore}/100</span>
+                                          <Target className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                          <span className="whitespace-nowrap">Score: {resume.analysisData.overallScore}/100</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <TrendingUp className="w-4 h-4 text-green-500" />
-                                          <span>Market Fit: {resume.analysisData.marketAlignment}%</span>
+                                          <TrendingUp className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                          <span className="whitespace-nowrap">Market Fit: {resume.analysisData.marketAlignment}%</span>
                                         </div>
                                       </div>
                                     )}
@@ -356,13 +389,13 @@ export default function ResumesPage() {
                                 )}
 
                                 {resume.notes && (
-                                  <p className="text-sm text-muted-foreground bg-muted p-2 rounded mt-3">
+                                  <p className="text-sm text-muted-foreground bg-muted p-2 rounded mt-3 break-words">
                                     {resume.notes}
                                   </p>
                                 )}
                               </div>
 
-                              <div className="flex gap-2 ml-4">
+                              <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 flex-wrap sm:flex-nowrap">
                                 {!resume.isPrimary && resume.status === 'ready' && (
                                   <Button
                                     variant="outline"
@@ -681,8 +714,8 @@ export default function ResumesPage() {
                           <Card className="border-purple-200 dark:border-purple-800 hover:shadow-lg transition-shadow">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-2 mb-3">
-                                <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
-                                  <TrendingUp className="w-5 h-5 text-pink-600" />
+                                <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                                  <TrendingUp className="w-5 h-5 text-purple-600" />
                                 </div>
                                 <h4 className="font-semibold">Market Alignment</h4>
                               </div>

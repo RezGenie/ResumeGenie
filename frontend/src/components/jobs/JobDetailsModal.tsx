@@ -292,6 +292,18 @@ export function JobDetailsModal({
             <Button
               variant="outline"
               onClick={() => {
+                // Import and use savedJobsService
+                const { savedJobsService } = require('@/lib/api/savedJobs');
+                savedJobsService.saveJob({
+                  id: job.id,
+                  title: job.title,
+                  company: job.company,
+                  location: job.location,
+                  salary: job.salaryText,
+                  description: job.snippet,
+                  skills: job.skills || [],
+                  jobUrl: job.redirect_url
+                });
                 onLikeAction(job.id);
                 onCloseAction();
               }}

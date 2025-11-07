@@ -48,6 +48,7 @@ interface UploadedFile {
   type: string;
   isUploaded?: boolean;
   resumeData?: ResumeResponse;
+  autoLoaded?: boolean; // Flag to indicate if this was auto-loaded from primary resume
 }
 
 interface Wish {
@@ -253,6 +254,7 @@ export default function StudioPage() {
     useState<AnalysisResults | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasLoadedPrimaryResume = useRef(false); // Track if we've already loaded primary resume
 
   // Helper function to parse recommendations if they come as JSON string
   const parseRecommendations = useCallback((data: any): string[] => {
@@ -344,6 +346,50 @@ export default function StudioPage() {
       setMaxWishes(3);
     }
   }, [isAuthenticated]);
+
+  // Load primary resume for authenticated users (runs once on mount)
+  useEffect(() => {
+    let isMounted = true; // Track if component is still mounted
+    
+    if (isAuthenticated && !resumeFile && !hasLoadedPrimaryResume.current) {
+      hasLoadedPrimaryResume.current = true; // Set immediately to prevent race conditions
+      
+      const loadPrimaryResume = async () => {
+        try {
+          const { localResumeService } = await import('@/lib/api/localResumes');
+          const primaryResume = localResumeService.getPrimaryResume();
+          
+          if (primaryResume && primaryResume.status === 'ready' && isMounted) {
+            // Convert LocalResume to UploadedFile format
+            const uploadedFile: UploadedFile = {
+              id: primaryResume.id,
+              name: primaryResume.name,
+              size: primaryResume.fileSize,
+              type: primaryResume.fileType,
+              isUploaded: true,
+              autoLoaded: true, // Mark as auto-loaded
+            };
+            
+            setResumeFile(uploadedFile);
+            setShowButtonHighlight(true);
+            
+            toast.success("Primary resume summoned!", {
+              description: `Using "${primaryResume.name}" - rub the lamp again to change it`,
+            });
+          }
+        } catch (error) {
+          console.warn('Failed to load primary resume:', error);
+        }
+      };
+      
+      loadPrimaryResume();
+    }
+    
+    return () => {
+      isMounted = false; // Cleanup: mark component as unmounted
+      hasLoadedPrimaryResume.current = false; // Reset flag so it loads again on next mount
+    };
+  }, [isAuthenticated]); // Only depend on isAuthenticated, not resumeFile
 
   // Fetch real daily wish usage from backend (supports both authenticated and guest users)
   useEffect(() => {
@@ -835,6 +881,14 @@ export default function StudioPage() {
   };
 
   const handleSubmit = async () => {
+    // Check if resume is uploaded first
+    if (!resumeFile) {
+      toast.error("Resume required! 📄✨", {
+        description: "Please upload your resume first to get personalized AI insights.",
+      });
+      return;
+    }
+
     // Enhanced validation with better user guidance
     const trimmedWish = jobPosting.trim();
 
@@ -856,8 +910,8 @@ export default function StudioPage() {
     // Check for overly simple inputs
     const simpleInputs = ['hello', 'hi', 'test', 'testing', 'help me', 'please help'];
     if (simpleInputs.includes(trimmedWish.toLowerCase())) {
-      toast.error("The genie needs a real career wish! 🔮", {
-        description: "Try asking something like 'How can I improve my resume?' or paste a job description.",
+      toast.error("The genie needs more details! 🔮", {
+        description: "Try pasting a job description or asking 'How can I improve my resume for [role]?'",
       });
       return;
     }
@@ -1052,8 +1106,8 @@ export default function StudioPage() {
               Make Your Career Wish
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Ask career questions, upload your resume, or paste job postings.
-              Your AI genie will grant you personalized career insights!
+              Upload your resume and paste a job posting to get AI-powered career insights.
+              Your genie will analyze your match and provide personalized recommendations!
             </p>
           </motion.div>
         </motion.div>
@@ -1412,12 +1466,12 @@ export default function StudioPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Your Resume <span className="text-sm text-muted-foreground font-normal">(Optional)</span>
+                    Your Resume
                   </CardTitle>
                 </CardHeader>
 
                 <CardDescription className="text-sm text-muted-foreground mb-2 px-4">
-                  Upload for personalized resume analysis, or skip for general career advice
+                  Upload your resume to get personalized AI-powered insights
                 </CardDescription>
                 <CardContent className="space-y-4">
                   {!resumeFile ? (
@@ -1513,12 +1567,57 @@ export default function StudioPage() {
                       />
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-8 w-8 text-primary" />
-                          <div>
-                            <p className="font-medium">{resumeFile.name}</p>
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ 
+                        duration: 0.3,
+                        ease: "easeOut"
+                      }}
+                    >
+                      <motion.div 
+                        className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border-2 border-primary/20"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ 
+                          duration: 0.4,
+                          delay: 0.1,
+                          ease: "easeOut"
+                        }}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <motion.div
+                            initial={{ rotate: -180, scale: 0 }}
+                            animate={{ rotate: 0, scale: 1 }}
+                            transition={{ 
+                              duration: 0.5,
+                              delay: 0.2,
+                              type: "spring",
+                              stiffness: 200
+                            }}
+                          >
+                            <FileText className="h-8 w-8 text-primary flex-shrink-0" />
+                          </motion.div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium truncate">{resumeFile.name}</p>
+                              {resumeFile.autoLoaded && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ 
+                                    duration: 0.3,
+                                    delay: 0.4
+                                  }}
+                                >
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 text-xs whitespace-nowrap">
+                                    ✓ Primary Resume
+                                  </Badge>
+                                </motion.div>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">
                               {formatFileSize(resumeFile.size)}
                             </p>
@@ -1528,34 +1627,46 @@ export default function StudioPage() {
                           variant="ghost"
                           size="sm"
                           onClick={removeFile}
-                          className="text-muted-foreground hover:text-destructive"
+                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                          title="Remove and upload different resume"
                         >
                           <X className="h-4 w-4" />
                         </Button>
-                      </div>
+                      </motion.div>
 
                       {/* Upload Progress */}
                       {isLoading && (
-                        <div className="space-y-2">
+                        <motion.div 
+                          className="space-y-2"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
                           <div className="flex justify-between text-sm text-muted-foreground">
                             <span>Uploading...</span>
                             <span>{uploadProgress}%</span>
                           </div>
                           <Progress value={uploadProgress} className="h-2" />
-                        </div>
+                        </motion.div>
                       )}
 
                       {/* Processing Status */}
                       {resumeFile.isUploaded && resumeFile.resumeData && (
-                        <div className="text-sm text-muted-foreground">
+                        <motion.div 
+                          className="text-sm text-muted-foreground"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3, delay: 0.3 }}
+                        >
                           Status:{" "}
                           {resumeFile.resumeData.processing_status ===
                             "completed"
                             ? "✅ Ready for analysis"
                             : "⏳ Processing..."}
-                        </div>
+                        </motion.div>
                       )}
-                    </div>
+                    </motion.div>
                   )}
                 </CardContent>
               </Card>
@@ -1575,14 +1686,14 @@ export default function StudioPage() {
 
                 </CardHeader>
                 <CardDescription className="text-sm text-muted-foreground mb-2 px-4">
-                  Paste a job description, ask career questions, or request resume advice
+                  Paste a job description to analyze your resume match, or ask for resume improvement tips
                 </CardDescription>
                 <CardContent className="space-y-4">
                   <div className="relative">
                     <Textarea
                       placeholder={isDailyLimitReached
                         ? `Daily limit reached (${dailyWishes}/${maxWishes}). Come back tomorrow!`
-                        : "Ask me anything about your career! (At least 10 characters)\n\nExamples:\n• Paste a job description for match analysis\n• 'How can I improve my resume for software engineering roles?'\n• 'What skills should I develop for data science?'\n• 'Review my career goals and suggest next steps'\n• 'Analyze this job posting: [paste job description]'"}
+                        : "Paste a full job posting to see how well your resume matches or ask for resume advice! \n\nExamples:\n• 'How can I improve my resume for senior software engineer roles?'\n• 'Give me tips to optimize my resume for ATS systems'"}
                       value={jobPosting}
                       onChange={(e) => {
                         setJobPosting(e.target.value);
@@ -1618,17 +1729,23 @@ export default function StudioPage() {
               size="lg"
               onClick={handleSubmit}
               disabled={
+                !resumeFile ||
                 !jobPosting.trim() ||
                 isDailyLimitReached ||
                 isAnalyzing ||
                 isResumeUploading
               }
-              className={`px-8 ${showButtonHighlight && !(!jobPosting.trim() || isDailyLimitReached || isAnalyzing || isResumeUploading) ? getHighlightClass(true) : ''}`}
+              className={`px-8 ${showButtonHighlight && !(!resumeFile || !jobPosting.trim() || isDailyLimitReached || isAnalyzing || isResumeUploading) ? getHighlightClass(true) : ''}`}
             >
               {isAnalyzing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Granting Wish...
+                </>
+              ) : !resumeFile ? (
+                <>
+                  <Upload className="h-5 w-5 mr-2" />
+                  Upload Resume First
                 </>
               ) : (
                 <>
@@ -1821,14 +1938,14 @@ export default function StudioPage() {
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Your Wish History
+                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                      <Clock className="h-5 w-5 flex-shrink-0" />
+                      <span>Your Wish History</span>
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm">
                       Click any analysis to view full results
                     </CardDescription>
                   </div>
@@ -1836,21 +1953,22 @@ export default function StudioPage() {
 
                 {/* Search and Filter Section */}
                 {wishes.length > 0 && (
-                  <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                  <div className="flex flex-col gap-3 mt-4">
                     <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <Input
                         placeholder="Search wishes by title or description..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 border-input bg-background text-foreground placeholder:text-muted-foreground"
+                        className="pl-10 border-input bg-background text-foreground placeholder:text-muted-foreground text-sm"
                       />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto pb-1">
                       <Button
                         variant={statusFilter === "all" ? "default" : "outline"}
                         size="sm"
                         onClick={() => setStatusFilter("all")}
+                        className="whitespace-nowrap text-xs sm:text-sm"
                       >
                         All ({wishes.length})
                       </Button>
@@ -1858,23 +1976,29 @@ export default function StudioPage() {
                         variant={statusFilter === "completed" ? "default" : "outline"}
                         size="sm"
                         onClick={() => setStatusFilter("completed")}
+                        className="whitespace-nowrap text-xs sm:text-sm"
                       >
-                        <Trophy className="h-3 w-3 mr-1" />
-                        Completed ({wishes.filter(w => w.status === "completed").length})
+                        <Trophy className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="hidden sm:inline">Completed</span>
+                        <span className="sm:hidden">Done</span>
+                        <span className="ml-1">({wishes.filter(w => w.status === "completed").length})</span>
                       </Button>
                       <Button
                         variant={statusFilter === "processing" ? "default" : "outline"}
                         size="sm"
                         onClick={() => setStatusFilter("processing")}
+                        className="whitespace-nowrap text-xs sm:text-sm"
                       >
-                        <Zap className="h-3 w-3 mr-1" />
-                        Processing ({wishes.filter(w => w.status === "processing").length})
+                        <Zap className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="hidden sm:inline">Processing</span>
+                        <span className="sm:hidden">Active</span>
+                        <span className="ml-1">({wishes.filter(w => w.status === "processing").length})</span>
                       </Button>
                     </div>
                   </div>
                 )}
               </CardHeader>
-              <CardContent className="h-96">
+              <CardContent className="h-80 sm:h-96 p-4 sm:p-6 pt-0">
                 <div className="h-full flex flex-col">
                   {filteredWishes.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground flex-1 flex flex-col justify-center">
@@ -1908,14 +2032,14 @@ export default function StudioPage() {
                           key={wish.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${wish.status === "completed"
+                          className={`border border-muted-foreground/25 rounded-lg p-3 sm:p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${wish.status === "completed"
                             ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
                             : "cursor-default dark:bg-card"
                             }`}
                         >
-                          <div className="flex items-start justify-between mb-3">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
                             <div
-                              className="flex items-start gap-3 flex-1"
+                              className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0"
                               onClick={() => {
                                 if (wish.status === "completed") {
                                   setSelectedWish(wish);
@@ -1924,33 +2048,33 @@ export default function StudioPage() {
                               }}
                             >
                               <div
-                                className={`p-2 rounded-lg text-white ${getWishColor(
+                                className={`p-2 rounded-lg text-white flex-shrink-0 ${getWishColor(
                                   wish.type
                                 )}`}
                               >
                                 {getWishIcon(wish.type)}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1">
-                                  <h4 className="font-medium truncate">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
+                                  <h4 className="font-medium text-sm sm:text-base break-words">
                                     {wish.title}
                                   </h4>
                                   {wish.status === "completed" &&
                                     wish.results?.score && (
                                       <Badge
                                         variant="secondary"
-                                        className="ml-2 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                        className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 w-fit text-xs"
                                       >
                                         {wish.results.score}%
                                       </Badge>
                                     )}
                                 </div>
-                                <p className="text-sm text-muted-foreground line-clamp-2 break-words">
+                                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 break-words">
                                   {wish.description}
                                 </p>
                                 <div className="flex items-center gap-2 mt-2">
-                                  <Clock className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
                                     {new Date(
                                       wish.timestamp
                                     ).toLocaleDateString("en-US", {
@@ -1964,7 +2088,7 @@ export default function StudioPage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 ml-3">
+                            <div className="flex items-center gap-2 sm:ml-3 self-end sm:self-start">
                               <Badge
                                 variant={
                                   wish.status === "completed"
@@ -1973,7 +2097,7 @@ export default function StudioPage() {
                                       ? "secondary"
                                       : "outline"
                                 }
-                                className={`${wish.status === "completed"
+                                className={`text-xs whitespace-nowrap ${wish.status === "completed"
                                   ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
                                   : wish.status === "processing"
                                     ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
@@ -1981,13 +2105,18 @@ export default function StudioPage() {
                                   }`}
                               >
                                 {wish.status === "processing" && (
-                                  <Zap className="h-3 w-3 mr-1 animate-pulse" />
+                                  <Zap className="h-3 w-3 mr-1 animate-pulse flex-shrink-0" />
                                 )}
                                 {wish.status === "completed" && (
-                                  <Trophy className="h-3 w-3 mr-1" />
+                                  <Trophy className="h-3 w-3 mr-1 flex-shrink-0" />
                                 )}
-                                {wish.status.charAt(0).toUpperCase() +
-                                  wish.status.slice(1)}
+                                <span className="hidden sm:inline">
+                                  {wish.status.charAt(0).toUpperCase() +
+                                    wish.status.slice(1)}
+                                </span>
+                                <span className="sm:hidden">
+                                  {wish.status === "completed" ? "Done" : wish.status === "processing" ? "Active" : "Pending"}
+                                </span>
                               </Badge>
 
                               <Button
@@ -1997,7 +2126,7 @@ export default function StudioPage() {
                                   e.stopPropagation();
                                   await deleteWish(wish.id);
                                 }}
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
                                 title="Delete wish"
                               >
                                 <X className="h-3 w-3" />
@@ -2016,20 +2145,20 @@ export default function StudioPage() {
 
                           {wish.status === "completed" && wish.results && (
                             <div className="mt-3 pt-3 border-t border-muted/50">
-                              <div className="grid grid-cols-3 gap-4 text-center">
+                              <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                                 {wish.results.score && (
                                   <div>
-                                    <div className="text-lg font-bold text-primary">
+                                    <div className="text-base sm:text-lg font-bold text-primary">
                                       {wish.results.score}%
                                     </div>
                                     <div className="text-xs text-muted-foreground">
-                                      Overall Score
+                                      <span className="hidden sm:inline">Overall </span>Score
                                     </div>
                                   </div>
                                 )}
                                 {wish.results.insights && (
                                   <div>
-                                    <div className="text-lg font-bold text-purple-600">
+                                    <div className="text-base sm:text-lg font-bold text-purple-600">
                                       {wish.results.insights.length}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
@@ -2039,7 +2168,7 @@ export default function StudioPage() {
                                 )}
                                 {wish.results.recommendations && (
                                   <div>
-                                    <div className="text-lg font-bold text-purple-600">
+                                    <div className="text-base sm:text-lg font-bold text-purple-600">
                                       {wish.results.recommendations.length}
                                     </div>
                                     <div className="text-xs text-muted-foreground">

@@ -1,4 +1,4 @@
-# RezGenie Development Environment
+# 📖 RezGenie Development Environment
 
 This guide will help you set up a complete development environment for RezGenie using conda and Docker.
 

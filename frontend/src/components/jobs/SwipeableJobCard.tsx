@@ -105,7 +105,7 @@ export function SwipeableJobCard({
   return (
     <motion.div
       ref={cardRef}
-      className={`absolute inset-0 w-full h-full ${isDragging ? 'z-[9999]' : isActive ? 'z-[100]' : 'z-10'}`}
+      className={`absolute inset-0 w-full h-full ${isDragging ? 'z-[55]' : isActive ? 'z-[45]' : 'z-10'}`}
       style={{ 
         x: isActive ? x : 0,
         y: isActive ? y : 0,

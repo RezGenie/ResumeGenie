@@ -1,12 +1,36 @@
 # 🧞‍♂️ RezGenie
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+
 > AI-powered resume optimization platform that helps job seekers land their dream jobs
+
+---
+
+## 📑 Table of Contents
+
+- [Project Overview](#-project-overview)
+- [Key Features](#-key-features)
+- [Team](#-team)
+- [Technology Stack](#️-technology-stack)
+- [Project Structure](#️-project-structure)
+- [Quick Start](#-quick-start)
+- [Documentation](#-documentation)
+- [Application Structure](#️-application-structure)
+- [Testing](#-testing)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
+
+---
 
 ## 🎯 Project Overview
 
 RezGenie is an intelligent resume analysis and optimization platform that leverages AI to help job seekers improve their resumes and increase their chances of landing interviews. Our AI genie provides personalized recommendations, skill gap analysis, and job matching insights.
 
-## 🌟 Key Features
+## ✨ Key Features
 
 - **Smart Resume Analysis**: AI-powered parsing and analysis of resume content
 - **Job Matching**: Intelligent matching between resumes and job postings
@@ -57,21 +81,9 @@ RezGenie/
 ├── infra/                  # Infrastructure as code
 ├── docker-compose.yml      # Development environment setup
 └── docs/                   # Project documentation
-```
+can w```
 
-## 📚 Documentation
-
-- 🍑 [Backend Documentation](backend/README.md) - Detailed technical documentation
-- 📝 [Changelog](docs/CHANGELOG.md) - Project progress and completed features
-- 📖 [Complete Setup Guide](docs/setup.md) - Detailed setup instructions
-- 🏗️ [Design Document](docs/design.md) - System architecture
-- 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and design system
-- 🚀 [Quick Reference](docs/QUICK_REFERENCE.md) - Daily workflow commands
-- 📋 [Requirements](docs/requirements.md) - Functional requirements  
-- ✅ [Task Tracking](docs/tasks.md) - Development progress
-- 🧪 [Testing Guide](docs/testing.md) - Comprehensive testing procedures  
-
-## ⚡ Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -110,6 +122,25 @@ RezGenie/
    - **Frontend**: <http://localhost:3000>
    - **MinIO Console**: <http://localhost:9001>
 
+## 📚 Documentation
+
+### Core Documentation
+- 📖 [Complete Setup Guide](docs/setup.md) - Development environment setup
+- 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
+- 🚀 [Deployment Guide](docs/deployment.md) - Production deployment options
+- 📦 [Changelog](docs/CHANGELOG.md) - Version history and features
+
+### Technical Documentation
+- 🍑 [Backend Documentation](backend/README.md) - API architecture and endpoints
+- 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and component library
+- 🏗️ [Design Document](docs/design.md) - System architecture and data models
+- 🗄️ [Database Schema](docs/database.md) - Database design and models
+
+### Project Management
+- 📋 [Requirements](docs/requirements.md) - Functional requirements and user stories
+- ✅ [Task Tracking](docs/tasks.md) - Implementation progress
+- 🎓 [Academic Context](docs/academic.md) - Capstone project information  
+
 ## 🗺️ Application Structure
 
 ### Frontend (Next.js 14)
@@ -129,14 +160,6 @@ Modern, responsive web application with comprehensive UI/UX:
 - **Smooth Animations**: Framer Motion powered transitions and micro-interactions
 - **Component Library**: shadcn/ui components with consistent design patterns
 
-## 🧪 Testing
-
-```bash
-# Run backend tests
-cd backend
-python -m pytest tests/ -v
-```
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -146,6 +169,17 @@ python -m pytest tests/ -v
 5. Commit your changes (`git commit -m 'Add some amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
+
+## 📸 Screenshots
+
+### Landing Page
+![Landing Page](docs/images/landing.png)
+
+### AI Genie Interface
+![Genie Interface](docs/images/genie.png)
+
+### Dashboard
+![Dashboard](docs/images/dashboard.png)
 
 ## 📄 License
 

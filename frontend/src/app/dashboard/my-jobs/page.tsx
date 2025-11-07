@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -68,6 +69,7 @@ export default function MyJobsPage() {
   const [filteredJobs, setFilteredJobs] = useState<SavedJob[]>([]);
   const [filters, setFilters] = useState<SavedJobsFilters>({ status: 'all' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [searching, setSearching] = useState(false);
   const [selectedJob, setSelectedJob] = useState<SavedJob | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState('');
@@ -78,10 +80,16 @@ export default function MyJobsPage() {
     loadJobs();
   }, []);
 
-  // Apply filters when jobs or filters change
+  // Apply filters when jobs or filters change with debounce
   useEffect(() => {
-    const filtered = savedJobsService.getFilteredJobs({ ...filters, search: searchTerm });
-    setFilteredJobs(filtered);
+    setSearching(true);
+    const timeoutId = setTimeout(() => {
+      const filtered = savedJobsService.getFilteredJobs({ ...filters, search: searchTerm });
+      setFilteredJobs(filtered);
+      setSearching(false);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [jobs, filters, searchTerm]);
 
   const loadJobs = () => {
@@ -269,7 +277,27 @@ export default function MyJobsPage() {
 
         {/* Jobs List */}
         <motion.div variants={itemVariants}>
-          {filteredJobs.length === 0 ? (
+          {searching ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="space-y-3">
+                      <Skeleton className="h-6 w-3/4" />
+                      <div className="flex gap-4">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-6 w-16" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredJobs.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
                 <Bookmark className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
@@ -298,37 +326,37 @@ export default function MyJobsPage() {
                     transition={{ delay: index * 0.05 }}
                   >
                     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1" onClick={() => setSelectedJob(job)}>
-                            <div className="flex items-start justify-between mb-2">
-                              <h3 className="text-xl font-semibold text-foreground hover:text-purple-600 transition-colors">
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                          <div className="flex-1 min-w-0" onClick={() => setSelectedJob(job)}>
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                              <h3 className="text-lg sm:text-xl font-semibold text-foreground hover:text-purple-600 transition-colors break-words">
                                 {job.title}
                               </h3>
-                              <Badge className={getStatusColor(job.status)}>
+                              <Badge className={`${getStatusColor(job.status)} flex-shrink-0 w-fit`}>
                                 {getStatusIcon(job.status)}
                                 <span className="ml-1 capitalize">{job.status}</span>
                               </Badge>
                             </div>
                             
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground mb-3">
                               <div className="flex items-center gap-1">
-                                <Building className="w-4 h-4" />
-                                {job.company}
+                                <Building className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">{job.company}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <MapPin className="w-4 h-4" />
-                                {job.location}
+                                <MapPin className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">{job.location}</span>
                               </div>
                               {job.salary && (
                                 <div className="flex items-center gap-1">
-                                  <DollarSign className="w-4 h-4" />
-                                  {job.salary}
+                                  <DollarSign className="w-4 h-4 flex-shrink-0" />
+                                  <span className="truncate">{job.salary}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-1">
-                                <Calendar className="w-4 h-4" />
-                                {new Date(job.savedAt).toLocaleDateString()}
+                                <Calendar className="w-4 h-4 flex-shrink-0" />
+                                <span className="whitespace-nowrap">{new Date(job.savedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
 
@@ -346,13 +374,13 @@ export default function MyJobsPage() {
                             </div>
 
                             {job.notes && (
-                              <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                              <p className="text-sm text-muted-foreground bg-muted p-2 rounded break-words">
                                 {job.notes}
                               </p>
                             )}
                           </div>
 
-                          <div className="flex gap-2 ml-4">
+                          <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 flex-wrap sm:flex-nowrap">
                             <Select
                               value={job.status}
                               onValueChange={(value: string) => handleStatusChange(job.id, value as SavedJob['status'])}
