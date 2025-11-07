@@ -462,7 +462,7 @@ async def search_jobs(
         )
 
 
-@router.get("/{comparison_id}", response_model=JobComparisonDetailResponse)
+@router.get("/comparisons/{comparison_id}", response_model=JobComparisonDetailResponse)
 async def get_job_comparison(
     comparison_id: str,
     current_user: User = Depends(get_current_user),
@@ -530,7 +530,7 @@ async def get_job_comparison(
         )
 
 
-@router.delete("/{comparison_id}", status_code=status.HTTP_200_OK)
+@router.delete("/comparisons/{comparison_id}", status_code=status.HTTP_200_OK)
 async def delete_job_comparison(
     comparison_id: str,
     current_user: User = Depends(get_current_user),
@@ -578,7 +578,7 @@ async def delete_job_comparison(
         )
 
 
-@router.post("/{comparison_id}/reanalyze", response_model=JobComparisonResponse)
+@router.post("/comparisons/{comparison_id}/reanalyze", response_model=JobComparisonResponse)
 async def reanalyze_job_comparison(
     comparison_id: str,
     current_user: User = Depends(get_current_user),

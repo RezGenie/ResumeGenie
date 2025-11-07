@@ -2,6 +2,16 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.16.0] - 2025-11-06
+
+### CP-54 Resume not persisting after upload and unpoplated job opportunities
+
+- **Bug Fixes**
+  - Fixed issue where uploaded resumes were not being displayed in dashboard
+  - Resolved problem with job opportunities page not displaying relevant jobs after resume upload
+  - Added Celery Beat scheduler to run job ingestion every 6 hours automatically
+  - Updated frontend to use personalized recommendations
+
 ## [0.15.0] - 2025-11-03
 
 ### CP-50 Production polish and bug fixes

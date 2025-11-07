@@ -56,34 +56,22 @@ RezGenie/
 ├── frontend/               # React frontend
 ├── infra/                  # Infrastructure as code
 ├── docker-compose.yml      # Development environment setup
-├── docs/                   # Project documentation
-└── README.md
+└── docs/                   # Project documentation
 ```
 
-## 🚀 Quick Start
+## 📚 Documentation
 
-```powershell
-# 1. Clone the repository
-git clone https://github.com/RezGenie/ResumeGenie.git
-cd ResumeGenie
+- 🍑 [Backend Documentation](backend/README.md) - Detailed technical documentation
+- 📝 [Changelog](docs/changelog.md) - Project progress and completed features
+- 📖 [Complete Setup Guide](docs/setup.md) - Detailed setup instructions
+- 🏗️ [Design Document](docs/design.md) - System architecture
+- 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and design system
+- 🚀 [Quick Reference](docs/QUICK_REFERENCE.md) - Daily workflow commands
+- 📋 [Requirements](docs/requirements.md) - Functional requirements  
+- ✅ [Task Tracking](docs/tasks.md) - Development progress
+- 🧪 [Testing Guide](docs/testing.md) - Comprehensive testing procedures  
 
-# 2. Set up environment variables
-cp backend/.env.example backend/.env
-# Edit backend/.env with your OpenAI API key
-
-# 3. Start all services with Docker
-docker-compose up -d
-
-# 4. Access the application
-# Frontend: http://localhost:3000
-# API Docs: http://localhost:8000/docs
-```
-
-**📚 Documentation:**
-
-- 📖 [Complete Setup Guide](docs/DEV_SETUP.md) - Detailed setup instructions
-- 🧪 [Testing Guide](docs/TESTING_GUIDE.md) - Comprehensive testing procedures  
-- ⚡ [Quick Reference](docs/QUICK_REFERENCE.md) - Daily workflow commands
+## ⚡ Quick Start
 
 ### Prerequisites
 
@@ -122,8 +110,6 @@ docker-compose up -d
    - **Frontend**: <http://localhost:3000>
    - **MinIO Console**: <http://localhost:9001>
 
-For backend technical details and API documentation, see **[Backend README](backend/README.md)**
-
 ## 🗺️ Application Structure
 
 ### Frontend (Next.js 14)
@@ -143,8 +129,6 @@ Modern, responsive web application with comprehensive UI/UX:
 - **Smooth Animations**: Framer Motion powered transitions and micro-interactions
 - **Component Library**: shadcn/ui components with consistent design patterns
 
-For detailed frontend documentation, see **[Frontend README](frontend/README.md)**
-
 ## 🧪 Testing
 
 ```bash
@@ -152,15 +136,6 @@ For detailed frontend documentation, see **[Frontend README](frontend/README.md)
 cd backend
 python -m pytest tests/ -v
 ```
-
-## 📚 Documentation
-
-- [Backend Documentation](backend/README.md) - Detailed technical documentation
-- [Changelog](docs/CHANGELOG.md) - Project progress and completed features
-- [Design Document](docs/design.md) - System architecture
-- [Frontend Documentation](frontend/README.md) - UI/UX and design system
-- [Requirements](docs/requirements.md) - Functional requirements  
-- [Task Tracking](docs/tasks.md) - Development progress
 
 ## 🤝 Contributing
 

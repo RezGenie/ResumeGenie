@@ -15,6 +15,16 @@ export class JobService {
     limit: number = 20
   ): Promise<APIResponse<JobDisplay[]>> {
     try {
+      // Use personalized recommendations if user has completed profile and no search/filters
+      const hasProfile = userPreferencesService.hasCompletedProfile();
+      const hasFilters = filters.search || (filters.location && filters.location !== 'all');
+      
+      if (hasProfile && !hasFilters) {
+        console.log('Using personalized job recommendations...');
+        return await this.getRecommendedJobs(limit);
+      }
+      
+      // Otherwise use discovery feed with filters
       const params = new URLSearchParams({
         skip: skip.toString(),
         limit: limit.toString(),
@@ -43,7 +53,7 @@ export class JobService {
       let jobsDisplay: JobDisplay[] = jobs.map(this.transformJobToDisplay);
       
       // Apply smart filtering based on user preferences
-      if (userPreferencesService.hasCompletedProfile()) {
+      if (hasProfile) {
         console.log('Applying smart job filtering...');
         const originalCount = jobsDisplay.length;
         
@@ -79,7 +89,7 @@ export class JobService {
       return {
         success: true,
         data: jobsDisplay,
-        message: userPreferencesService.hasCompletedProfile() 
+        message: hasProfile 
           ? `Found ${jobsDisplay.length} personalized job matches`
           : `Found ${jobsDisplay.length} jobs`
       };
@@ -184,19 +194,88 @@ export class JobService {
   }
 
   /**
-   * Get recommended jobs for the current user (future endpoint)
+   * Get recommended jobs for the current user using personalized matching
    */
-  async getRecommendedJobs(limit: number = 5): Promise<APIResponse<JobDisplay[]>> {
+  async getRecommendedJobs(limit: number = 20): Promise<APIResponse<JobDisplay[]>> {
     try {
-      // Use the existing discovery feed for now
-      const response = await this.getJobs({}, 0, limit);
-      return response;
-    } catch (error) {
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+      });
+      
+      // Use the personalized recommendations endpoint
+      const response = await apiClient.get<any>(`/jobs/recommendations?${params}`);
+      
+      console.log('Recommendations API response:', response);
+      
+      // Check if response is an array
+      if (!Array.isArray(response)) {
+        console.warn('Recommendations response is not an array, falling back to discovery feed');
+        throw new Error('Invalid recommendations response format');
+      }
+      
+      // Transform recommendations to JobDisplay format
+      const jobsDisplay: JobDisplay[] = response.map(rec => ({
+        id: rec.job_id.toString(),
+        provider: rec.provider,
+        provider_job_id: rec.provider_job_id,
+        title: rec.title,
+        company: rec.company,
+        location: rec.location || '',
+        remote: rec.remote,
+        salary_min: rec.salary_min,
+        salary_max: rec.salary_max,
+        currency: rec.currency,
+        snippet: rec.snippet || '',
+        tags: rec.tags || [],
+        redirect_url: rec.redirect_url,
+        posted_at: rec.posted_at,
+        created_at: rec.posted_at, // Use posted_at as created_at
+        updated_at: rec.posted_at, // Use posted_at as updated_at
+        salaryText: JobService.formatSalary(rec.salary_min, rec.salary_max, rec.currency),
+        skills: rec.tags || [],
+        type: rec.remote ? 'Remote' : 'Full-time',
+        saved: false,
+        matchScore: Math.round(rec.score * 100), // Convert 0-1 score to percentage
+      }));
+      
+      console.log(`Personalized recommendations: ${jobsDisplay.length} jobs with scores`);
+      if (jobsDisplay.length > 0) {
+        console.log('Top 5 recommendations:');
+        jobsDisplay.slice(0, 5).forEach((job, idx) => {
+          console.log(`  ${idx + 1}. ${job.title} (${job.matchScore}%) - ${job.company}`);
+        });
+      }
+      
       return {
-        success: false,
-        data: [],
-        message: error instanceof Error ? error.message : 'Failed to get recommended jobs'
+        success: true,
+        data: jobsDisplay,
+        message: `Found ${jobsDisplay.length} personalized job recommendations`
       };
+    } catch (error) {
+      console.error('Jobs API: Failed to get recommended jobs:', error);
+      // Fallback to discovery feed if recommendations fail
+      console.log('Falling back to discovery feed...');
+      try {
+        const params = new URLSearchParams({
+          skip: '0',
+          limit: limit.toString(),
+        });
+        const jobs = await apiClient.get<Job[]>(`/jobs/discovery?${params}`);
+        const jobsDisplay = jobs.map(this.transformJobToDisplay);
+        
+        return {
+          success: true,
+          data: jobsDisplay,
+          message: `Showing ${jobsDisplay.length} jobs (recommendations unavailable)`
+        };
+      } catch (fallbackError) {
+        console.error('Fallback to discovery feed also failed:', fallbackError);
+        return {
+          success: false,
+          data: [],
+          message: 'Failed to fetch jobs'
+        };
+      }
     }
   }
 

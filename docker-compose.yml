@@ -103,14 +103,47 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie
       - REDIS_URL=redis://:redis123@redis:6379/0
+      - CELERY_BROKER_URL=redis://:redis123@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis123@redis:6379/0
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin123
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ADZUNA_APP_ID=${ADZUNA_APP_ID}
+      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app
       - uploaded_files:/app/uploads
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - rezgenie-network
+    restart: unless-stopped
+
+  # Celery Beat for periodic task scheduling
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rezgenie_celery_beat
+    command: celery -A app.celery.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie
+      - REDIS_URL=redis://:redis123@redis:6379/0
+      - CELERY_BROKER_URL=redis://:redis123@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis123@redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ADZUNA_APP_ID=${ADZUNA_APP_ID}
+      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
     depends_on:
       - postgres
       - redis
@@ -129,6 +162,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie
       - REDIS_URL=redis://:redis123@redis:6379/0
+      - CELERY_BROKER_URL=redis://:redis123@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis123@redis:6379/0
     ports:
       - "5555:5555"
     volumes:
