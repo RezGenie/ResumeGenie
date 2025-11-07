@@ -1,4 +1,3 @@
-import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 interface LogoProps {
@@ -8,12 +7,11 @@ interface LogoProps {
 
 export function Logo({ size = 48, className }: LogoProps) {
   return (
-    <Image
-      src="/logo.png"
-      alt="RezGenie Logo"
-      width={size}
-      height={size}
-      className={cn("object-contain", className)}
-    />
+    <div 
+      className={cn("flex items-center justify-center", className)}
+      style={{ fontSize: `${size}px`, lineHeight: 1 }}
+    >
+      🧞‍♂️
+    </div>
   )
 }
