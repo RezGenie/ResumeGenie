@@ -62,7 +62,7 @@ RezGenie/
 ## 📚 Documentation
 
 - 🍑 [Backend Documentation](backend/README.md) - Detailed technical documentation
-- 📝 [Changelog](docs/changelog.md) - Project progress and completed features
+- 📝 [Changelog](docs/CHANGELOG.md) - Project progress and completed features
 - 📖 [Complete Setup Guide](docs/setup.md) - Detailed setup instructions
 - 🏗️ [Design Document](docs/design.md) - System architecture
 - 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and design system
