@@ -17,7 +17,6 @@ All notable changes to the RezGenie project will be documented in this file.
   - Added new script files for testing and environment management
   - Enhanced project metadata and documentation structure
 
-
 ### CP-64: Enhance resume management
 
 - **Resume management workflow enhancement**
