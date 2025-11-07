@@ -1,8 +1,8 @@
-# Database Connection Guide
+# 🗄️ Database Connection Guide
 
 ## Connecting to PostgreSQL with DBeaver
 
-The RezGenie PostgreSQL database is running in Docker and can be accessed using DBeaver or any other PostgreSQL client.
+The RezGenie PostgreSQL database is running in Docker and can be accessed using any PostgreSQL client.
 
 ### Connection Details
 

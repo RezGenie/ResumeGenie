@@ -1,4 +1,4 @@
-# RezGenie Design Document
+# 🏗️ RezGenie Design Document
 
 ## Overview
 

@@ -261,13 +261,6 @@ export function Header() {
                 >
                   Job Opportunities
                 </Link>
-                <Link
-                  href="/opportunities"
-                  className="block px-4 py-3 text-base font-medium text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Job Opportunities
-                </Link>
 
                 <div className="border-t pt-4 mt-4">
                   <div className="px-4 py-2">

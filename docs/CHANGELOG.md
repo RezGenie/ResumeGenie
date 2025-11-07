@@ -1,6 +1,21 @@
-# Changelog
+# 📦 Changelog
 
 All notable changes to the RezGenie project will be documented in this file.
+
+### [0.17.0] = 2025-11-07
+
+### CP-31 Final documentation
+
+- **Comprehensive documentation and project structure refinement**
+  - Restructured README.md with enhanced project overview and sections
+  - Added badges for project technologies and license
+  - Updated CHANGELOG.md with detailed version history
+  - Created new documentation files: academic.md, and deployment.md
+  - Added project screenshots in docs/images directory
+  - Removed outdated reference and infrastructure scripts
+  - Organized documentation with clear sections and improved readability
+  - Added new script files for testing and environment management
+  - Enhanced project metadata and documentation structure
 
 ## [0.16.0] - 2025-11-06
 
@@ -17,12 +32,18 @@ All notable changes to the RezGenie project will be documented in this file.
 ### CP-50 Production polish and bug fixes
 
 - **Bug Fixes**
+  - Resolved React Strict Mode double-render issues with useRef tracking
+  - Added proper cleanup functions to prevent memory leaks
   - Resolved minor UI glitches in dashboard and profile settings
   - Refactored job export functionality to support CSV format
 
 - **Performance Improvements**
   - Enhanced user experience with smoother animations and transitions
   - Optimized API response times for profile updates and dashboard data fetching
+  - Implemented `hasLoadedPrimaryResume` ref to prevent duplicate loads
+  - Added `autoLoaded` flag to track auto-loaded vs manually uploaded resumes
+  - Enhanced error handling with user-friendly toast messages
+  - Optimized component mounting/unmounting lifecycle
 
 ## [0.14.0] - 2025-10-29
 
