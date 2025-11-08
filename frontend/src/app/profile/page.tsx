@@ -41,10 +41,12 @@ import { userProfileService } from "@/lib/api/userProfile";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
 import { EnhancedSelect } from "@/components/profile/EnhancedSelect";
+import { AvatarSelector } from "@/components/profile/AvatarSelector";
 
 // Form validation schema
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
+  avatar: z.string().optional(),
   phone: z.string().optional(),
   location: z.string().optional(),
   bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
@@ -80,6 +82,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState('');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -87,6 +90,7 @@ export default function ProfilePage() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: '',
+      avatar: '',
       phone: '',
       location: '',
       bio: '',
@@ -110,9 +114,11 @@ export default function ProfilePage() {
       // Use saved profile name, or fallback to email-derived name
       const userName = profile.name || user.email.split('@')[0] || '';
       setDisplayName(userName);
+      setSelectedAvatar(profile.avatar || '');
 
       form.reset({
         name: userName,
+        avatar: profile.avatar || '',
         phone: profile.phone || '',
         location: profile.location || preferences.location || '',
         bio: profile.bio || '',
@@ -133,6 +139,7 @@ export default function ProfilePage() {
     // Save personal information
     userProfileService.saveProfile({
       name: data.name,
+      avatar: data.avatar || '',
       phone: data.phone || '',
       location: data.location || '',
       bio: data.bio || '',
@@ -187,11 +194,26 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader className="text-center">
                   <div className="flex flex-col items-center space-y-4">
-                    <Avatar className="h-24 w-24">
-                      <AvatarFallback className="text-2xl bg-purple-600 text-white">
-                        {displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="relative group cursor-pointer"
+                      title="Click to change avatar"
+                    >
+                      <Avatar className="h-24 w-24 transition-all duration-200 group-hover:ring-2 group-hover:ring-purple-500 group-hover:scale-105">
+                        {selectedAvatar && selectedAvatar.startsWith('/') ? (
+                          <AvatarImage 
+                            src={selectedAvatar}
+                            alt="User avatar"
+                          />
+                        ) : null}
+                        <AvatarFallback className="text-2xl bg-purple-600 text-white">
+                          {!selectedAvatar ? displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase() : ''}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 rounded-full transition-colors duration-200">
+                        <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm font-medium">Change</span>
+                      </div>
+                    </button>
                     <div>
                       <h1 className="text-2xl font-bold ">{displayName || 'User'}</h1>
                       <p className="text-muted-foreground">{user.email}</p>
@@ -235,6 +257,16 @@ export default function ProfilePage() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {isEditing && (
+                    <AvatarSelector
+                      selectedAvatar={selectedAvatar}
+                      onSelect={(avatar) => {
+                        setSelectedAvatar(avatar);
+                        form.setValue('avatar', avatar);
+                      }}
+                      isEditing={isEditing}
+                    />
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>

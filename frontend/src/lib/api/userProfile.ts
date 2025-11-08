@@ -7,6 +7,7 @@ export interface UserProfile {
   location?: string;
   bio?: string;
   profilePicture?: string;
+  avatar?: string; // Emoji character for profile picture
 }
 
 class UserProfileService {

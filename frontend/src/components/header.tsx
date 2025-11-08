@@ -14,16 +14,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/AuthContext"
+import { userProfileService } from "@/lib/api/userProfile"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [userAvatar, setUserAvatar] = useState('')
   const { user, logout } = useAuth()
 
   const handleLogout = async () => {
     await logout()
   }
+
+  // Update avatar when profile changes
+  useEffect(() => {
+    const profile = userProfileService.getProfile()
+    setUserAvatar(profile.avatar || '')
+
+    const handleProfileUpdate = () => {
+      const profile = userProfileService.getProfile()
+      setUserAvatar(profile.avatar || '')
+    }
+
+    window.addEventListener('userProfileUpdated', handleProfileUpdate)
+    return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate)
+  }, [])
 
   // Close mobile menu on window resize
   useEffect(() => {
@@ -143,8 +159,14 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
+                      {userAvatar && userAvatar.startsWith('/') ? (
+                        <AvatarImage 
+                          src={userAvatar}
+                          alt="User avatar"
+                        />
+                      ) : null}
                       <AvatarFallback className="bg-purple-600 text-white">
-                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                        {!userAvatar ? user?.email?.charAt(0).toUpperCase() || 'U' : ''}
                       </AvatarFallback>
                     </Avatar>
                     {/* Online indicator */}

@@ -381,6 +381,7 @@ export default function Dashboard() {
         setDashboardUser({
           ...authUser,
           name: displayName,
+          profilePicture: profile.avatar,
           memberSince,
           profileCompleteness, // Use real profile completeness
           title: preferences.jobTitle || 'Job Seeker',
@@ -492,8 +493,14 @@ export default function Dashboard() {
                 className="h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => router.push('/profile')}
               >
+                {dashboardUser?.profilePicture && dashboardUser.profilePicture.startsWith('/') ? (
+                  <AvatarImage 
+                    src={dashboardUser.profilePicture}
+                    alt="User avatar"
+                  />
+                ) : null}
                 <AvatarFallback className="bg-purple-600 text-white text-lg font-semibold">
-                  {dashboardUser?.name?.charAt(0).toUpperCase() || 'U'}
+                  {!dashboardUser?.profilePicture ? (dashboardUser?.name?.charAt(0).toUpperCase() || 'U') : ''}
                 </AvatarFallback>
               </Avatar>
               <div>
