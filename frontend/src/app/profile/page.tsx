@@ -190,42 +190,36 @@ export default function ProfilePage() {
             className="space-y-6"
           >
             {/* Profile Header */}
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardHeader className="text-center">
-                  <div className="flex flex-col items-center space-y-4">
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="relative group cursor-pointer"
-                      title="Click to change avatar"
-                    >
-                      <Avatar className="h-24 w-24 transition-all duration-200 group-hover:ring-2 group-hover:ring-purple-500 group-hover:scale-105">
-                        {selectedAvatar && selectedAvatar.startsWith('/') ? (
-                          <AvatarImage 
-                            src={selectedAvatar}
-                            alt="User avatar"
-                          />
-                        ) : null}
-                        <AvatarFallback className="text-2xl bg-purple-600 text-white">
-                          {!selectedAvatar ? displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase() : ''}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 rounded-full transition-colors duration-200">
-                        <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm font-medium">Change</span>
-                      </div>
-                    </button>
-                    <div>
-                      <h1 className="text-2xl font-bold ">{displayName || 'User'}</h1>
-                      <p className="text-muted-foreground">{user.email}</p>
-                      <div className="flex items-center justify-center gap-2 mt-2">
-                        <Badge variant={user.is_active ? "default" : "destructive"} className="bg-purple-600 hover:bg-purple-700">
-                          {user.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
+            <motion.div variants={itemVariants} className="flex flex-col items-center space-y-4 py-8">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="relative group cursor-pointer"
+                title="Click to change avatar"
+              >
+                <Avatar className="h-24 w-24 transition-all duration-200 group-hover:ring-2 group-hover:ring-purple-500 group-hover:scale-105">
+                  {selectedAvatar && selectedAvatar.startsWith('/') ? (
+                    <AvatarImage 
+                      src={selectedAvatar}
+                      alt="User avatar"
+                    />
+                  ) : null}
+                  <AvatarFallback className="text-2xl bg-purple-600 text-white">
+                    {!selectedAvatar ? displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase() : ''}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 rounded-full transition-colors duration-200">
+                  <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm font-medium">Change</span>
+                </div>
+              </button>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold">{displayName || 'User'}</h1>
+                <p className="text-muted-foreground">{user.email}</p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <Badge variant={user.is_active ? "default" : "destructive"} className="bg-purple-600 hover:bg-purple-700">
+                    {user.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              </div>
             </motion.div>
 
             {/* Profile Information */}
