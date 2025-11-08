@@ -89,6 +89,8 @@ interface WishDetailsResponse {
   resources?: Array<{ title?: string; url?: string; description?: string }>;
   confidence_score?: number;
   job_match_score?: number;
+  company_name?: string;
+  position_title?: string;
 }
 
 interface HistoricalWish {
@@ -239,6 +241,8 @@ export default function StudioPage() {
   const modalRef = useRef<HTMLDivElement | null>(null);
   const [resumeFile, setResumeFile] = useState<UploadedFile | null>(null);
   const [jobPosting, setJobPosting] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [positionTitle, setPositionTitle] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -489,11 +493,16 @@ export default function StudioPage() {
         if (Array.isArray(historicalWishes)) {
           // Convert historical wishes with full details included
           const detailedWishes = historicalWishes.map((wish) => {
+            // Reconstruct title from company_name and position_title if available
+            const title = wish.company_name || wish.position_title
+              ? `${wish.company_name ? wish.company_name : ""}${wish.company_name && wish.position_title ? " - " : ""}${wish.position_title || ""}`
+              : "Resume & Job Match Analysis";
+            
             return {
               id: wish.id,
               type: "resume_analysis" as const,
-              title: "Resume & Job Match Analysis",
-              description: `Career guidance and resume optimization analysis`,
+              title: title,
+              description: "",
               timestamp: new Date(wish.created_at),
               status: wish.is_processed
                 ? "completed"
@@ -922,17 +931,22 @@ export default function StudioPage() {
       const data = await apiClient.post<{ id: string }>(endpoint, {
         wish_type: "improvement",
         wish_text: jobPosting,
-        context_data: resumeFile ? { resume_id: resumeFile.id } : undefined,
+        context_data: {
+          ...(resumeFile ? { resume_id: resumeFile.id } : {}),
+          ...(companyName ? { company_name: companyName } : {}),
+          ...(positionTitle ? { position_title: positionTitle } : {}),
+        },
       });
 
       // Add wish to history immediately with real backend ID
       const newWish: Wish = {
         id: data.id,
         type: "resume_analysis",
-        title: resumeFile ? "Resume & Job Match Analysis" : "Career Guidance",
-        description: resumeFile
-          ? `AI-powered analysis of ${resumeFile.name} with personalized recommendations`
-          : "Career advice and personalized recommendations",
+        title: companyName || positionTitle
+          ? `${companyName ? companyName : ""}${companyName && positionTitle ? " - " : ""}${positionTitle || ""}`
+          : resumeFile ? "Resume & Job Match Analysis" : "Career Guidance",
+        // Description intentionally left empty to avoid redundant summaries in wish history cards
+        description: "",
         timestamp: new Date(),
         status: "processing",
       };
@@ -1030,6 +1044,11 @@ export default function StudioPage() {
 
       // Refresh usage count after successful wish
       await refreshDailyUsage();
+      
+      // Clear input fields after successful submission
+      setJobPosting("");
+      setCompanyName("");
+      setPositionTitle("");
     } catch (error) {
       // Remove the temporary wish if it failed
       setWishes((prev) => {
@@ -1670,6 +1689,33 @@ export default function StudioPage() {
                   Paste a job description to analyze your resume match, or ask for resume improvement tips
                 </CardDescription>
                 <CardContent className="space-y-4">
+                  {/* Company and Position Inputs */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                        Company Name (optional)
+                      </label>
+                      <Input
+                        placeholder="e.g., Acme Corp"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                        Position Title (optional)
+                      </label>
+                      <Input
+                        placeholder="e.g., Senior Software Engineer"
+                        value={positionTitle}
+                        onChange={(e) => setPositionTitle(e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Job Posting Textarea */}
                   <div className="relative">
                     <Textarea
                       placeholder={isDailyLimitReached

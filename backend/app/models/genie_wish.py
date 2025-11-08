@@ -17,6 +17,10 @@ class GenieWish(Base):
     request_text = Column(Text)
     response_text = Column(Text)  # Keep for backward compatibility
     
+    # Wish context (company and position from user input)
+    company_name = Column(String(255), nullable=True)
+    position_title = Column(String(255), nullable=True)
+    
     # Detailed AI response fields
     ai_response = Column(Text)  # The main AI response text
     recommendations = Column(JSON)  # List of recommendations

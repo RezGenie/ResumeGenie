@@ -70,6 +70,8 @@ class GenieWishDetailResponse(GenieWishResponse):
     resources: Optional[List[Dict[str, str]]]
     confidence_score: Optional[float]
     job_match_score: Optional[float]
+    company_name: Optional[str]
+    position_title: Optional[str]
 
 
 class DailyUsageResponse(BaseModel):
@@ -114,10 +116,17 @@ async def create_wish(
             )
         
         # Create initial wish record (processing)
+        # Extract company_name and position_title from context_data if provided
+        ctx = wish_request.context_data or {}
+        company_name = ctx.get("company_name") if isinstance(ctx, dict) else None
+        position_title = ctx.get("position_title") if isinstance(ctx, dict) else None
+        
         genie_wish = GenieWish(
             user_id=current_user.id,
             wish_type=wish_request.wish_type,
             request_text=wish_request.wish_text,
+            company_name=company_name,
+            position_title=position_title,
             status="processing",
         )
         db.add(genie_wish)
@@ -127,7 +136,6 @@ async def create_wish(
         # Generate AI response synchronously (no Celery dependency)
         resume_context = ""
         try:
-            ctx = wish_request.context_data or {}
             resume_id = ctx.get("resume_id") if isinstance(ctx, dict) else None
             if resume_id:
                 resume = await db.get(Resume, resume_id)
@@ -406,6 +414,8 @@ async def list_wishes(
                 resources=resources if is_done else None,
                 confidence_score=confidence_score if is_done else None,
                 job_match_score=job_match_score if is_done else None,
+                company_name=wish.company_name,
+                position_title=wish.position_title,
             )
             wish_list.append(wish_response)
         
@@ -509,6 +519,8 @@ async def get_wish(
             resources=resources,
             confidence_score=confidence_score,
             job_match_score=job_match_score,
+            company_name=wish.company_name,
+            position_title=wish.position_title,
         )
         return response
     
