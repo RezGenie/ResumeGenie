@@ -379,16 +379,14 @@ Current Similarity Score: {similarity_score:.2f}
 Please provide:
 1. Missing key skills that appear in the job description but not in the resume
 2. Skills that are mentioned but could be better highlighted
-3. Specific technical skills or certifications that would strengthen the application
-4. Soft skills that are important for this role
-5. Industry-specific skills or knowledge areas to develop
+3. Specific skills or certifications that would strengthen the application
+4. Industry-specific skills or knowledge areas to develop
 
 Format your response as a JSON object with the following structure:
 {{
     "missing_skills": ["skill1", "skill2", ...],
     "underemphasized_skills": ["skill1", "skill2", ...],
-    "recommended_technical": ["skill1", "skill2", ...],
-    "recommended_soft": ["skill1", "skill2", ...],
+    "recommended_skills": ["skill1", "skill2", ...],
     "development_areas": ["area1", "area2", ...],
     "priority_level": "high|medium|low",
     "impact_explanation": "explanation of how these changes would improve the match"
@@ -530,11 +528,17 @@ Format your response as a JSON object:
                 "actionable": True
             })
         
-        for skill in data.get("recommended_technical", []):
+        # Combine any recommended skills into a unified list (backwards compatible with older keys)
+        combined_recommended = []
+        combined_recommended.extend(data.get("recommended_skills", []))
+        combined_recommended.extend(data.get("recommended_technical", []))
+        combined_recommended.extend(data.get("recommended_soft", []))
+
+        for skill in combined_recommended:
             recommendations.append({
                 "type": "skill_enhancement",
-                "category": "technical_skill",
-                "title": f"Strengthen Technical Skill: {skill}",
+                "category": "skill",
+                "title": f"Strengthen Skill: {skill}",
                 "description": f"Consider obtaining certification or demonstrating experience in {skill}.",
                 "priority": "medium",
                 "actionable": True

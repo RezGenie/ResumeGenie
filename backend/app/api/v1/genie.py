@@ -156,7 +156,7 @@ Provide JSON with keys:
 - confidence_score: Number between 0-1 (overall analysis confidence)
 - job_match_score: Number between 0-1 (how well the resume matches the job requirements if job description provided, or resume quality score if general analysis)
 
-Focus on making action_items a clean list of specific skill names (both technical and soft skills) that would improve the resume's match to this job posting.
+Focus on making action_items a clean list of specific skill names that would improve the resume's match to this job posting.
 """
 
         # Call OpenAI with smart fallback
@@ -179,12 +179,12 @@ Focus on making action_items a clean list of specific skill names (both technica
                 
                 # Generate intelligent fallback response with genie personality
                 ai_raw = """{
-                    "response": "🧞‍♂️ My mystical analysis reveals that while our primary divination channels are experiencing high demand, I can still provide you with wise career guidance! The career stars align to show this appears to be a role requiring strong technical skills and professional experience. Fear not, for my backup wisdom is still quite powerful!",
+                    "response": "🧞‍♂️ My mystical analysis reveals that while our primary divination channels are experiencing high demand, I can still provide you with wise career guidance! The career stars align to show this appears to be a role requiring strong skills and professional experience. Fear not, for my backup wisdom is still quite powerful!",
                     "recommendations": [
                         "I divine that you should tailor your resume to include keywords from the job posting - this magical technique increases your visibility to hiring managers",
                         "The career stars align to show that quantifying your achievements with specific metrics and numbers creates powerful impact on recruiters",
-                        "My magical analysis reveals you should highlight relevant technical skills prominently in a dedicated section for maximum effect",
-                        "I divine that including soft skills matching the role requirements will demonstrate your perfect cultural fit",
+                        "My magical analysis reveals you should highlight relevant skills prominently in a dedicated section for maximum effect",
+                        "I divine that including skills that match the role requirements will demonstrate your cultural fit",
                         "The mystical career patterns show that your experience section should demonstrate clear progression and growth over time",
                         "My wisdom suggests you should customize your professional summary to mirror the job's key requirements",
                         "The career stars reveal that using action verbs and power words will make your accomplishments shine brighter"
@@ -313,7 +313,7 @@ Focus on making action_items a clean list of specific skill names (both technica
         )
 
 
-@router.get("/", response_model=List[GenieWishResponse])
+@router.get("/", response_model=List[GenieWishDetailResponse])
 async def list_wishes(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -327,6 +327,8 @@ async def list_wishes(
     - **wish_type**: Optional filter by wish type
     - **skip**: Number of wishes to skip (default: 0)
     - **limit**: Maximum number of wishes to return (default: 20, max: 100)
+    
+    For completed wishes, includes full AI analysis details.
     """
     try:
         # Validate limit
@@ -344,12 +346,51 @@ async def list_wishes(
         result = await db.execute(query)
         wishes = result.scalars().all()
         
-        # Create response list
+        # Create response list with full details for completed wishes
         wish_list = []
         for wish in wishes:
-            # Parse stored AI results for consistency (optional)
+            # Parse stored AI results - use new fields first, fallback to response_text
+            ai_response_text = wish.ai_response
+            recommendations = wish.recommendations
+            action_items = wish.action_items
+            resources = wish.resources
+            confidence_score = wish.confidence_score
+            job_match_score = wish.job_match_score
+            
+            # Parse JSON fields if they come as strings
+            if isinstance(recommendations, str):
+                try:
+                    recommendations = json.loads(recommendations)
+                except (json.JSONDecodeError, TypeError):
+                    recommendations = []
+            
+            if isinstance(action_items, str):
+                try:
+                    action_items = json.loads(action_items)
+                except (json.JSONDecodeError, TypeError):
+                    action_items = []
+            
+            if isinstance(resources, str):
+                try:
+                    resources = json.loads(resources)
+                except (json.JSONDecodeError, TypeError):
+                    resources = []
+            
+            # Fallback to parsing response_text if new fields are empty
+            if not ai_response_text and wish.response_text:
+                try:
+                    parsed_response = json.loads(wish.response_text)
+                    ai_response_text = ai_response_text or parsed_response.get("response", "")
+                    recommendations = recommendations or parsed_response.get("recommendations", [])
+                    action_items = action_items or parsed_response.get("action_items", [])
+                    resources = resources or parsed_response.get("resources", [])
+                    confidence_score = confidence_score or parsed_response.get("confidence_score", 0.8)
+                    job_match_score = job_match_score or parsed_response.get("job_match_score", 0.7)
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse response_text for wish {wish.id}")
+            
             is_done = (wish.status or "") == "completed"
-            wish_response = GenieWishResponse(
+            wish_response = GenieWishDetailResponse(
                 id=str(wish.id),
                 wish_type=wish.wish_type,
                 wish_text=wish.request_text or "",
@@ -358,7 +399,13 @@ async def list_wishes(
                 processing_status=wish.status or "pending",
                 processing_error=wish.error_message,
                 created_at=wish.created_at.isoformat(),
-                processed_at=wish.completed_at.isoformat() if wish.completed_at else None
+                processed_at=wish.completed_at.isoformat() if wish.completed_at else None,
+                ai_response=ai_response_text if is_done else None,
+                recommendations=recommendations if is_done else None,
+                action_items=action_items if is_done else None,
+                resources=resources if is_done else None,
+                confidence_score=confidence_score if is_done else None,
+                job_match_score=job_match_score if is_done else None,
             )
             wish_list.append(wish_response)
         
@@ -747,7 +794,7 @@ Provide JSON with keys:
 - confidence_score: Number between 0-1 (overall analysis confidence)
 - job_match_score: Number between 0-1 (how well the resume matches the job requirements if job description provided, or resume quality score if general analysis)
 
-Focus on making action_items a clean list of specific skill names (both technical and soft skills) that would improve the resume's match to this job posting.
+Focus on making action_items a clean list of specific skill names that would improve the resume's match to this job posting.
 """
 
         # Call OpenAI with improved error handling and intelligent fallback
@@ -773,12 +820,12 @@ Focus on making action_items a clean list of specific skill names (both technica
                 
                 # Generate intelligent fallback response
                 ai_raw = """{
-                    "response": "Due to high demand, our AI service is temporarily using a backup analysis system. Based on your job description, this appears to be a role requiring strong technical skills and professional experience.",
+                    "response": "Due to high demand, our AI service is temporarily using a backup analysis system. Based on your job description, this appears to be a role requiring strong skills and professional experience.",
                     "recommendations": [
                         "Tailor your resume to include keywords from the job posting",
                         "Quantify your achievements with specific metrics and numbers",
-                        "Highlight relevant technical skills prominently in a dedicated section",
-                        "Include soft skills that match the role requirements",
+                        "Highlight relevant skills prominently in a dedicated section",
+                        "Include skills that match the role requirements",
                         "Ensure your experience section demonstrates progression and growth"
                     ],
                     "action_items": ["Python", "JavaScript", "SQL", "Leadership", "Communication", "Project Management", "Problem Solving", "Team Collaboration"],

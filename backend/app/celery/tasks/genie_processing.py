@@ -297,7 +297,7 @@ def _create_fallback_response(wish_type: str) -> Dict[str, Any]:
             ]
         },
         "skill_gap": {
-            "response": "Focus on developing both technical and soft skills that are in high demand in your field.",
+            "response": "Focus on developing relevant skills that are in high demand in your field.",
             "recommendations": [
                 "Identify the most sought-after skills in your industry",
                 "Choose learning methods that work best for you",

@@ -75,23 +75,20 @@ interface Wish {
 
 interface WishDetailsResponse {
   id: string;
-  status: string;
   wish_type: string;
   wish_text: string;
-  created_at: string;
-  updated_at: string;
+  context_data?: Record<string, any>;
+  is_processed?: boolean;
   processing_status?: string;
-  confidence_score?: number;
-  job_match_score?: number;
+  processing_error?: string;
+  created_at: string;
+  processed_at?: string;
+  ai_response?: string;
   recommendations?: string[];
   action_items?: string[];
-  results?: {
-    analysis?: string;
-    score?: number;
-    insights?: string[];
-    recommendations?: string[];
-    skillGaps?: string[];
-  };
+  resources?: Array<{ title?: string; url?: string; description?: string }>;
+  confidence_score?: number;
+  job_match_score?: number;
 }
 
 interface HistoricalWish {
@@ -485,51 +482,35 @@ export default function StudioPage() {
           return;
         }
         const { apiClient } = await import("@/lib/api/client");
-        const historicalWishes = await apiClient.get<HistoricalWish[]>(
+        const historicalWishes = await apiClient.get<WishDetailsResponse[]>(
           "/genie"
         );
 
         if (Array.isArray(historicalWishes)) {
-          // Fetch detailed data for completed wishes
-          const detailedWishes = await Promise.all(
-            historicalWishes.map(async (wish) => {
-              let detailedData = null;
-              if (wish.status === "completed") {
-                try {
-                  detailedData = await apiClient.get<WishDetailsResponse>(
-                    `/genie/${wish.id}`
-                  );
-                } catch (err) {
-                  console.warn(
-                    `Failed to fetch details for wish ${wish.id}:`,
-                    err
-                  );
+          // Convert historical wishes with full details included
+          const detailedWishes = historicalWishes.map((wish) => {
+            return {
+              id: wish.id,
+              type: "resume_analysis" as const,
+              title: "Resume & Job Match Analysis",
+              description: `Career guidance and resume optimization analysis`,
+              timestamp: new Date(wish.created_at),
+              status: wish.is_processed
+                ? "completed"
+                : wish.processing_status === "processing"
+                  ? "processing"
+                  : "pending",
+              results: wish.is_processed && wish.ai_response
+                ? {
+                  score: Math.round(
+                    (wish.confidence_score || 0) * 100
+                  ),
+                  insights: parseRecommendations(wish.recommendations),
+                  recommendations: parseRecommendations(wish.action_items),
                 }
-              }
-
-              return {
-                id: wish.id,
-                type: "resume_analysis" as const,
-                title: "Resume & Job Match Analysis",
-                description: `Career guidance and resume optimization analysis`,
-                timestamp: new Date(wish.created_at),
-                status: wish.is_processed
-                  ? "completed"
-                  : wish.processing_status === "processing"
-                    ? "processing"
-                    : "pending",
-                results: detailedData
-                  ? {
-                    score: Math.round(
-                      (detailedData.confidence_score || 0) * 100
-                    ),
-                    insights: parseRecommendations(detailedData.recommendations),
-                    recommendations: parseRecommendations(detailedData.action_items),
-                  }
-                  : undefined,
-              } as Wish;
-            })
-          );
+                : undefined,
+            } as Wish;
+          });
           setWishes(detailedWishes);
         }
       } catch (err) {
@@ -1872,53 +1853,18 @@ export default function StudioPage() {
                   </p>
                   {analysisResults && analysisResults.skillGaps.length > 0 ? (
                     <div className="space-y-3 flex-1 min-h-0">
-                      <div className="grid gap-2 overflow-y-auto max-h-52 pr-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent overflow-x-hidden">
-                        {analysisResults.skillGaps.map(
-                          (skill: string, index: number) => {
-                            // Determine if it's likely a technical or soft skill for styling
-                            const isTechnical =
-                              /^(Python|JavaScript|React|AWS|SQL|Excel|VBA|Tableau|PowerBI|Java|C\+\+|Docker|Kubernetes|Azure|GCP|Node\.js|API|Database|HTML|CSS|Git|Linux|Windows|Mac|Android|iOS|Machine Learning|AI|Data|Analytics|Cloud|DevOps|Agile|Scrum|\.NET|PHP|Ruby|Go|Rust|Swift|Kotlin|R|MATLAB|Salesforce|SAP|Oracle|MongoDB|PostgreSQL|MySQL|Redis|Elasticsearch|Hadoop|Spark|TensorFlow|PyTorch|Pandas|NumPy|Scipy|Jupyter|Anaconda|Visual Studio|IntelliJ|Eclipse|Xcode|Android Studio)/i.test(
-                                skill
-                              );
-
-                            return (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-muted"
-                              >
-                                <div
-                                  className={`w-2 h-2 rounded-full ${isTechnical
-                                    ? "bg-purple-500"
-                                    : "bg-pink-500"
-                                    }`}
-                                ></div>
-                                <span className="text-sm font-medium flex-1">
-                                  {skill}
-                                </span>
-                                <Badge
-                                  variant="secondary"
-                                  className={`text-xs ${isTechnical
-                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                    : "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
-                                    }`}
-                                >
-                                  {isTechnical ? "Technical" : "Soft Skill"}
-                                </Badge>
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground border-t">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                          <span>Technical Skills</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-pink-500"></div>
-                          <span>Soft Skills</span>
-                        </div>
-                      </div>
+                      <ul className="space-y-1">
+                        {analysisResults.skillGaps.map((skill: string, index: number) => (
+                          <li
+                            key={index}
+                            className="text-sm text-muted-foreground flex items-start gap-2"
+                          >
+                            <span className="text-purple-600 mt-1">•</span>
+                            {skill}
+                          </li>
+                        ))}
+                      </ul>
+                      {/* Legend removed: skill type classification is not needed */}
                     </div>
                   ) : (
                     <div className="flex items-center justify-center py-4 text-muted-foreground flex-1">
@@ -2414,43 +2360,20 @@ export default function StudioPage() {
                               Recommended Skills to Add (
                               {selectedWish.results.skillGaps.length})
                             </h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {selectedWish.results.skillGaps.map(
-                                (skill, index: number) => {
-                                  const skillName =
-                                    typeof skill === "string"
-                                      ? skill
-                                      : skill.skill;
-                                  const isTechnical =
-                                    /^(Python|JavaScript|React|AWS|SQL|Excel|VBA|Tableau|PowerBI|Java|C\+\+|Docker|Kubernetes|Azure|GCP|Node\.js|API|Database|HTML|CSS|Git|Linux|Windows|Mac|Android|iOS|Machine Learning|AI|Data|Analytics|Cloud|DevOps|Agile|Scrum|\.NET|PHP|Ruby|Go|Rust|Swift|Kotlin|R|MATLAB|Salesforce|SAP|Oracle|MongoDB|PostgreSQL|MySQL|Redis|Elasticsearch|Hadoop|Spark|TensorFlow|PyTorch|Pandas|NumPy|Scipy|Jupyter|Anaconda|Visual Studio|IntelliJ|Eclipse|Xcode|Android Studio)/i.test(
-                                      skillName
-                                    );
-
-                                  return (
-                                    <div
-                                      key={index}
-                                      className="flex items-center gap-2 p-2.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800/30 hover:border-amber-300 dark:hover:border-amber-700/50 transition-colors"
-                                    >
-                                      <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                                      <span className="text-sm font-medium flex-1 text-gray-900 dark:text-gray-100">
-                                        {skillName}
-                                      </span>
-                                      <Badge
-                                        variant="secondary"
-                                        className={`text-xs ${isTechnical
-                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                          }`}
-                                      >
-                                        {isTechnical
-                                          ? "Tech"
-                                          : "Soft"}
-                                      </Badge>
-                                    </div>
-                                  );
-                                }
-                              )}
-                            </div>
+                            <ul className="space-y-1">
+                              {selectedWish.results.skillGaps.map((skill, index: number) => {
+                                const skillName = typeof skill === "string" ? skill : skill.skill;
+                                return (
+                                  <li
+                                    key={index}
+                                    className="text-sm text-muted-foreground flex items-start gap-2"
+                                  >
+                                    <span className="text-amber-500 mt-1">•</span>
+                                    {skillName}
+                                  </li>
+                                );
+                              })}
+                            </ul>
                           </div>
                         )}
                     </div>
