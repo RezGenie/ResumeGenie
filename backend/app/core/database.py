@@ -14,13 +14,15 @@ logger = logging.getLogger(__name__)
 db_url = settings.database_url
 if not db_url.startswith("postgresql+asyncpg://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+    db_url = db_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
     
 engine = create_async_engine(
     db_url,
     echo=settings.debug,
     poolclass=NullPool,  # Disable connection pooling for development
     pool_pre_ping=True,
-    future=True
+    future=True,
+    connect_args={"server_settings": {"jit": "off"}}  # Disable JIT for compatibility
 )
 
 # Create async session factory
