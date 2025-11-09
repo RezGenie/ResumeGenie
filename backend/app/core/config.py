@@ -9,12 +9,52 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://:redis123@redis:6379/0"
     
-    # MinIO/S3
+    # Storage Configuration (MinIO locally, R2 in production)
+    storage_provider: str = "minio"  # "minio" or "r2"
+    
+    # MinIO Configuration (local development)
     minio_endpoint: str = "minio:9000"
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin123"
     minio_secure: bool = False
     minio_bucket_name: str = "rezgenie-uploads"
+    
+    # Cloudflare R2 Configuration (production)
+    r2_endpoint: str = ""
+    r2_access_key: str = ""
+    r2_secret_key: str = ""
+    r2_bucket_name: str = "rezgenie-uploads"
+    r2_secure: bool = True  # Always use HTTPS for R2
+    
+    @property
+    def is_production(self) -> bool:
+        """Check if we're running in production environment"""
+        return self.environment == "production"
+    
+    @property
+    def storage_endpoint(self) -> str:
+        """Get the appropriate storage endpoint"""
+        return self.r2_endpoint if self.is_production else self.minio_endpoint
+    
+    @property
+    def storage_access_key(self) -> str:
+        """Get the appropriate access key"""
+        return self.r2_access_key if self.is_production else self.minio_access_key
+    
+    @property
+    def storage_secret_key(self) -> str:
+        """Get the appropriate secret key"""
+        return self.r2_secret_key if self.is_production else self.minio_secret_key
+    
+    @property
+    def storage_bucket_name(self) -> str:
+        """Get the appropriate bucket name"""
+        return self.r2_bucket_name if self.is_production else self.minio_bucket_name
+    
+    @property
+    def storage_secure(self) -> bool:
+        """Get the appropriate secure setting"""
+        return self.r2_secure if self.is_production else self.minio_secure
     
     # OpenAI
     openai_api_key: str = ""
