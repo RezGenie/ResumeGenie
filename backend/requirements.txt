@@ -21,19 +21,16 @@ celery==5.3.4
 redis==5.0.1
 flower==2.0.1
 
-# AI and ML - Using specific versions known to have wheels
+# AI and ML - Using specific versions with pre-built wheels
 openai==1.3.5
-spacy==3.7.2
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz
-blis==0.7.11  # Explicitly pinned version
-thinc==8.2.1  # Adding explicit dependency
-preshed==3.0.9  # Adding explicit dependency
-wasabi==1.1.2  # Adding explicit dependency
-srsly==2.4.8  # Adding explicit dependency
-catalogue==2.0.10  # Adding explicit dependency
+--find-links https://download.pytorch.org/whl/torch_stable.html
+spacy[transformers]==3.7.2
 nltk==3.8.1
 fuzzywuzzy==0.18.0
-python-Levenshtein-wheels==0.13.2  # Using wheels instead of python-levenshtein
+python-Levenshtein-wheels==0.13.2
+
+# Install spaCy model after spaCy is installed
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 
 # File processing
 pypdf2==3.0.1
