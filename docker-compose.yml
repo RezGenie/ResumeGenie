@@ -77,6 +77,11 @@ services:
       - OPENAI_MODEL=gpt-4o-mini
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-change-in-production}
       - ENVIRONMENT=development
+      - ADZUNA_APP_ID=${ADZUNA_APP_ID}
+      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
+      - ADZUNA_BASE_URL=${ADZUNA_BASE_URL}
+      - ADZUNA_RATE_LIMIT=${ADZUNA_RATE_LIMIT}
+      - ADZUNA_MAX_PAGES=${ADZUNA_MAX_PAGES}
     ports:
       - "8000:8000"
     volumes:
@@ -111,6 +116,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ADZUNA_APP_ID=${ADZUNA_APP_ID}
       - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
+      - ADZUNA_BASE_URL=${ADZUNA_BASE_URL}
+      - ADZUNA_RATE_LIMIT=${ADZUNA_RATE_LIMIT}
+      - ADZUNA_MAX_PAGES=${ADZUNA_MAX_PAGES}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app
@@ -141,6 +149,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ADZUNA_APP_ID=${ADZUNA_APP_ID}
       - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
+      - ADZUNA_BASE_URL=${ADZUNA_BASE_URL}
+      - ADZUNA_RATE_LIMIT=${ADZUNA_RATE_LIMIT}
+      - ADZUNA_MAX_PAGES=${ADZUNA_MAX_PAGES}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app

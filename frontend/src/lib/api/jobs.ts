@@ -52,8 +52,9 @@ export class JobService {
       // Transform to JobDisplay format for UI
       let jobsDisplay: JobDisplay[] = jobs.map(this.transformJobToDisplay);
       
-      // Apply smart filtering based on user preferences
-      if (hasProfile) {
+      // Apply smart filtering based on user preferences (but NOT when user explicitly searches)
+      // When searching, users should see exactly what they searched for
+      if (hasProfile && !filters.search) {
         console.log('Applying smart job filtering...');
         const originalCount = jobsDisplay.length;
         
@@ -82,6 +83,13 @@ export class JobService {
             console.log(`  ${idx + 1}. ${job.title} (${job.matchScore}%) - ${job.company}`);
           });
         }
+      } else if (hasProfile && filters.search) {
+        // When user explicitly searches, still score jobs but don't filter
+        console.log('User searched explicitly, showing all search results with scoring...');
+        jobsDisplay = jobsDisplay.map(job => ({
+          ...job,
+          matchScore: Math.round(userPreferencesService.scoreJob(job))
+        }));
       } else {
         console.log('Profile incomplete, showing all jobs without filtering');
       }

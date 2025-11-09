@@ -135,11 +135,11 @@ export default function JobDiscoveryPage() {
       }
     };
 
-    // Debounce search to avoid glitching
+    // Debounce search to avoid glitching (150ms for responsive feel)
     const timeoutId = setTimeout(() => {
       fetchJobs();
       fetchJobStats();
-    }, 300);
+    }, 150);
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm, locationFilter, salaryFilter]);
