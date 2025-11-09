@@ -30,10 +30,13 @@ target_metadata = Base.metadata
 
 
 def get_url():
-    """Get database URL from settings, converted for synchronous use."""
+    """Get database URL from settings, ensuring synchronous URL for Alembic."""
     url = settings.database_url
-    # Convert async URL to sync URL for Alembic
-    url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    # Ensure we're using the synchronous psycopg2 URL for Alembic
+    if "postgresql+asyncpg://" in url:
+        url = url.replace("postgresql+asyncpg://", "postgresql://")
+    elif "postgresql+psycopg://" in url:
+        url = url.replace("postgresql+psycopg://", "postgresql://")
     return url
 
 

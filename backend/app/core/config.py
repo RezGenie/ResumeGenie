@@ -4,7 +4,7 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie"  # For async SQLAlchemy
+    database_url: str = "postgresql://postgres:postgres123@postgres:5432/rezgenie"  # Base URL, will be modified for async/sync as needed
     
     # Redis
     redis_url: str = "redis://:redis123@redis:6379/0"

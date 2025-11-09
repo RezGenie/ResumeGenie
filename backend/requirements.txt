@@ -3,14 +3,13 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
-# Database
+# Database and ORM
 sqlalchemy[asyncio]==2.0.23
-asyncpg==0.29.0
-psycopg==3.1.12
-psycopg-binary==3.1.12
-psycopg2-binary==2.9.9
-alembic==1.12.1
-pgvector==0.2.4
+# PostgreSQL drivers
+asyncpg==0.29.0  # Async driver
+psycopg2-binary==2.9.9  # Sync driver for Alembic
+alembic==1.12.1  # Database migrations
+pgvector==0.2.4  # Vector support
 
 # Authentication
 python-jose[cryptography]==3.3.0

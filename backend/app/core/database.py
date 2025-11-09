@@ -10,8 +10,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create async engine
+# Ensure we're using asyncpg for the async engine
+db_url = settings.database_url
+if not db_url.startswith("postgresql+asyncpg://"):
+    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+    
 engine = create_async_engine(
-    settings.database_url,
+    db_url,
     echo=settings.debug,
     poolclass=NullPool,  # Disable connection pooling for development
     pool_pre_ping=True,
