@@ -33,8 +33,7 @@ def get_url():
     """Get database URL from settings, converted for synchronous use."""
     url = settings.database_url
     # Convert async URL to sync URL for Alembic
-    if "postgresql+asyncpg://" in url:
-        url = url.replace("postgresql+asyncpg://", "postgresql://")
+    url = url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
     return url
 
 
