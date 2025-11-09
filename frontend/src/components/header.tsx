@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { Menu, X, User, LogOut, Upload, BarChart3, LayoutDashboard } from "lucide-react"
 
@@ -19,12 +20,18 @@ import { useAuth } from "@/contexts/AuthContext"
 import { userProfileService } from "@/lib/api/userProfile"
 
 export function Header() {
+  const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [userAvatar, setUserAvatar] = useState('')
   const { user, logout } = useAuth()
 
   const handleLogout = async () => {
     await logout()
+  }
+
+  // Check if a route is active
+  const isActive = (href: string) => {
+    return pathname === href || pathname.startsWith(href + '/')
   }
 
   // Update avatar when profile changes
@@ -100,19 +107,34 @@ export function Header() {
             <>
               <Link
                 href="/dashboard"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+                className={`text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                  isActive('/dashboard')
+                    ? 'text-purple-600'
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+                style={isActive('/dashboard') ? { textShadow: '0 0 8px rgba(168,85,247,0.3)' } : {}}
               >
                 Dashboard
               </Link>
               <Link
                 href="/genie"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+                className={`text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                  isActive('/genie')
+                    ? 'text-purple-600'
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+                style={isActive('/genie') ? { textShadow: '0 0 8px rgba(168,85,247,0.3)' } : {}}
               >
                 Genie Wishes
               </Link>
               <Link
                 href="/opportunities"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+                className={`text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                  isActive('/opportunities')
+                    ? 'text-purple-600'
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+                style={isActive('/opportunities') ? { textShadow: '0 0 8px rgba(168,85,247,0.3)' } : {}}
               >
                 Job Opportunities
               </Link>
@@ -121,19 +143,34 @@ export function Header() {
             <>
             <Link
                 href="/genie"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+                className={`text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                  isActive('/genie')
+                    ? 'text-purple-600'
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+                style={isActive('/genie') ? { textShadow: '0 0 8px rgba(168,85,247,0.3)' } : {}}
               >
                 Demo
               </Link>
             <Link
                 href="/guides"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+                className={`text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                  isActive('/guides')
+                    ? 'text-purple-600'
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+                style={isActive('/guides') ? { textShadow: '0 0 8px rgba(168,85,247,0.3)' } : {}}
               >
                 Guides
               </Link>
               <Link
                 href="/pricing"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+                className={`text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                  isActive('/pricing')
+                    ? 'text-purple-600'
+                    : 'text-muted-foreground hover:text-primary'
+                }`}
+                style={isActive('/pricing') ? { textShadow: '0 0 8px rgba(168,85,247,0.3)' } : {}}
               >
                 Pricing
               </Link>
