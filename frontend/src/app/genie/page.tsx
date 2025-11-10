@@ -1799,27 +1799,27 @@ export default function StudioPage() {
                 </CardDescription>
                 <CardContent className="space-y-4">
                   {/* Company and Position Inputs */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground block">
                         Company Name (optional)
                       </label>
                       <Input
                         placeholder="e.g., Acme Corp"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        className="h-9 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        className="w-full h-10 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground block">
                         Position Title (optional)
                       </label>
                       <Input
                         placeholder="e.g., Senior Software Engineer"
                         value={positionTitle}
                         onChange={(e) => setPositionTitle(e.target.value)}
-                        className="h-9 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        className="w-full h-10 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
                   </div>

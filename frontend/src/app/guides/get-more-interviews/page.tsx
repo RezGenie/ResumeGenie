@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Logo } from "@/components/ui/logo"
 
 export default function GetMoreInterviews() {
   return (
@@ -88,7 +87,7 @@ export default function GetMoreInterviews() {
                 </p>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold">Tailor for Each Application</h3>
                       <p className="text-sm text-muted-foreground">
@@ -98,7 +97,7 @@ export default function GetMoreInterviews() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold">Quantify Everything</h3>
                       <p className="text-sm text-muted-foreground">
@@ -108,7 +107,7 @@ export default function GetMoreInterviews() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold">Lead with Impact</h3>
                       <p className="text-sm text-muted-foreground">
@@ -175,7 +174,7 @@ export default function GetMoreInterviews() {
                 </p>
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-2">
+                    <div className="w-12 h-12 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center mx-auto mb-2">
                       <Users className="h-6 w-6" />
                     </div>
                     <h3 className="font-semibold text-sm">LinkedIn Networking</h3>
@@ -184,7 +183,7 @@ export default function GetMoreInterviews() {
                     </p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="w-12 h-12 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mx-auto mb-2">
+                    <div className="w-12 h-12 rounded-full bg-purple-600/10 text-purple-600 flex items-center justify-center mx-auto mb-2">
                       <MessageSquare className="h-6 w-6" />
                     </div>
                     <h3 className="font-semibold text-sm">Informational Interviews</h3>
@@ -193,7 +192,7 @@ export default function GetMoreInterviews() {
                     </p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="w-12 h-12 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center mx-auto mb-2">
+                    <div className="w-12 h-12 rounded-full bg-purple-700/10 text-purple-700 flex items-center justify-center mx-auto mb-2">
                       <Target className="h-6 w-6" />
                     </div>
                     <h3 className="font-semibold text-sm">Industry Events</h3>
@@ -221,19 +220,19 @@ export default function GetMoreInterviews() {
                   A well-crafted cover letter can increase your interview chances by 30%. Here&apos;s the formula:
                 </p>
                 <div className="space-y-4">
-                  <div className="border-l-4 border-primary pl-4">
+                  <div className="border-l-4 border-purple-500 pl-4">
                     <h3 className="font-semibold">Opening Hook</h3>
                     <p className="text-sm text-muted-foreground">
                       Start with a compelling statement about your relevant achievement or connection to the company.
                     </p>
                   </div>
-                  <div className="border-l-4 border-green-500 pl-4">
+                  <div className="border-l-4 border-purple-600 pl-4">
                     <h3 className="font-semibold">Value Proposition</h3>
                     <p className="text-sm text-muted-foreground">
                       Clearly state how you can solve their specific problems, using examples from your experience.
                     </p>
                   </div>
-                  <div className="border-l-4 border-blue-500 pl-4">
+                  <div className="border-l-4 border-purple-700 pl-4">
                     <h3 className="font-semibold">Call to Action</h3>
                     <p className="text-sm text-muted-foreground">
                       End with a confident request for an interview and mention you&apos;ll follow up.
@@ -261,7 +260,7 @@ export default function GetMoreInterviews() {
                   </p>
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <h3 className="font-semibold mb-3 text-green-600">✓ Effective Follow-up</h3>
+                      <h3 className="font-semibold mb-3 text-purple-600">✓ Effective Follow-up</h3>
                       <ul className="space-y-2 text-sm">
                         <li>• Wait 1-2 weeks after applying</li>
                         <li>• Send a brief, professional email</li>
@@ -271,7 +270,7 @@ export default function GetMoreInterviews() {
                       </ul>
                     </div>
                     <div>
-                      <h3 className="font-semibold mb-3 text-red-600">✗ Avoid These Mistakes</h3>
+                      <h3 className="font-semibold mb-3 text-purple-600">✗ Avoid These Mistakes</h3>
                       <ul className="space-y-2 text-sm">
                         <li>• Following up too frequently</li>
                         <li>• Being pushy or demanding</li>
@@ -302,19 +301,19 @@ export default function GetMoreInterviews() {
                 </p>
                 <div className="grid md:grid-cols-4 gap-4 text-center">
                   <div className="p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-primary">2-5%</div>
+                    <div className="text-2xl font-bold text-purple-600">2-5%</div>
                     <div className="text-sm text-muted-foreground">Response Rate Goal</div>
                   </div>
                   <div className="p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-500">10-20%</div>
+                    <div className="text-2xl font-bold text-purple-600">10-20%</div>
                     <div className="text-sm text-muted-foreground">Interview Rate Goal</div>
                   </div>
                   <div className="p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-500">5-10</div>
+                    <div className="text-2xl font-bold text-purple-600">5-10</div>
                     <div className="text-sm text-muted-foreground">Applications/Week</div>
                   </div>
                   <div className="p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-500">3-6</div>
+                    <div className="text-2xl font-bold text-purple-600">3-6</div>
                     <div className="text-sm text-muted-foreground">Months Average</div>
                   </div>
                 </div>
@@ -330,7 +329,6 @@ export default function GetMoreInterviews() {
           >
             <Card>
               <CardContent className="py-8 text-center">
-                <Logo className="h-6 w-6" />
                 <h2 className="text-2xl font-bold mb-4">
                   Ready to Boost Your Interview Rate?
                 </h2>
@@ -345,7 +343,7 @@ export default function GetMoreInterviews() {
                       Optimize My Resume
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild size="lg">
+                  <Button variant="outline" asChild size="lg" className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                     <Link href="/guides">
                       View More Guides
                     </Link>

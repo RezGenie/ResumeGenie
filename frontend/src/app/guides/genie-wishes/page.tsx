@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Logo } from "@/components/ui/logo"
 
 export default function GenieWishes() {
   return (
@@ -83,7 +82,7 @@ export default function GenieWishes() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center flex-shrink-0">
                         <FileText className="h-5 w-5" />
                       </div>
                       <div>
@@ -95,7 +94,7 @@ export default function GenieWishes() {
                     </div>
                     
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-purple-600/10 text-purple-600 flex items-center justify-center flex-shrink-0">
                         <Target className="h-5 w-5" />
                       </div>
                       <div>
@@ -109,7 +108,7 @@ export default function GenieWishes() {
                   
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-purple-700/10 text-purple-700 flex items-center justify-center flex-shrink-0">
                         <TrendingUp className="h-5 w-5" />
                       </div>
                       <div>
@@ -121,7 +120,7 @@ export default function GenieWishes() {
                     </div>
                     
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-purple-800/10 text-purple-800 flex items-center justify-center flex-shrink-0">
                         <Zap className="h-5 w-5" />
                       </div>
                       <div>
@@ -208,7 +207,7 @@ export default function GenieWishes() {
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="font-semibold mb-3 text-green-600">✓ Do This</h3>
+                    <h3 className="font-semibold mb-3 text-purple-600">✓ Do This</h3>
                     <ul className="space-y-2 text-sm">
                       <li>• Use wishes regularly to track progress</li>
                       <li>• Compare against multiple job descriptions</li>
@@ -218,7 +217,7 @@ export default function GenieWishes() {
                     </ul>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-3 text-red-600">✗ Avoid This</h3>
+                    <h3 className="font-semibold mb-3 text-purple-600">✗ Avoid This</h3>
                     <ul className="space-y-2 text-sm">
                       <li>• Ignoring consistent recommendations</li>
                       <li>• Only checking once and forgetting</li>
@@ -262,7 +261,6 @@ export default function GenieWishes() {
           >
             <Card>
               <CardContent className="py-8 text-center">
-                <Logo className="h-6 w-6" />
                 <h2 className="text-2xl font-bold mb-4">
                   Ready to Make Your First Wish?
                 </h2>
@@ -277,7 +275,7 @@ export default function GenieWishes() {
                       Try Your First Wish
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild size="lg">
+                  <Button variant="outline" asChild size="lg" className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                     <Link href="/guides">
                       View More Guides
                     </Link>
