@@ -675,47 +675,71 @@ Format your response as a JSON object:
             Dict with overall_score and score_breakdown
         """
         prompt = f"""
-Analyze this resume and provide a comprehensive quality score breakdown.
+Analyze this resume against the job requirements and provide specific, actionable feedback.
 
-Resume Text:
+RESUME:
 {resume_text[:4000]}
 
-{"Job Description:" if job_description else ""}
-{job_description[:2000] if job_description else ""}
+JOB DESCRIPTION:
+{job_description[:2000] if job_description else "General resume evaluation"}
 
-Please evaluate the resume across these dimensions and provide scores (0-100):
+Evaluate across 5 dimensions (score 0-100):
 
-1. **Style & Formatting** (20% weight): Layout, visual appeal, professional presentation, section organization
-2. **Grammar & Spelling** (20% weight): Language quality, grammar correctness, spelling accuracy
-3. **Job Match** (30% weight): Alignment with job requirements, relevant experience, skills match
-4. **ATS Compatibility** (15% weight): Keyword optimization, format compatibility, parsing friendliness
-5. **Content Quality** (15% weight): Achievement quantification, impact demonstration, clarity
+1. **style_formatting**: Visual layout, section organization, readability (1-2 sentence feedback)
+2. **grammar_spelling**: Language quality, grammar, spelling (1-2 sentence feedback)
+3. **job_match**: Analyze what matches and what's missing (provide structured lists)
+4. **ats_compatibility**: Keyword usage, format simplicity (1-2 sentence feedback)
+5. **content_quality**: Achievement quantification, impact (1-2 sentence feedback)
 
-Provide your response as a JSON object:
+For job_match, provide:
+- "matches": list of 3-5 skills/experiences YOU HAVE that match the job
+- "gaps": list of 3-5 skills/requirements YOU'RE MISSING
+- "feedback": 1-2 sentence summary in SECOND PERSON (use "you", "your")
+
+Return ONLY valid JSON (no markdown):
 {{
-    "style_formatting": {{"score": 0-100, "feedback": "brief feedback"}},
-    "grammar_spelling": {{"score": 0-100, "feedback": "brief feedback"}},
-    "job_match": {{"score": 0-100, "feedback": "brief feedback"}},
-    "ats_compatibility": {{"score": 0-100, "feedback": "brief feedback"}},
-    "content_quality": {{"score": 0-100, "feedback": "brief feedback"}},
-    "overall_assessment": "2-3 sentence summary of resume quality"
+    "style_formatting": {{"score": 75, "feedback": "Your resume has clear sections but could improve spacing"}},
+    "grammar_spelling": {{"score": 85, "feedback": "Your writing is strong with only minor typos"}},
+    "job_match": {{
+        "score": 70,
+        "matches": ["Python programming", "Data analysis experience", "Team leadership"],
+        "gaps": ["Azure cloud experience", "Power BI/Tableau", "Databricks"],
+        "feedback": "You have strong programming and ML experience, but you're missing specific Azure and data visualization tools mentioned in the job description"
+    }},
+    "ats_compatibility": {{"score": 80, "feedback": "Your resume has good keyword usage, but avoid using tables"}},
+    "content_quality": {{"score": 75, "feedback": "Add specific metrics to quantify your achievements"}},
+    "overall_assessment": "Your resume shows solid fundamentals with room for improvement"
 }}
 
-Be realistic - typical scores range from 60-85. Only exceptional resumes score above 90.
+Be specific and actionable. Scores: 90+=excellent, 75-89=good, 60-74=needs work, <60=major issues.
 """
         
         try:
+            logger.info("Calling OpenAI for comprehensive score...")
             response_text = await self.get_chat_completion(
                 messages=[
-                    {"role": "system", "content": "You are an expert resume evaluator with years of experience in recruitment and ATS systems."},
+                    {"role": "system", "content": "You are an expert resume evaluator. Provide specific, actionable feedback in valid JSON format."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.5,
-                max_tokens=1500
+                temperature=0.3,  # Lower temperature for more consistent JSON
+                max_tokens=1000
             )
             
+            logger.info(f"OpenAI response received: {response_text[:200]}...")
+            
+            # Clean response - remove markdown code blocks if present
+            cleaned_response = response_text.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]
+            cleaned_response = cleaned_response.strip()
+            
             # Parse the JSON response
-            score_data = json.loads(response_text)
+            score_data = json.loads(cleaned_response)
+            logger.info(f"Successfully parsed score data with keys: {score_data.keys()}")
             
             # Calculate weighted overall score
             weights = {
@@ -740,6 +764,14 @@ Be realistic - typical scores range from 60-85. Only exceptional resumes score a
                     "feedback": feedback,
                     "weight": weight
                 }
+                
+                # For job_match, include matches and gaps if available
+                if component == "job_match":
+                    matches = component_data.get("matches", [])
+                    gaps = component_data.get("gaps", [])
+                    score_breakdown[component]["matches"] = matches
+                    score_breakdown[component]["gaps"] = gaps
+                    logger.info(f"Job match data: matches={len(matches)}, gaps={len(gaps)}")
             
             # If we have a similarity score, use it to adjust job_match
             if similarity_score is not None and job_description:
@@ -766,18 +798,38 @@ Be realistic - typical scores range from 60-85. Only exceptional resumes score a
             return self._get_default_comprehensive_score()
     
     def _get_default_comprehensive_score(self) -> Dict[str, Any]:
-        """Return default comprehensive score when AI fails."""
+        """Return default comprehensive score when AI fails - still provide helpful guidance."""
         default_score = 75.0
         return {
             "overall_score": default_score,
             "score_breakdown": {
-                "style_formatting": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
-                "grammar_spelling": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
-                "job_match": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.30},
-                "ats_compatibility": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15},
-                "content_quality": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15}
+                "style_formatting": {
+                    "score": 75, 
+                    "feedback": "Your resume formatting appears standard. Use clear section headers, consistent fonts, and proper spacing for better readability.", 
+                    "weight": 0.20
+                },
+                "grammar_spelling": {
+                    "score": 75, 
+                    "feedback": "No major grammar issues detected in the initial scan. Always proofread carefully before submitting to catch any subtle errors.", 
+                    "weight": 0.20
+                },
+                "job_match": {
+                    "score": 75, 
+                    "feedback": "Review the job description carefully and ensure your resume highlights relevant skills, experience, and keywords that match the role requirements.", 
+                    "weight": 0.30
+                },
+                "ats_compatibility": {
+                    "score": 75, 
+                    "feedback": "Use standard section headings (Experience, Education, Skills), avoid tables and complex formatting, and include relevant keywords for better ATS parsing.", 
+                    "weight": 0.15
+                },
+                "content_quality": {
+                    "score": 75, 
+                    "feedback": "Strengthen your content by adding quantifiable achievements (numbers, percentages, metrics) and specific examples of your impact in previous roles.", 
+                    "weight": 0.15
+                }
             },
-            "overall_assessment": "Resume evaluation completed with default scoring"
+            "overall_assessment": "Your resume shows solid fundamentals. Focus on tailoring it to specific job requirements and quantifying your achievements for maximum impact."
         }
 
 

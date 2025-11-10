@@ -43,7 +43,6 @@ class UserPreferencesService {
       const existing = this.getPreferences();
       const updated = { ...existing, ...preferences };
       localStorage.setItem(storageKey, JSON.stringify(updated));
-      console.log('Preferences saved for user:', storageKey, updated);
 
       // Dispatch custom event to notify components about preference changes
       if (typeof window !== 'undefined') {
@@ -122,11 +121,8 @@ class UserPreferencesService {
     const prefs = this.getPreferences();
 
     if (!this.hasCompletedProfile()) {
-      console.log('Profile not completed, showing all jobs');
       return jobs; // Show all jobs if profile is not completed
     }
-
-    console.log('Applying smart filters with preferences:', prefs);
 
     return jobs.filter(job => {
       const jobTitle = job.title.toLowerCase();
@@ -151,7 +147,6 @@ class UserPreferencesService {
 
         // Filter out if NEITHER title NOR skills match
         if (!titleMatches && !skillMatches) {
-          console.log(`Filtered out ${job.title} - no relevance to ${prefs.jobTitle} or skills`);
           return false;
         }
       }
@@ -164,7 +159,6 @@ class UserPreferencesService {
           if (prefs.salaryMin) {
             const minSalary = parseInt(prefs.salaryMin);
             if (jobSalary < minSalary * 0.6) {
-              console.log(`Filtered out ${job.title} - salary too low (${jobSalary} < ${minSalary * 0.6})`);
               return false;
             }
           }
@@ -172,7 +166,6 @@ class UserPreferencesService {
           if (prefs.salaryMax) {
             const maxSalary = parseInt(prefs.salaryMax);
             if (jobSalary > maxSalary * 1.6) {
-              console.log(`Filtered out ${job.title} - salary too high (${jobSalary} > ${maxSalary * 1.6})`);
               return false;
             }
           }
@@ -183,7 +176,6 @@ class UserPreferencesService {
       if (prefs.workType === 'remote' && prefs.remotePreference) {
         const isRemoteJob = this.isRemoteJob(job);
         if (!isRemoteJob && !job.location?.toLowerCase().includes('hybrid')) {
-          console.log(`Filtered out ${job.title} - not remote/hybrid`);
           return false;
         }
       }
@@ -196,7 +188,6 @@ class UserPreferencesService {
             jobTitle.includes('principal') || jobTitle.includes('director') ||
             jobTitle.includes('vp') || jobTitle.includes('chief')) &&
             (jobSnippet.includes('10+ years') || jobSnippet.includes('15+ years'))) {
-            console.log(`Filtered out ${job.title} - too senior for entry level`);
             return false;
           }
         }
@@ -206,7 +197,6 @@ class UserPreferencesService {
           if (jobTitle.includes('intern') ||
             (jobTitle.includes('junior') && !jobTitle.includes('senior')) ||
             (jobTitle.includes('entry') && jobSnippet.includes('no experience'))) {
-            console.log(`Filtered out ${job.title} - too junior for senior level`);
             return false;
           }
         }

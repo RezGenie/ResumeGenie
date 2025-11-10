@@ -2,6 +2,49 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.18.0] - 2025-11-10
+
+### CP-65: Comprehensive Resume Scoring System
+
+- **Enhanced Scoring Algorithm**
+  - Replaced AI confidence score with comprehensive resume quality scoring (0-100)
+  - Implemented weighted scoring across 5 key components:
+    - Style & Formatting (20%)
+    - Grammar & Spelling (20%)
+    - Job Match (30%)
+    - ATS Compatibility (15%)
+    - Content Quality (15%)
+  - Added detailed score breakdown with component-level feedback
+  - Maintained separate Job Match Score for clarity
+
+- **Backend Improvements**
+  - Added `overall_score` and `score_breakdown` fields to GenieWish model
+  - Created database migration with backward compatibility (default score: 75)
+  - Enhanced OpenAI prompt with comprehensive scoring criteria
+  - Implemented fallback scoring for error scenarios
+  - Added support for matches/gaps analysis in job match component
+
+- **Frontend Enhancements**
+  - Redesigned Resume Analysis card with prominent overall score display
+  - Added animated score breakdown with individual component progress bars
+  - Implemented smooth Framer Motion animations for score reveals
+  - Enhanced visual hierarchy with icons for each score component
+  - Improved mobile responsiveness for score displays
+  - Added contextual feedback based on score ranges
+
+- **Code Quality & Maintenance**
+  - Removed all mock data from codebase (localResumes, API client)
+  - Cleaned up 50+ development console.log statements
+  - Removed ~250 lines of dead/mock code
+  - Improved error handling with proper API error surfacing
+  - Enhanced code maintainability and production readiness
+
+- **UI/UX Improvements**
+  - Improved card layouts for better space utilization on large screens
+  - Enhanced progress bar visibility in light mode with proper backgrounds
+  - Removed misleading mock skills display from resume cards
+  - Added professional status indicators for resume readiness
+
 ### [0.17.0] - 2025-11-07
 
 ### CP-31 Final documentation

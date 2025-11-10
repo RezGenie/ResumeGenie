@@ -77,7 +77,6 @@ class SavedJobsService {
       savedJobs.push(newSavedJob);
       const storageKey = this.getUserStorageKey();
       localStorage.setItem(storageKey, JSON.stringify(savedJobs));
-      console.log('Job saved for user:', storageKey);
       return true;
     } catch (error) {
       console.error('Error saving job:', error);
@@ -94,7 +93,6 @@ class SavedJobsService {
       if (filteredJobs.length !== savedJobs.length) {
         const storageKey = this.getUserStorageKey();
         localStorage.setItem(storageKey, JSON.stringify(filteredJobs));
-        console.log('Job removed for user:', storageKey);
         return true;
       }
       return false;

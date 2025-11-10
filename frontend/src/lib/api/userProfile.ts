@@ -37,7 +37,6 @@ class UserProfileService {
       const existing = this.getProfile();
       const updated = { ...existing, ...profile };
       localStorage.setItem(storageKey, JSON.stringify(updated));
-      console.log('Profile saved:', updated);
 
       // Dispatch custom event to notify components
       if (typeof window !== 'undefined') {

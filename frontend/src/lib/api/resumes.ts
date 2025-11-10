@@ -50,14 +50,6 @@ export class ResumeService {
         : `${baseURL}/resumes/upload`;
       
       // Use fetch instead of XMLHttpRequest (XMLHttpRequest has CORS issues)
-      console.log('[ResumeService] Starting upload with fetch:', {
-        uploadURL,
-        isGuest,
-        hasToken: !!token,
-        fileSize: file.size,
-        fileName: file.name,
-        fileType: file.type
-      });
 
       const headers: Record<string, string> = {};
       
@@ -120,14 +112,7 @@ export class ResumeService {
         xhr.send(formData);
       });
 
-      console.log('[ResumeService] Upload response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
       if (response.status === 401 && !isGuest && token) {
-        console.log('Authentication failed, retrying as guest...');
         // Retry as guest
         return this.uploadResume(file, { ...options, isGuest: true });
       }

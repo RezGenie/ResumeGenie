@@ -369,66 +369,30 @@ export default function ResumesPage() {
                       >
                         <Card className="hover:shadow-lg transition-shadow">
                           <CardContent className="p-4 sm:p-6">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
-                              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedResume(resume)}>
-                                <div className="flex items-start gap-3 mb-2">
-                                  <div className="text-2xl flex-shrink-0">
-                                    {localResumeService.getFileTypeIcon(resume.fileType)}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg sm:text-xl font-semibold text-foreground flex items-center gap-2 break-words">
-                                      <span className="break-all">{resume.name}</span>
-                                      {resume.isPrimary && (
-                                        <Star className="w-4 h-4 text-purple-600 fill-current flex-shrink-0" />
-                                      )}
-                                    </h3>
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground mt-1">
-                                      <span className="truncate">{resume.fileName}</span>
-                                      <span className="whitespace-nowrap">{localResumeService.formatFileSize(resume.fileSize)}</span>
-                                      <div className={`flex items-center gap-1 ${statusDisplay.color} whitespace-nowrap`}>
-                                        {statusDisplay.icon}
-                                        {statusDisplay.text}
-                                      </div>
-                                      <span className="whitespace-nowrap">{new Date(resume.uploadedAt).toLocaleDateString()}</span>
-                                    </div>
-                                  </div>
+                            {/* Header Row - Icon, Title, Status, and Actions */}
+                            <div className="flex items-start justify-between gap-4 mb-3">
+                              <div className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedResume(resume)}>
+                                <div className="text-2xl flex-shrink-0">
+                                  {localResumeService.getFileTypeIcon(resume.fileType)}
                                 </div>
-
-                                {resume.extractedData && (
-                                  <div className="mt-3">
-                                    <div className="flex flex-wrap gap-2 mb-2">
-                                      {resume.extractedData.skills?.slice(0, 6).map((skill, idx) => (
-                                        <Badge key={idx} variant="secondary" className="text-xs">
-                                          {skill}
-                                        </Badge>
-                                      ))}
-                                      {resume.extractedData.skills && resume.extractedData.skills.length > 6 && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          +{resume.extractedData.skills.length - 6} more
-                                        </Badge>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                      <Target className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                      <span>Ready for analysis</span>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {resume.notes && (
-                                  <p className="text-sm text-muted-foreground bg-muted p-2 rounded mt-3 break-words">
-                                    {resume.notes}
-                                  </p>
-                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-lg sm:text-xl font-semibold text-foreground hover:text-purple-600 transition-colors flex items-center gap-2 break-words">
+                                    <span className="break-all">{resume.name}</span>
+                                    {resume.isPrimary && (
+                                      <Star className="w-4 h-4 text-purple-600 fill-current flex-shrink-0" />
+                                    )}
+                                  </h3>
+                                </div>
                               </div>
 
-                              <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 flex-wrap sm:flex-nowrap">
+                              {/* Action Buttons - Horizontal on all screens */}
+                              <div className="flex items-center gap-2 flex-shrink-0">
                                 {!resume.isPrimary && resume.status === 'ready' && (
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSetPrimary(resume.id)}
+                                    className="h-8 w-8 p-0"
                                     title="Set as primary resume"
                                   >
                                     <StarOff className="w-4 h-4" />
@@ -443,6 +407,8 @@ export default function ResumesPage() {
                                     setEditName(resume.name);
                                     setEditNotes(resume.notes || '');
                                   }}
+                                  className="h-8 w-8 p-0"
+                                  title="Edit resume details"
                                 >
                                   <Edit3 className="w-4 h-4" />
                                 </Button>
@@ -451,7 +417,8 @@ export default function ResumesPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleDeleteResume(resume)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 h-8 w-8 p-0"
+                                  title="Delete resume"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -466,12 +433,44 @@ export default function ResumesPage() {
                                       a.download = resume.fileName;
                                       a.click();
                                     }}
+                                    className="h-8 w-8 p-0"
+                                    title="Download resume"
                                   >
                                     <Download className="w-4 h-4" />
                                   </Button>
                                 )}
                               </div>
                             </div>
+
+                            {/* File Info and Status */}
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-muted-foreground mb-3 cursor-pointer" onClick={() => setSelectedResume(resume)}>
+                              <span className="truncate">{resume.fileName}</span>
+                              <span className="whitespace-nowrap">{localResumeService.formatFileSize(resume.fileSize)}</span>
+                              <div className={`flex items-center gap-1 ${statusDisplay.color} whitespace-nowrap font-medium`}>
+                                {statusDisplay.icon}
+                                {statusDisplay.text}
+                              </div>
+                              <span className="whitespace-nowrap ml-auto">{new Date(resume.uploadedAt).toLocaleDateString()}</span>
+                            </div>
+
+                            {/* Status indicator for ready resumes */}
+                            {resume.status === 'ready' && (
+                              <div className="mb-3 cursor-pointer" onClick={() => setSelectedResume(resume)}>
+                                <div className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
+                                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                                  <span className="font-medium">Ready for AI analysis</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Notes */}
+                            {resume.notes && (
+                              <div className="cursor-pointer" onClick={() => setSelectedResume(resume)}>
+                                <p className="text-sm text-muted-foreground bg-muted p-3 rounded break-words line-clamp-2">
+                                  {resume.notes}
+                                </p>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       </motion.div>

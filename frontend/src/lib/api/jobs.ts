@@ -20,7 +20,6 @@ export class JobService {
       const hasFilters = filters.search || (filters.location && filters.location !== 'all');
       
       if (hasProfile && !hasFilters) {
-        console.log('Using personalized job recommendations...');
         return await this.getRecommendedJobs(limit);
       }
       
@@ -54,7 +53,6 @@ export class JobService {
       
       // Apply smart filtering based on user preferences
       if (hasProfile) {
-        console.log('Applying smart job filtering...');
         const originalCount = jobsDisplay.length;
         
         // Filter jobs based on user preferences
@@ -72,18 +70,6 @@ export class JobService {
           ...job,
           matchScore: Math.round(userPreferencesService.scoreJob(job))
         }));
-        
-        console.log(`Smart filtering: ${originalCount} → ${jobsDisplay.length} jobs (${originalCount - jobsDisplay.length} filtered out)`);
-        
-        // Log top 5 matches for debugging
-        if (jobsDisplay.length > 0) {
-          console.log('Top 5 job matches:');
-          jobsDisplay.slice(0, 5).forEach((job, idx) => {
-            console.log(`  ${idx + 1}. ${job.title} (${job.matchScore}%) - ${job.company}`);
-          });
-        }
-      } else {
-        console.log('Profile incomplete, showing all jobs without filtering');
       }
       
       return {
@@ -205,8 +191,6 @@ export class JobService {
       // Use the personalized recommendations endpoint
       const response = await apiClient.get<any>(`/jobs/recommendations?${params}`);
       
-      console.log('Recommendations API response:', response);
-      
       // Check if response is an array
       if (!Array.isArray(response)) {
         console.warn('Recommendations response is not an array, falling back to discovery feed');
@@ -238,14 +222,6 @@ export class JobService {
         matchScore: Math.round(rec.score * 100), // Convert 0-1 score to percentage
       }));
       
-      console.log(`Personalized recommendations: ${jobsDisplay.length} jobs with scores`);
-      if (jobsDisplay.length > 0) {
-        console.log('Top 5 recommendations:');
-        jobsDisplay.slice(0, 5).forEach((job, idx) => {
-          console.log(`  ${idx + 1}. ${job.title} (${job.matchScore}%) - ${job.company}`);
-        });
-      }
-      
       return {
         success: true,
         data: jobsDisplay,
@@ -254,7 +230,6 @@ export class JobService {
     } catch (error) {
       console.error('Jobs API: Failed to get recommended jobs:', error);
       // Fallback to discovery feed if recommendations fail
-      console.log('Falling back to discovery feed...');
       try {
         const params = new URLSearchParams({
           skip: '0',
@@ -285,7 +260,6 @@ export class JobService {
   async toggleSaveJob(jobId: string): Promise<APIResponse<{ saved: boolean }>> {
     try {
       // TODO: Implement actual save/unsave when backend endpoint is ready
-      console.log(`Toggle save for job ${jobId}`);
       return {
         success: true,
         data: { saved: Math.random() > 0.5 },

@@ -19,6 +19,11 @@ import {
   Loader2,
   Copy,
   Search,
+  Palette,
+  CheckCircle2,
+  Crosshair,
+  Cpu,
+  Award,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -93,7 +98,13 @@ interface WishDetailsResponse {
   score_breakdown?: {
     style_formatting: { score: number; feedback: string; weight: number };
     grammar_spelling: { score: number; feedback: string; weight: number };
-    job_match: { score: number; feedback: string; weight: number };
+    job_match: { 
+      score: number; 
+      feedback: string; 
+      weight: number;
+      matches?: string[];
+      gaps?: string[];
+    };
     ats_compatibility: { score: number; feedback: string; weight: number };
     content_quality: { score: number; feedback: string; weight: number };
   };
@@ -239,7 +250,13 @@ interface AnalysisResults {
   scoreBreakdown?: {
     style_formatting: { score: number; feedback: string; weight: number };
     grammar_spelling: { score: number; feedback: string; weight: number };
-    job_match: { score: number; feedback: string; weight: number };
+    job_match: { 
+      score: number; 
+      feedback: string; 
+      weight: number;
+      matches?: string[];
+      gaps?: string[];
+    };
     ats_compatibility: { score: number; feedback: string; weight: number };
     content_quality: { score: number; feedback: string; weight: number };
   };
@@ -251,6 +268,8 @@ interface AnalysisResults {
 export default function StudioPage() {
   const { isAuthenticated, user } = useAuth();
   const [isRecModalOpen, setIsRecModalOpen] = useState(false);
+  const [isSkillGapModalOpen, setIsSkillGapModalOpen] = useState(false);
+  const [isJobMatchModalOpen, setIsJobMatchModalOpen] = useState(false);
   const [selectedWish, setSelectedWish] = useState<Wish | null>(null);
   const [isWishDetailModalOpen, setIsWishDetailModalOpen] = useState(false);
   const modalCloseRef = useRef<HTMLButtonElement | null>(null);
@@ -373,29 +392,37 @@ export default function StudioPage() {
       
       const loadPrimaryResume = async () => {
         try {
-          const { localResumeService } = await import('@/lib/api/localResumes');
-          const primaryResume = localResumeService.getPrimaryResume();
+          // Fetch resumes from backend instead of local storage
+          const { apiClient } = await import('@/lib/api/client');
+          const resumes = await apiClient.get<any[]>('/resumes');
           
-          if (primaryResume && primaryResume.status === 'ready' && isMounted) {
-            // Convert LocalResume to UploadedFile format
+          // Find the most recent completed resume
+          const primaryResume = resumes
+            .filter((r: any) => r.processing_status === 'completed')
+            .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
+          
+          if (primaryResume && isMounted) {
+            // Use backend resume data - prefer original_filename over filename (UUID)
+            const displayName = primaryResume.original_filename || primaryResume.filename || 'Resume.pdf';
             const uploadedFile: UploadedFile = {
               id: primaryResume.id,
-              name: primaryResume.name,
-              size: primaryResume.fileSize,
-              type: primaryResume.fileType,
+              name: displayName,
+              size: primaryResume.file_size || 0,
+              type: primaryResume.file_type || 'application/pdf',
               isUploaded: true,
               autoLoaded: true, // Mark as auto-loaded
+              resumeData: primaryResume, // Store the full backend data
             };
             
             setResumeFile(uploadedFile);
             setShowButtonHighlight(true);
             
             toast.success("Primary resume summoned!", {
-              description: `Using "${primaryResume.name}" - rub the lamp again to change it`,
+              description: `Using "${displayName}" from your account`,
             });
           }
         } catch (error) {
-          console.warn('Failed to load primary resume:', error);
+          console.warn('Failed to load primary resume from backend:', error);
         }
       };
       
@@ -527,9 +554,7 @@ export default function StudioPage() {
                   : "pending",
               results: wish.is_processed && wish.ai_response
                 ? {
-                  score: Math.round(
-                    (wish.confidence_score || 0) * 100
-                  ),
+                  score: wish.overall_score || Math.round((wish.confidence_score || 0) * 100),
                   insights: parseRecommendations(wish.recommendations),
                   recommendations: parseRecommendations(wish.action_items),
                 }
@@ -611,7 +636,6 @@ export default function StudioPage() {
           // If wish not found in backend (404), that's actually fine - it means it was already deleted
           // or it's a local-only wish. We'll still remove it from the UI.
           if (error instanceof Error && error.message.includes('404')) {
-            console.log(`Wish ${wishId} not found in backend, removing from local state only. This might be a local-only or already-deleted wish.`);
             toast.success("Wish deleted successfully");
           } else {
             // For other errors, re-throw to be handled by outer catch
@@ -750,6 +774,34 @@ export default function StudioPage() {
     return null;
   };
 
+  const copySkillGapsToClipboard = async () => {
+    if (!analysisResults?.skillGaps || analysisResults.skillGaps.length === 0) {
+      toast.error("No skill gaps identified yet! 🎯");
+      return;
+    }
+
+    const skillsText = analysisResults.skillGaps
+      .map((skill, idx) => `${idx + 1}. ${skill}`)
+      .join('\n');
+
+    try {
+      await navigator.clipboard.writeText(skillsText);
+      toast.success("Skills copied to clipboard! 📋");
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = skillsText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success("Skills copied to clipboard! 📋");
+      } catch {
+        toast.error("Failed to copy skills");
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
   const copyRecommendationsToClipboard = async () => {
     if (!analysisResults?.recommendations || analysisResults.recommendations.length === 0) {
       toast.error("The cosmic wisdom hasn't materialized yet! 🔮", {
@@ -827,7 +879,6 @@ export default function StudioPage() {
           setResumeFile(uploadedFile);
           setIsResumeUploading(false);
           setShowButtonHighlight(true);
-          console.log("Resume uploaded successfully:", response);
         },
         onError: (error) => {
           console.error("Resume upload failed:", error);
@@ -944,25 +995,41 @@ export default function StudioPage() {
 
       // Call backend to create a wish (supports both authenticated and guest users)
       const endpoint = isAuthenticated ? "/genie" : "/genie/guest";
-      const data = await apiClient.post<{ id: string }>(endpoint, {
+      
+      // For auto-loaded resumes, the ID is already the backend resume ID
+      const actualResumeId = resumeFile?.id;
+      
+      const requestPayload = {
         wish_type: "improvement",
         wish_text: jobPosting,
         context_data: {
-          ...(resumeFile ? { resume_id: resumeFile.id } : {}),
+          ...(actualResumeId ? { resume_id: actualResumeId } : {}),
           ...(companyName ? { company_name: companyName } : {}),
           ...(positionTitle ? { position_title: positionTitle } : {}),
         },
-      });
+      };
+      const data = await apiClient.post<WishDetailsResponse>(endpoint, requestPayload);
 
       // Add wish to history immediately with real backend ID
+      // Create a clean title and descriptive subtitle
+      let wishTitle = "Resume & Job Match Analysis";
+      let wishDescription = "";
+      
+      if (companyName || positionTitle) {
+        wishDescription = `${companyName || ""}${companyName && positionTitle ? " - " : ""}${positionTitle || ""}`;
+      } else if (jobPosting) {
+        // Extract first line or first 60 chars from job posting for description
+        const firstLine = jobPosting.split('\n')[0].trim();
+        wishDescription = firstLine.length > 60 
+          ? firstLine.substring(0, 60) + "..." 
+          : firstLine;
+      }
+      
       const newWish: Wish = {
         id: data.id,
         type: "resume_analysis",
-        title: companyName || positionTitle
-          ? `${companyName ? companyName : ""}${companyName && positionTitle ? " - " : ""}${positionTitle || ""}`
-          : resumeFile ? "Resume & Job Match Analysis" : "Career Guidance",
-        // Description intentionally left empty to avoid redundant summaries in wish history cards
-        description: "",
+        title: wishTitle,
+        description: wishDescription,
         timestamp: new Date(),
         status: "processing",
       };
@@ -980,26 +1047,38 @@ export default function StudioPage() {
         return updatedWishes;
       });
 
-      // Poll for wish completion (simplified)
-      let wishDetails: WishDetailsResponse | null = null;
-      for (let i = 0; i < 30; i++) {
-        // up to 30s
-        try {
-          const wishEndpoint = isAuthenticated ? `/genie/${data.id}` : `/genie/guest/${data.id}`;
-          wishDetails = await apiClient.get<WishDetailsResponse>(
-            wishEndpoint
-          );
-          if (wishDetails && wishDetails.processing_status === "completed")
-            break;
-        } catch { }
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-      if (!wishDetails || wishDetails.processing_status !== "completed") {
-        throw new Error("Wish processing timed out");
+      // For guest wishes, the response already contains full details (processed synchronously)
+      // For authenticated wishes, we need to poll for completion
+      let wishDetails: WishDetailsResponse;
+      
+      if (!isAuthenticated && data.processing_status === "completed") {
+        // Guest wish is already complete, use the response directly
+        wishDetails = data;
+      } else {
+        // Poll for wish completion (for authenticated users or if guest wish isn't complete yet)
+        let polledDetails: WishDetailsResponse | null = null;
+        for (let i = 0; i < 30; i++) {
+          // up to 30s
+          try {
+            const wishEndpoint = isAuthenticated ? `/genie/${data.id}` : `/genie/guest/${data.id}`;
+            polledDetails = await apiClient.get<WishDetailsResponse>(
+              wishEndpoint
+            );
+            if (polledDetails && polledDetails.processing_status === "completed")
+              break;
+          } catch (error) {
+            console.error(`Error polling wish ${data.id} (attempt ${i + 1}):`, error);
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        if (!polledDetails || polledDetails.processing_status !== "completed") {
+          throw new Error("Wish processing timed out");
+        }
+        wishDetails = polledDetails;
       }
 
-      const parsedRecommendations = parseRecommendations(wishDetails.recommendations);
-      const parsedActionItems = parseRecommendations(wishDetails.action_items);
+      const parsedRecommendations = parseRecommendations(wishDetails!.recommendations);
+      const parsedActionItems = parseRecommendations(wishDetails!.action_items);
 
       // Update the wish with real results
       setWishes((prev) => {
@@ -1009,7 +1088,7 @@ export default function StudioPage() {
               ...wish,
               status: "completed" as const,
               results: {
-                score: Math.round((wishDetails!.confidence_score || 0) * 100),
+                score: wishDetails!.overall_score || Math.round((wishDetails!.confidence_score || 0) * 100),
                 insights: parsedRecommendations,
                 recommendations: parsedActionItems,
               },
@@ -1026,9 +1105,13 @@ export default function StudioPage() {
 
         return updatedWishes;
       });
+      // Use job_match score from scoreBreakdown for consistency, fallback to job_match_score
+      const jobMatchScore = wishDetails!.score_breakdown?.job_match?.score 
+        || Math.round((wishDetails!.job_match_score || 0) * 100);
+      
       setAnalysisResults({
-        resumeScore: Math.round((wishDetails!.confidence_score || 0) * 100),
-        matchScore: Math.round((wishDetails!.job_match_score || 0) * 100),
+        resumeScore: wishDetails!.overall_score || Math.round((wishDetails!.confidence_score || 0) * 100),
+        matchScore: jobMatchScore,
         overallScore: wishDetails!.overall_score,
         scoreBreakdown: wishDetails!.score_breakdown,
         skillGaps: parsedActionItems,
@@ -1179,9 +1262,9 @@ export default function StudioPage() {
                           <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
                             <Lightbulb
                               className="h-5 w-5 text-gray-900 dark:text-gray-100"
-                              aria-label="Recommendations icon"
+                              aria-label="Key Insights icon"
                             />
-                            Recommendations Preview
+                            Key Insights
                           </h5>
                           <div>
                             <Button
@@ -1195,7 +1278,7 @@ export default function StudioPage() {
                             </Button>
                           </div>
                         </div>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
+                        <ul className="space-y-2 text-sm">
                           {analysisResults?.insights &&
                             analysisResults.insights.length > 0
                             ? analysisResults.insights.map(
@@ -1207,15 +1290,15 @@ export default function StudioPage() {
                                   <span className="text-purple-600 mt-1">
                                     •
                                   </span>
-                                  <span>{rec}</span>
+                                  <span className="text-gray-700 dark:text-gray-300">{rec}</span>
                                 </li>
                               )
                             )
                             : [
-                              "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
-                              "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
-                              "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
-                              "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
+                              "The cosmic forces are still aligning your personalized insights ✨",
+                              "Your genie is crafting magical recommendations just for you 🔮",
+                              "The stars haven't revealed your perfect guidance yet - try again! 🌟",
+                              "Your wishes deserve divine attention - let me divine deeper insights! 💫",
                             ].map((mock, idx) => (
                               <li
                                 key={idx}
@@ -1224,7 +1307,7 @@ export default function StudioPage() {
                                 <span className="text-muted-foreground mt-1">
                                   •
                                 </span>
-                                <span>{mock}</span>
+                                <span className="text-muted-foreground">{mock}</span>
                               </li>
                             ))}
                         </ul>
@@ -1339,7 +1422,7 @@ export default function StudioPage() {
                           <div className="flex items-center justify-between mb-3">
                             <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                               <Lightbulb className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                              Your Genie Recommendations
+                              Key Insights
                             </h5>
                             <Button
                               size="sm"
@@ -1351,7 +1434,7 @@ export default function StudioPage() {
                               <Maximize2 className="h-4 w-4" />
                             </Button>
                           </div>
-                          <ul className="space-y-2 text-sm text-muted-foreground">
+                          <ul className="space-y-2 text-sm">
                             {analysisResults?.insights &&
                               analysisResults.insights.length > 0
                               ? analysisResults.insights.map(
@@ -1363,14 +1446,14 @@ export default function StudioPage() {
                                     <span className="text-purple-600 mt-1">
                                       •
                                     </span>
-                                    <span>{rec}</span>
+                                    <span className="text-gray-700 dark:text-gray-300">{rec}</span>
                                   </li>
                                 )
                               )
                               : [
-                                "🧞‍♂️ You've used all your daily wishes! Your genie insights are waiting here",
-                                "✨ Sign up for unlimited access to career magic and personalized recommendations",
-                                "🔮 Your completed wishes hold valuable career insights - check your wish history below!",
+                                "You've used all your daily wishes! Your genie insights are waiting here 🌟",
+                                "Sign up for unlimited access to career magic and personalized recommendations 🔮",
+                                "Your completed wishes hold valuable career insights - check your wish history below! ✨",
                               ].map((mock, idx) => (
                                 <li
                                   key={idx}
@@ -1419,7 +1502,7 @@ export default function StudioPage() {
                           <div className="flex items-center justify-between mb-3">
                             <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                               <Lightbulb className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                              Recommendations Preview
+                              Key Insights
                             </h5>
                             <Button
                               size="sm"
@@ -1431,7 +1514,7 @@ export default function StudioPage() {
                               <Maximize2 className="h-4 w-4" />
                             </Button>
                           </div>
-                          <ul className="space-y-2 text-sm text-muted-foreground">
+                          <ul className="space-y-2 text-sm">
                             {analysisResults?.insights &&
                               analysisResults.insights.length > 0
                               ? analysisResults.insights.map(
@@ -1443,15 +1526,15 @@ export default function StudioPage() {
                                     <span className="text-purple-600 mt-1">
                                       •
                                     </span>
-                                    <span>{rec}</span>
+                                    <span className="text-gray-700 dark:text-gray-300">{rec}</span>
                                   </li>
                                 )
                               )
                               : [
-                                "🧞‍♂️ I divine that your career magic awaits! Upload your resume and make a wish to unlock personalized insights",
-                                "✨ The career stars are aligning - share your job dreams or resume questions for mystical guidance",
-                                "🔮 My ancient wisdom reveals endless possibilities - let me analyze your path to success!",
-                                "⭐ Your professional destiny calls - grant me a wish and I'll illuminate your career journey",
+                                "The cosmic forces are still aligning your personalized insights ✨",
+                                "Your genie is crafting magical recommendations just for you 🔮",
+                                "The stars haven't revealed your perfect guidance yet - try again! 🌟",
+                                "Your wishes deserve divine attention - let me divine deeper insights! 💫",
                               ].map((mock, idx) => (
                                 <li
                                   key={idx}
@@ -1630,7 +1713,7 @@ export default function StudioPage() {
                                     delay: 0.4
                                   }}
                                 >
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 text-xs whitespace-nowrap">
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 text-xs whitespace-nowrap">
                                     ✓ Primary Resume
                                   </Badge>
                                 </motion.div>
@@ -1645,7 +1728,7 @@ export default function StudioPage() {
                           variant="ghost"
                           size="sm"
                           onClick={removeFile}
-                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                          className="text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 flex-shrink-0"
                           title="Remove and upload different resume"
                         >
                           <X className="h-4 w-4" />
@@ -1672,16 +1755,24 @@ export default function StudioPage() {
                       {/* Processing Status */}
                       {resumeFile.isUploaded && resumeFile.resumeData && (
                         <motion.div 
-                          className="text-sm text-muted-foreground"
+                          className="flex items-center gap-2 text-sm"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           transition={{ duration: 0.3, delay: 0.3 }}
                         >
-                          Status:{" "}
-                          {resumeFile.resumeData.processing_status ===
-                            "completed"
-                            ? "✅ Ready for analysis"
-                            : "⏳ Processing..."}
+                          {resumeFile.resumeData.processing_status === "completed" ? (
+                            <>
+                              <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span className="font-medium">Ready for analysis</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                              <span className="text-muted-foreground">Processing...</span>
+                            </>
+                          )}
                         </motion.div>
                       )}
                     </motion.div>
@@ -1717,7 +1808,7 @@ export default function StudioPage() {
                         placeholder="e.g., Acme Corp"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        className="h-9"
+                        className="h-9 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
                     <div>
@@ -1728,7 +1819,7 @@ export default function StudioPage() {
                         placeholder="e.g., Senior Software Engineer"
                         value={positionTitle}
                         onChange={(e) => setPositionTitle(e.target.value)}
-                        className="h-9"
+                        className="h-9 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
                   </div>
@@ -1818,86 +1909,91 @@ export default function StudioPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Overall Quality Score</span>
-                    <Badge
-                      variant="secondary"
-                      className={`${
-                        analysisResults?.overallScore
-                          ? analysisResults.overallScore >= 90
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                            : analysisResults.overallScore >= 80
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                            : analysisResults.overallScore >= 70
-                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
-                            : analysisResults.overallScore >= 60
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
-                      }`}
+                <div className="space-y-4">
+                  {/* Overall Score Display */}
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-center space-y-2"
+                  >
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2, duration: 0.5 }}
+                      className="text-5xl font-bold text-purple-600"
                     >
                       {analysisResults?.overallScore
-                        ? `${Math.round(analysisResults.overallScore)}/100`
-                        : analysisResults
-                        ? `${analysisResults.resumeScore}%`
-                        : "---"}
-                    </Badge>
-                  </div>
-                  <Progress
-                    value={analysisResults?.overallScore || analysisResults?.resumeScore || 0}
-                    className="h-2"
-                  />
-                  {analysisResults?.scoreBreakdown && (
-                    <div className="space-y-2 pt-2 border-t">
-                      <p className="text-xs font-medium text-muted-foreground">Score Breakdown:</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex justify-between">
-                          <span>Style & Format:</span>
-                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.style_formatting.score)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Grammar:</span>
-                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.grammar_spelling.score)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Job Match:</span>
-                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.job_match.score)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>ATS Ready:</span>
-                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.ats_compatibility.score)}</span>
-                        </div>
-                        <div className="flex justify-between col-span-2">
-                          <span>Content Quality:</span>
-                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.content_quality.score)}</span>
-                        </div>
-                      </div>
+                        ? Math.round(analysisResults.overallScore)
+                        : analysisResults?.resumeScore || "---"}
+                    </motion.div>
+                    <div className="text-sm text-muted-foreground">out of 100</div>
+                    <div className="relative h-2 bg-background/50 dark:bg-card rounded-full overflow-hidden border border-muted-foreground/20">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${analysisResults?.overallScore || analysisResults?.resumeScore || 0}%` }}
+                        transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
+                        className="absolute top-0 left-0 h-full bg-purple-600 rounded-full"
+                      />
                     </div>
-                  )}
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Key Insights:</p>
-                    {analysisResults ? (
-                      <ul className="space-y-1">
-                        {analysisResults.insights
-                          .slice(0, 2)
-                          .map((insight, index) => (
-                            <li
-                              key={index}
-                              className="text-sm text-muted-foreground flex items-start gap-2"
+                  </motion.div>
+
+                  {/* Score Breakdown */}
+                  {analysisResults?.scoreBreakdown && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="space-y-3 pt-3 border-t"
+                    >
+                      <p className="text-sm font-semibold">Score Components</p>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Style & Format', key: 'style_formatting', Icon: Palette, color: 'text-purple-500' },
+                          { label: 'Grammar & Spelling', key: 'grammar_spelling', Icon: CheckCircle2, color: 'text-purple-500' },
+                          { label: 'Job Match', key: 'job_match', Icon: Crosshair, color: 'text-purple-500' },
+                          { label: 'ATS Compatibility', key: 'ats_compatibility', Icon: Cpu, color: 'text-purple-500' },
+                          { label: 'Content Quality', key: 'content_quality', Icon: Award, color: 'text-purple-500' }
+                        ].map(({ label, key, Icon, color }, index) => {
+                          const score = Math.round(analysisResults.scoreBreakdown?.[key as keyof typeof analysisResults.scoreBreakdown]?.score || 0);
+                          return (
+                            <motion.div 
+                              key={key} 
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.4 + index * 0.1 }}
+                              className="space-y-1.5"
                             >
-                              <span className="text-purple-600 mt-1">•</span>
-                              {insight}
-                            </li>
-                          ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Upload your resume and job description to get AI-powered
-                        analysis
-                      </p>
-                    )}
-                  </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2">
+                                  <Icon className={`h-4 w-4 ${color}`} />
+                                  <span className="font-medium">{label}</span>
+                                </span>
+                                <span className="font-bold text-purple-600">
+                                  {score}
+                                </span>
+                              </div>
+                              <div className="relative h-1.5 bg-background/50 dark:bg-card rounded-full overflow-hidden border border-muted-foreground/20">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${score}%` }}
+                                  transition={{ duration: 1, delay: 0.5 + index * 0.1, ease: "easeOut" }}
+                                  className="absolute top-0 left-0 h-full bg-purple-600 rounded-full"
+                                />
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* No insights here - moved to recommendations section */}
+                  {!analysisResults && (
+                    <p className="text-sm text-muted-foreground text-center pt-2">
+                      Upload your resume to get comprehensive analysis
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1914,7 +2010,7 @@ export default function StudioPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Match Score</span>
                     <Badge
@@ -1926,15 +2022,74 @@ export default function StudioPage() {
                         : "---%"}
                     </Badge>
                   </div>
-                  <Progress
-                    value={analysisResults?.matchScore || 0}
-                    className="h-2"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {analysisResults
-                      ? `Your resume matches ${analysisResults.matchScore}% of the job requirements`
-                      : "See how well your resume matches the job requirements"}
-                  </p>
+                  <div className="relative h-2 bg-background/50 dark:bg-card rounded-full overflow-hidden border border-muted-foreground/20">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${analysisResults?.matchScore || 0}%` }}
+                      transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
+                      className="absolute top-0 left-0 h-full bg-purple-600 rounded-full"
+                    />
+                  </div>
+                  
+                  {/* Job Match Context - What you have and what's missing */}
+                  {analysisResults?.scoreBreakdown?.job_match && 
+                   ((analysisResults.scoreBreakdown.job_match.matches?.length ?? 0) > 0 || 
+                    (analysisResults.scoreBreakdown.job_match.gaps?.length ?? 0) > 0) ? (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        What you have and what's missing for this role
+                      </p>
+                      
+                      <div 
+                        onClick={() => setIsJobMatchModalOpen(true)}
+                        className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                      >
+                        {/* Preview - show first 3 of each */}
+                        <div className="space-y-2">
+                          {(() => {
+                            const matches = analysisResults.scoreBreakdown.job_match.matches || [];
+                            const gaps = analysisResults.scoreBreakdown.job_match.gaps || [];
+                            const totalItems = matches.length + gaps.length;
+                            
+                            return (
+                              <>
+                                {matches.slice(0, 3).map((match: string, idx: number) => (
+                                  <div key={`match-${idx}`} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                                    <span className="text-purple-600 mt-0.5">✓</span>
+                                    <span>{match}</span>
+                                  </div>
+                                ))}
+                                {gaps.slice(0, 3).map((gap: string, idx: number) => (
+                                  <div key={`gap-${idx}`} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                                    <span className="text-purple-600 mt-0.5">✗</span>
+                                    <span>{gap}</span>
+                                  </div>
+                                ))}
+                                {totalItems > 6 && (
+                                  <div className="text-center pt-2 border-t border-muted-foreground/10">
+                                    <span className="text-sm text-purple-600 hover:text-purple-700 hover:underline">
+                                      View all {totalItems} items
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </>
+                  ) : analysisResults?.scoreBreakdown?.job_match ? (
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {analysisResults.scoreBreakdown.job_match.feedback || 
+                       `Your resume matches ${analysisResults.matchScore}% of the job requirements`}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {analysisResults
+                        ? `Your resume matches ${analysisResults.matchScore}% of the job requirements`
+                        : "See how well your resume matches the job requirements"}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1950,30 +2105,39 @@ export default function StudioPage() {
                   Skill Gap Analysis
                 </CardTitle>
               </CardHeader>
-              <CardContent className="h-80">
-                <div className="space-y-4 h-full flex flex-col">
+              <CardContent>
+                <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Skills from the job posting that could strengthen your
                     profile
                   </p>
-                  {analysisResults && analysisResults.skillGaps.length > 0 ? (
-                    <div className="space-y-3 flex-1 min-h-0">
-                      <ul className="space-y-1">
-                        {analysisResults.skillGaps.map((skill: string, index: number) => (
+                  
+                  {/* Expandable Inner Card - Only shows when there are skills */}
+                  {analysisResults && analysisResults.skillGaps.length > 0 && (
+                    <div 
+                      onClick={() => setIsSkillGapModalOpen(true)}
+                      className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                    >
+                      <ul className="space-y-2 text-sm">
+                        {analysisResults.skillGaps.slice(0, 8).map((skill: string, index: number) => (
                           <li
                             key={index}
-                            className="text-sm text-muted-foreground flex items-start gap-2"
+                            className="flex items-start gap-2"
                           >
-                            <span className="text-purple-600 mt-1">•</span>
-                            {skill}
+                            <span className="text-purple-600 mt-1">
+                              •
+                            </span>
+                            <span className="text-gray-700 dark:text-gray-300">{skill.trim()}</span>
                           </li>
                         ))}
                       </ul>
-                      {/* Legend removed: skill type classification is not needed */}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center py-4 text-muted-foreground flex-1">
-
+                      {analysisResults.skillGaps.length > 8 && (
+                        <div className="text-center mt-3 pt-3 border-t border-muted-foreground/10">
+                          <span className="text-sm text-purple-600 hover:text-purple-700 hover:underline">
+                            View all {analysisResults.skillGaps.length} skills
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2083,105 +2247,99 @@ export default function StudioPage() {
                           key={wish.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
+                          onClick={() => {
+                            if (wish.status === "completed") {
+                              setSelectedWish(wish);
+                              setIsWishDetailModalOpen(true);
+                            }
+                          }}
                           className={`border border-muted-foreground/25 rounded-lg p-3 sm:p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${wish.status === "completed"
                             ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
                             : "cursor-default dark:bg-card"
                             }`}
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                          <div className="flex items-start gap-2 sm:gap-3 mb-3">
                             <div
-                              className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0"
-                              onClick={() => {
-                                if (wish.status === "completed") {
-                                  setSelectedWish(wish);
-                                  setIsWishDetailModalOpen(true);
-                                }
-                              }}
+                              className={`p-2 rounded-lg text-white flex-shrink-0 ${getWishColor(
+                                wish.type
+                              )}`}
                             >
-                              <div
-                                className={`p-2 rounded-lg text-white flex-shrink-0 ${getWishColor(
-                                  wish.type
-                                )}`}
-                              >
-                                {getWishIcon(wish.type)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
-                                  <h4 className="font-medium text-sm sm:text-base break-words">
-                                    {wish.title}
-                                  </h4>
+                              {getWishIcon(wish.type)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <h4 className="font-medium text-sm sm:text-base break-words flex-1">
+                                  {wish.title}
+                                </h4>
+                                <div className="flex items-center gap-2 flex-shrink-0">
                                   {wish.status === "completed" &&
                                     wish.results?.score && (
                                       <Badge
                                         variant="secondary"
-                                        className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 w-fit text-xs"
+                                        className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 text-xs"
                                       >
                                         {wish.results.score}%
                                       </Badge>
                                     )}
-                                </div>
-                                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 break-words">
-                                  {wish.description}
-                                </p>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                    {new Date(
-                                      wish.timestamp
-                                    ).toLocaleDateString("en-US", {
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </span>
+                                  <Badge
+                                    variant={
+                                      wish.status === "completed"
+                                        ? "default"
+                                        : wish.status === "processing"
+                                          ? "secondary"
+                                          : "outline"
+                                    }
+                                    className={`text-xs whitespace-nowrap ${wish.status === "completed"
+                                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
+                                      : wish.status === "processing"
+                                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                                      }`}
+                                  >
+                                    {wish.status === "processing" && (
+                                      <Zap className="h-3 w-3 mr-1 animate-pulse flex-shrink-0" />
+                                    )}
+                                    {wish.status === "completed" && (
+                                      <Trophy className="h-3 w-3 mr-1 flex-shrink-0" />
+                                    )}
+                                    <span className="hidden sm:inline">
+                                      {wish.status.charAt(0).toUpperCase() +
+                                        wish.status.slice(1)}
+                                    </span>
+                                    <span className="sm:hidden">
+                                      {wish.status === "completed" ? "Done" : wish.status === "processing" ? "Active" : "Pending"}
+                                    </span>
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await deleteWish(wish.id);
+                                    }}
+                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 flex-shrink-0"
+                                    title="Delete wish"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 sm:ml-3 self-end sm:self-start">
-                              <Badge
-                                variant={
-                                  wish.status === "completed"
-                                    ? "default"
-                                    : wish.status === "processing"
-                                      ? "secondary"
-                                      : "outline"
-                                }
-                                className={`text-xs whitespace-nowrap ${wish.status === "completed"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                  : wish.status === "processing"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
-                                  }`}
-                              >
-                                {wish.status === "processing" && (
-                                  <Zap className="h-3 w-3 mr-1 animate-pulse flex-shrink-0" />
-                                )}
-                                {wish.status === "completed" && (
-                                  <Trophy className="h-3 w-3 mr-1 flex-shrink-0" />
-                                )}
-                                <span className="hidden sm:inline">
-                                  {wish.status.charAt(0).toUpperCase() +
-                                    wish.status.slice(1)}
+                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 break-words">
+                                {wish.description}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {new Date(
+                                    wish.timestamp
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </span>
-                                <span className="sm:hidden">
-                                  {wish.status === "completed" ? "Done" : wish.status === "processing" ? "Active" : "Pending"}
-                                </span>
-                              </Badge>
-
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  await deleteWish(wish.id);
-                                }}
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                                title="Delete wish"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
+                              </div>
                             </div>
                           </div>
 
@@ -2266,7 +2424,7 @@ export default function StudioPage() {
                   >
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold">
-                        AI Recommendations
+                        Key Insights
                       </h3>
                       <div className="flex items-center gap-2">
                         <Button
@@ -2290,13 +2448,13 @@ export default function StudioPage() {
                         </Button>
                       </div>
                     </div>
-                    <div className="space-y-3 max-h-[60vh] overflow-auto text-sm text-muted-foreground">
+                    <div className="space-y-3 max-h-[60vh] overflow-auto text-sm">
                       {analysisResults?.recommendations &&
                         analysisResults.recommendations.length > 0
                         ? analysisResults.recommendations.map((rec, idx) => (
                           <div key={idx} className="flex items-start gap-3">
                             <span className="text-purple-600 mt-1">•</span>
-                            <div>{rec}</div>
+                            <div className="text-gray-700 dark:text-gray-300">{rec}</div>
                           </div>
                         ))
                         : [
@@ -2309,9 +2467,174 @@ export default function StudioPage() {
                             <span className="text-muted-foreground mt-1">
                               •
                             </span>
-                            <div>{mock}</div>
+                            <div className="text-muted-foreground">{mock}</div>
                           </div>
                         ))}
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Skill Gap Modal */}
+          <AnimatePresence>
+            {isSkillGapModalOpen && (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={overlayVariants}
+              >
+                <motion.div
+                  className="absolute inset-0 bg-black/50"
+                  onClick={() => setIsSkillGapModalOpen(false)}
+                />
+                <motion.div
+                  className="relative w-full max-w-3xl mx-auto p-6"
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={modalVariants}
+                >
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-purple-600" />
+                        Skill Gap Analysis
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={copySkillGapsToClipboard}
+                          aria-label="Copy skills"
+                          title="Copy skills to clipboard"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsSkillGapModalOpen(false)}
+                          aria-label="Close skills"
+                          title="Close skills modal"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Skills from the job posting that could strengthen your profile
+                    </p>
+                    <div className="space-y-2 max-h-[60vh] overflow-auto">
+                      {analysisResults?.skillGaps && analysisResults.skillGaps.length > 0
+                        ? analysisResults.skillGaps.map((skill, idx) => (
+                          <div key={idx} className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded transition-colors">
+                            <span className="text-purple-600 mt-1 flex-shrink-0">•</span>
+                            <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{skill.trim()}</div>
+                          </div>
+                        ))
+                        : [
+                          "The cosmic forces are still aligning your personalized insights ✨",
+                          "Your genie is crafting magical recommendations just for you 🔮",
+                          "The stars haven't revealed your perfect guidance yet - try again! 🌟",
+                          "Your wishes deserve divine attention - let me divine deeper insights! 💫",
+                        ].map((mock, idx) => (
+                          <div key={idx} className="flex items-start gap-3">
+                            <span className="text-muted-foreground mt-1">•</span>
+                            <div className="text-sm text-muted-foreground">{mock}</div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Job Match Modal */}
+          <AnimatePresence>
+            {isJobMatchModalOpen && analysisResults?.scoreBreakdown?.job_match && (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={overlayVariants}
+              >
+                <motion.div
+                  className="absolute inset-0 bg-black/50"
+                  onClick={() => setIsJobMatchModalOpen(false)}
+                />
+                <motion.div
+                  className="relative w-full max-w-3xl mx-auto p-6"
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={modalVariants}
+                >
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Target className="h-5 w-5 text-purple-600" />
+                        Job Match Analysis
+                      </h3>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setIsJobMatchModalOpen(false)}
+                        aria-label="Close"
+                        title="Close modal"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* Summary */}
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {analysisResults.scoreBreakdown.job_match.feedback}
+                    </p>
+                    
+                    <div className="space-y-4 max-h-[60vh] overflow-auto">
+                      {/* What You Have */}
+                      {analysisResults.scoreBreakdown.job_match.matches && 
+                       analysisResults.scoreBreakdown.job_match.matches.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                            <h4 className="font-medium text-purple-600">What You Have</h4>
+                          </div>
+                          <div className="space-y-2">
+                            {analysisResults.scoreBreakdown.job_match.matches.map((match: string, idx: number) => (
+                              <div key={idx} className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded transition-colors">
+                                <span className="text-purple-600 mt-1 flex-shrink-0">✓</span>
+                                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{match}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* What's Missing */}
+                      {analysisResults.scoreBreakdown.job_match.gaps && 
+                       analysisResults.scoreBreakdown.job_match.gaps.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <X className="h-5 w-5 text-purple-600" />
+                            <h4 className="font-medium text-purple-600">What's Missing</h4>
+                          </div>
+                          <div className="space-y-2">
+                            {analysisResults.scoreBreakdown.job_match.gaps.map((gap: string, idx: number) => (
+                              <div key={idx} className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded transition-colors">
+                                <span className="text-purple-600 mt-1 flex-shrink-0">✗</span>
+                                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{gap}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -2409,20 +2732,22 @@ export default function StudioPage() {
                               Key Insights (
                               {selectedWish.results.insights.length})
                             </h4>
-                            <div className="space-y-2">
-                              {selectedWish.results.insights.map(
-                                (insight, index) => (
-                                  <div
-                                    key={index}
-                                    className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg"
-                                  >
-                                    <span className="text-purple-600 mt-1 font-bold">
-                                      •
-                                    </span>
-                                    <span className="text-sm">{insight}</span>
-                                  </div>
-                                )
-                              )}
+                            <div className="bg-muted/30 rounded-lg border border-muted-foreground/10 p-4">
+                              <div className="space-y-3">
+                                {selectedWish.results.insights.map(
+                                  (insight, index) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-start gap-3"
+                                    >
+                                      <span className="text-purple-600 mt-1 font-bold">
+                                        •
+                                      </span>
+                                      <span className="text-sm">{insight}</span>
+                                    </div>
+                                  )
+                                )}
+                              </div>
                             </div>
                           </div>
                         )}
@@ -2436,22 +2761,24 @@ export default function StudioPage() {
                               Skills to Highlight (
                               {selectedWish.results.recommendations.length})
                             </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {selectedWish.results.recommendations.map(
-                                (rec, index) => (
-                                  <div
-                                    key={index}
-                                    className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-700/50 transition-colors"
-                                  >
-                                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-800/50 flex items-center justify-center">
-                                      <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">
-                                        {index + 1}
-                                      </span>
+                            <div className="bg-muted/30 rounded-lg border border-muted-foreground/10 p-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {selectedWish.results.recommendations.map(
+                                  (rec, index) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                                        <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">
+                                          {index + 1}
+                                        </span>
+                                      </div>
+                                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{rec}</span>
                                     </div>
-                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{rec}</span>
-                                  </div>
-                                )
-                              )}
+                                  )
+                                )}
+                              </div>
                             </div>
                           </div>
                         )}
