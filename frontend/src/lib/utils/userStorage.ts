@@ -72,7 +72,6 @@ export class UserStorage {
         }
         
         keysToRemove.forEach(key => localStorage.removeItem(key));
-        console.log(`Cleared ${keysToRemove.length} items for user ${userId}`);
       } catch (error) {
         console.warn('Failed to clear user data:', error);
       }

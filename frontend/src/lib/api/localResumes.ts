@@ -82,7 +82,6 @@ class LocalResumeService {
     try {
       const storageKey = this.getUserStorageKey();
       localStorage.setItem(storageKey, JSON.stringify(resumes));
-      console.log('Resumes saved for user:', storageKey);
     } catch (error) {
       console.error('Error saving resumes:', error);
     }
@@ -153,59 +152,18 @@ class LocalResumeService {
     }
   }
 
-  // Simulate resume processing
+  // Process resume - mark as ready without mock data
   private simulateResumeProcessing(resumeId: string, file: File): void {
     const resumes = this.getResumes();
     const resumeIndex = resumes.findIndex(r => r.id === resumeId);
     
     if (resumeIndex === -1) return;
 
-    // Mock extracted data
-    const mockExtractedData = {
-      skills: [
-        'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python',
-        'AWS', 'MongoDB', 'PostgreSQL', 'Docker', 'Kubernetes'
-      ],
-      experience: [
-        'Senior Software Developer at Tech Corp (2020-2023)',
-        'Full Stack Developer at StartupXYZ (2018-2020)',
-        'Junior Developer at WebSolutions (2016-2018)'
-      ],
-      education: [
-        'Bachelor of Science in Computer Science - University of Technology (2012-2016)',
-        'AWS Solutions Architect Certification (2021)'
-      ],
-      contactInfo: {
-        email: 'john.doe@example.com',
-        phone: '+1 (555) 123-4567',
-        location: 'San Francisco, CA'
-      },
-      summary: 'Experienced full-stack developer with 7+ years in building scalable web applications.'
-    };
-
-    const mockAnalysisData = {
-      overallScore: 85,
-      strengthAreas: [
-        'Strong technical skills in modern web technologies',
-        'Good progression of roles and responsibilities',
-        'Relevant certifications and continuous learning'
-      ],
-      improvementSuggestions: [
-        'Add more quantifiable achievements and metrics',
-        'Include leadership and project management experience',
-        'Expand on specific technologies used'
-      ],
-      skillsGap: ['Machine Learning', 'DevOps', 'Mobile Development'],
-      marketAlignment: 92
-    };
-
-    // Update resume
+    // Update resume status to ready
     resumes[resumeIndex] = {
       ...resumes[resumeIndex],
       status: 'ready',
       lastModified: new Date().toISOString(),
-      extractedData: mockExtractedData,
-      analysisData: mockAnalysisData,
       downloadUrl: URL.createObjectURL(file),
       previewUrl: URL.createObjectURL(file)
     };

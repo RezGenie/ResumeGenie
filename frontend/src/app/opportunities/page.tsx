@@ -148,7 +148,6 @@ export default function JobDiscoveryPage() {
   // Listen for preference changes and refresh jobs
   useEffect(() => {
     const handlePreferencesUpdate = () => {
-      console.log('Opportunities: Preferences updated, refreshing jobs...');
       setIsRefreshingFromPreferences(true);
 
       // Trigger a re-fetch by updating a state that's in the dependency array
@@ -684,13 +683,11 @@ export default function JobDiscoveryPage() {
               }}
               onLikeAction={(jobId) => {
                 // TODO: Implement like functionality
-                console.log('Liked job:', jobId);
                 setIsJobModalOpen(false);
                 setSelectedJob(null);
               }}
               onPassAction={(jobId) => {
                 // TODO: Implement pass functionality
-                console.log('Passed job:', jobId);
                 setIsJobModalOpen(false);
                 setSelectedJob(null);
               }}

@@ -70,6 +70,8 @@ class GenieWishDetailResponse(GenieWishResponse):
     resources: Optional[List[Dict[str, str]]]
     confidence_score: Optional[float]
     job_match_score: Optional[float]
+    overall_score: Optional[float]
+    score_breakdown: Optional[Dict[str, Any]]
     company_name: Optional[str]
     position_title: Optional[str]
 
@@ -135,12 +137,27 @@ async def create_wish(
 
         # Generate AI response synchronously (no Celery dependency)
         resume_context = ""
+        resume_text_only = ""
         try:
-            resume_id = ctx.get("resume_id") if isinstance(ctx, dict) else None
-            if resume_id:
-                resume = await db.get(Resume, resume_id)
-                if resume and resume.extracted_text:
-                    resume_context = f"\n\nRESUME CONTEXT:\n{resume.extracted_text[:2000]}"
+            # First check if resume_text is provided directly (for local resumes)
+            if isinstance(ctx, dict) and ctx.get("resume_text"):
+                resume_text_only = ctx.get("resume_text")[:4000]
+                resume_context = f"\n\nRESUME CONTEXT:\n{ctx.get('resume_text')[:2000]}"
+                logger.info(f"Resume text provided directly: {len(resume_text_only)} characters")
+            else:
+                # Otherwise try to get from resume_id (for backend resumes)
+                resume_id = ctx.get("resume_id") if isinstance(ctx, dict) else None
+                logger.info(f"Extracting resume context for resume_id: {resume_id}")
+                if resume_id:
+                    resume = await db.get(Resume, resume_id)
+                    if resume and resume.extracted_text:
+                        resume_text_only = resume.extracted_text[:4000]  # Get more text for scoring
+                        resume_context = f"\n\nRESUME CONTEXT:\n{resume.extracted_text[:2000]}"
+                        logger.info(f"Resume text extracted from DB: {len(resume_text_only)} characters")
+                    else:
+                        logger.warning(f"Resume {resume_id} not found or has no extracted text")
+                else:
+                    logger.warning("No resume_id or resume_text provided in context_data")
         except Exception as e:
             logger.warning(f"Wish context processing warning: {e}")
 
@@ -269,6 +286,29 @@ Focus on making action_items a clean list of specific skill names that would imp
             genie_wish.resources = ai_struct.get("resources", [])
             genie_wish.confidence_score = ai_struct.get("confidence_score", 0.8)
             genie_wish.job_match_score = ai_struct.get("job_match_score", 0.7)
+            
+            # Generate comprehensive score
+            try:
+                logger.info(f"Generating comprehensive resume score... Resume text length: {len(resume_text_only)}")
+                comprehensive_score_data = await openai_service.generate_comprehensive_score(
+                    resume_text=resume_text_only if resume_text_only else "No resume provided",
+                    job_description=wish_request.wish_text,  # The wish text is the job description
+                    similarity_score=genie_wish.job_match_score
+                )
+                genie_wish.overall_score = comprehensive_score_data["overall_score"]
+                genie_wish.score_breakdown = comprehensive_score_data["score_breakdown"]
+                logger.info(f"Comprehensive score generated: {genie_wish.overall_score}")
+            except Exception as score_error:
+                logger.warning(f"Failed to generate comprehensive score: {score_error}. Using defaults.")
+                genie_wish.overall_score = 75.0
+                genie_wish.score_breakdown = {
+                    "style_formatting": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                    "grammar_spelling": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                    "job_match": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.30},
+                    "ats_compatibility": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15},
+                    "content_quality": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15}
+                }
+            
             genie_wish.is_processed = True
             genie_wish.processing_status = "completed"
             genie_wish.processed_at = datetime.utcnow()
@@ -414,6 +454,8 @@ async def list_wishes(
                 resources=resources if is_done else None,
                 confidence_score=confidence_score if is_done else None,
                 job_match_score=job_match_score if is_done else None,
+                overall_score=wish.overall_score if is_done else None,
+                score_breakdown=wish.score_breakdown if is_done else None,
                 company_name=wish.company_name,
                 position_title=wish.position_title,
             )
@@ -519,6 +561,8 @@ async def get_wish(
             resources=resources,
             confidence_score=confidence_score,
             job_match_score=job_match_score,
+            overall_score=wish.overall_score,
+            score_breakdown=wish.score_breakdown,
             company_name=wish.company_name,
             position_title=wish.position_title,
         )
@@ -910,6 +954,29 @@ Focus on making action_items a clean list of specific skill names that would imp
             genie_wish.resources = ai_struct.get("resources", [])
             genie_wish.confidence_score = ai_struct.get("confidence_score", 0.8)
             genie_wish.job_match_score = ai_struct.get("job_match_score", 0.7)
+            
+            # Generate comprehensive score for guests too
+            try:
+                logger.info("Guest: Generating comprehensive resume score...")
+                comprehensive_score_data = await openai_service.generate_comprehensive_score(
+                    resume_text=resume_context if resume_context else wish_request.wish_text,
+                    job_description=wish_request.wish_text if resume_context else None,
+                    similarity_score=genie_wish.job_match_score
+                )
+                genie_wish.overall_score = comprehensive_score_data["overall_score"]
+                genie_wish.score_breakdown = comprehensive_score_data["score_breakdown"]
+                logger.info(f"Guest: Comprehensive score generated: {genie_wish.overall_score}")
+            except Exception as score_error:
+                logger.warning(f"Guest: Failed to generate comprehensive score: {score_error}. Using defaults.")
+                genie_wish.overall_score = 75.0
+                genie_wish.score_breakdown = {
+                    "style_formatting": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                    "grammar_spelling": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                    "job_match": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.30},
+                    "ats_compatibility": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15},
+                    "content_quality": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15}
+                }
+            
             genie_wish.is_processed = True
             genie_wish.processing_status = "completed"
             genie_wish.processed_at = datetime.utcnow()
@@ -930,7 +997,8 @@ Focus on making action_items a clean list of specific skill names that would imp
         
         logger.info(f"Guest wish created successfully. Session: {session_id[:8]}, Wish ID: {genie_wish.id}")
         
-        return GenieWishResponse(
+        # Return full details for guest wishes since they're processed synchronously
+        return GenieWishDetailResponse(
             id=str(genie_wish.id),
             wish_type=genie_wish.wish_type,
             wish_text=wish_request.wish_text,
@@ -940,6 +1008,16 @@ Focus on making action_items a clean list of specific skill names that would imp
             processing_error=None,
             created_at=genie_wish.created_at.isoformat(),
             processed_at=genie_wish.completed_at.isoformat() if genie_wish.completed_at else None,
+            ai_response=genie_wish.ai_response,
+            recommendations=genie_wish.recommendations,
+            action_items=genie_wish.action_items,
+            resources=genie_wish.resources,
+            confidence_score=genie_wish.confidence_score,
+            job_match_score=genie_wish.job_match_score,
+            overall_score=genie_wish.overall_score,
+            score_breakdown=genie_wish.score_breakdown,
+            company_name=wish_request.context_data.get("company_name") if wish_request.context_data else None,
+            position_title=wish_request.context_data.get("position_title") if wish_request.context_data else None,
         )
         
     except HTTPException:

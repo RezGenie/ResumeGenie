@@ -128,3 +128,40 @@ export interface PaginatedResponse<T> extends APIResponse<T[]> {
     totalPages: number;
   };
 }
+
+// Genie Wish Types
+export interface ScoreComponent {
+  score: number;
+  feedback: string;
+  weight: number;
+}
+
+export interface ScoreBreakdown {
+  style_formatting: ScoreComponent;
+  grammar_spelling: ScoreComponent;
+  job_match: ScoreComponent;
+  ats_compatibility: ScoreComponent;
+  content_quality: ScoreComponent;
+}
+
+export interface GenieWish {
+  id: string;
+  wish_type: string;
+  wish_text: string;
+  context_data?: Record<string, unknown>;
+  is_processed: boolean;
+  processing_status: string;
+  processing_error?: string;
+  created_at: string;
+  processed_at?: string;
+  ai_response?: string;
+  recommendations?: string[];
+  action_items?: string[];
+  resources?: Array<{ title: string; url: string; description: string }>;
+  confidence_score?: number;
+  job_match_score?: number;
+  overall_score?: number;
+  score_breakdown?: ScoreBreakdown;
+  company_name?: string;
+  position_title?: string;
+}

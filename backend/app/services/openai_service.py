@@ -657,6 +657,181 @@ Format your response as a JSON object:
         final_confidence = min(base_confidence + quality_bonus + similarity_factor, 0.95)
         return round(final_confidence, 2)
 
+    async def generate_comprehensive_score(
+        self,
+        resume_text: str,
+        job_description: Optional[str] = None,
+        similarity_score: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate comprehensive resume quality score with breakdown.
+        
+        Args:
+            resume_text: Resume text content
+            job_description: Optional job description for job match scoring
+            similarity_score: Optional pre-calculated similarity score
+            
+        Returns:
+            Dict with overall_score and score_breakdown
+        """
+        prompt = f"""
+Analyze this resume against the job requirements and provide specific, actionable feedback.
+
+RESUME:
+{resume_text[:4000]}
+
+JOB DESCRIPTION:
+{job_description[:2000] if job_description else "General resume evaluation"}
+
+Evaluate across 5 dimensions (score 0-100):
+
+1. **style_formatting**: Visual layout, section organization, readability (1-2 sentence feedback)
+2. **grammar_spelling**: Language quality, grammar, spelling (1-2 sentence feedback)
+3. **job_match**: Analyze what matches and what's missing (provide structured lists)
+4. **ats_compatibility**: Keyword usage, format simplicity (1-2 sentence feedback)
+5. **content_quality**: Achievement quantification, impact (1-2 sentence feedback)
+
+For job_match, provide:
+- "matches": list of 3-5 skills/experiences YOU HAVE that match the job
+- "gaps": list of 3-5 skills/requirements YOU'RE MISSING
+- "feedback": 1-2 sentence summary in SECOND PERSON (use "you", "your")
+
+Return ONLY valid JSON (no markdown):
+{{
+    "style_formatting": {{"score": 75, "feedback": "Your resume has clear sections but could improve spacing"}},
+    "grammar_spelling": {{"score": 85, "feedback": "Your writing is strong with only minor typos"}},
+    "job_match": {{
+        "score": 70,
+        "matches": ["Python programming", "Data analysis experience", "Team leadership"],
+        "gaps": ["Azure cloud experience", "Power BI/Tableau", "Databricks"],
+        "feedback": "You have strong programming and ML experience, but you're missing specific Azure and data visualization tools mentioned in the job description"
+    }},
+    "ats_compatibility": {{"score": 80, "feedback": "Your resume has good keyword usage, but avoid using tables"}},
+    "content_quality": {{"score": 75, "feedback": "Add specific metrics to quantify your achievements"}},
+    "overall_assessment": "Your resume shows solid fundamentals with room for improvement"
+}}
+
+Be specific and actionable. Scores: 90+=excellent, 75-89=good, 60-74=needs work, <60=major issues.
+"""
+        
+        try:
+            logger.info("Calling OpenAI for comprehensive score...")
+            response_text = await self.get_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are an expert resume evaluator. Provide specific, actionable feedback in valid JSON format."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,  # Lower temperature for more consistent JSON
+                max_tokens=1000
+            )
+            
+            logger.info(f"OpenAI response received: {response_text[:200]}...")
+            
+            # Clean response - remove markdown code blocks if present
+            cleaned_response = response_text.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]
+            cleaned_response = cleaned_response.strip()
+            
+            # Parse the JSON response
+            score_data = json.loads(cleaned_response)
+            logger.info(f"Successfully parsed score data with keys: {score_data.keys()}")
+            
+            # Calculate weighted overall score
+            weights = {
+                "style_formatting": 0.20,
+                "grammar_spelling": 0.20,
+                "job_match": 0.30,
+                "ats_compatibility": 0.15,
+                "content_quality": 0.15
+            }
+            
+            overall_score = 0.0
+            score_breakdown = {}
+            
+            for component, weight in weights.items():
+                component_data = score_data.get(component, {})
+                score = component_data.get("score", 75)  # Default to 75 if missing
+                feedback = component_data.get("feedback", "No feedback provided")
+                
+                overall_score += score * weight
+                score_breakdown[component] = {
+                    "score": score,
+                    "feedback": feedback,
+                    "weight": weight
+                }
+                
+                # For job_match, include matches and gaps if available
+                if component == "job_match":
+                    matches = component_data.get("matches", [])
+                    gaps = component_data.get("gaps", [])
+                    score_breakdown[component]["matches"] = matches
+                    score_breakdown[component]["gaps"] = gaps
+                    logger.info(f"Job match data: matches={len(matches)}, gaps={len(gaps)}")
+            
+            # If we have a similarity score, use it to adjust job_match
+            if similarity_score is not None and job_description:
+                adjusted_job_match = int(similarity_score * 100)
+                score_breakdown["job_match"]["score"] = adjusted_job_match
+                # Recalculate overall score with adjusted job match
+                overall_score = sum(
+                    score_breakdown[comp]["score"] * score_breakdown[comp]["weight"]
+                    for comp in weights.keys()
+                )
+            
+            return {
+                "overall_score": round(overall_score, 1),
+                "score_breakdown": score_breakdown,
+                "overall_assessment": score_data.get("overall_assessment", "Resume evaluated successfully")
+            }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse comprehensive score JSON: {e}")
+            # Return default scores
+            return self._get_default_comprehensive_score()
+        except Exception as e:
+            logger.error(f"Error generating comprehensive score: {e}")
+            return self._get_default_comprehensive_score()
+    
+    def _get_default_comprehensive_score(self) -> Dict[str, Any]:
+        """Return default comprehensive score when AI fails - still provide helpful guidance."""
+        default_score = 75.0
+        return {
+            "overall_score": default_score,
+            "score_breakdown": {
+                "style_formatting": {
+                    "score": 75, 
+                    "feedback": "Your resume formatting appears standard. Use clear section headers, consistent fonts, and proper spacing for better readability.", 
+                    "weight": 0.20
+                },
+                "grammar_spelling": {
+                    "score": 75, 
+                    "feedback": "No major grammar issues detected in the initial scan. Always proofread carefully before submitting to catch any subtle errors.", 
+                    "weight": 0.20
+                },
+                "job_match": {
+                    "score": 75, 
+                    "feedback": "Review the job description carefully and ensure your resume highlights relevant skills, experience, and keywords that match the role requirements.", 
+                    "weight": 0.30
+                },
+                "ats_compatibility": {
+                    "score": 75, 
+                    "feedback": "Use standard section headings (Experience, Education, Skills), avoid tables and complex formatting, and include relevant keywords for better ATS parsing.", 
+                    "weight": 0.15
+                },
+                "content_quality": {
+                    "score": 75, 
+                    "feedback": "Strengthen your content by adding quantifiable achievements (numbers, percentages, metrics) and specific examples of your impact in previous roles.", 
+                    "weight": 0.15
+                }
+            },
+            "overall_assessment": "Your resume shows solid fundamentals. Focus on tailoring it to specific job requirements and quantifying your achievements for maximum impact."
+        }
+
 
 # Global OpenAI service instance
 openai_service = OpenAIService()

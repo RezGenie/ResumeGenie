@@ -327,65 +327,26 @@ export default function MyJobsPage() {
                   >
                     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                       <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                        {/* Header Row - Title, Status Badge, and Actions */}
+                        <div className="flex items-start justify-between gap-4 mb-3">
                           <div className="flex-1 min-w-0" onClick={() => setSelectedJob(job)}>
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                              <h3 className="text-lg sm:text-xl font-semibold text-foreground hover:text-purple-600 transition-colors break-words">
-                                {job.title}
-                              </h3>
-                              <Badge className={`${getStatusColor(job.status)} flex-shrink-0 w-fit`}>
-                                {getStatusIcon(job.status)}
-                                <span className="ml-1 capitalize">{job.status}</span>
-                              </Badge>
-                            </div>
-                            
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground mb-3">
-                              <div className="flex items-center gap-1">
-                                <Building className="w-4 h-4 flex-shrink-0" />
-                                <span className="truncate">{job.company}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="w-4 h-4 flex-shrink-0" />
-                                <span className="truncate">{job.location}</span>
-                              </div>
-                              {job.salary && (
-                                <div className="flex items-center gap-1">
-                                  <DollarSign className="w-4 h-4 flex-shrink-0" />
-                                  <span className="truncate">{job.salary}</span>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-4 h-4 flex-shrink-0" />
-                                <span className="whitespace-nowrap">{new Date(job.savedAt).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {job.skills.slice(0, 4).map((skill, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {skill}
-                                </Badge>
-                              ))}
-                              {job.skills.length > 4 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{job.skills.length - 4} more
-                                </Badge>
-                              )}
-                            </div>
-
-                            {job.notes && (
-                              <p className="text-sm text-muted-foreground bg-muted p-2 rounded break-words">
-                                {job.notes}
-                              </p>
-                            )}
+                            <h3 className="text-lg sm:text-xl font-semibold text-foreground hover:text-purple-600 transition-colors break-words">
+                              {job.title}
+                            </h3>
                           </div>
-
-                          <div className="flex flex-row sm:flex-col gap-2 sm:ml-4 flex-wrap sm:flex-nowrap">
+                          
+                          {/* Status Badge and Actions - Horizontal on all screens */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge className={`${getStatusColor(job.status)} hidden sm:flex`}>
+                              {getStatusIcon(job.status)}
+                              <span className="ml-1 capitalize">{job.status}</span>
+                            </Badge>
+                            
                             <Select
                               value={job.status}
                               onValueChange={(value: string) => handleStatusChange(job.id, value as SavedJob['status'])}
                             >
-                              <SelectTrigger className="w-32 h-8">
+                              <SelectTrigger className="w-28 h-8 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -402,6 +363,8 @@ export default function MyJobsPage() {
                                 setEditingNotes(job.id);
                                 setNotesText(job.notes || '');
                               }}
+                              className="h-8 w-8 p-0"
+                              title="Edit notes"
                             >
                               <Edit3 className="w-4 h-4" />
                             </Button>
@@ -410,7 +373,8 @@ export default function MyJobsPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleRemoveJob(job.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 h-8 w-8 p-0"
+                              title="Delete job"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -420,12 +384,59 @@ export default function MyJobsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => window.open(job.jobUrl, '_blank')}
+                                className="h-8 w-8 p-0"
+                                title="View original posting"
                               >
                                 <ExternalLink className="w-4 h-4" />
                               </Button>
                             )}
                           </div>
                         </div>
+
+                        {/* Company and Location Info */}
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-muted-foreground mb-3" onClick={() => setSelectedJob(job)}>
+                          <div className="flex items-center gap-1">
+                            <Building className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{job.company}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{job.location}</span>
+                          </div>
+                          {job.salary && (
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="w-4 h-4 flex-shrink-0" />
+                              <span className="truncate font-medium text-purple-600">{job.salary}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1 ml-auto">
+                            <Calendar className="w-4 h-4 flex-shrink-0" />
+                            <span className="whitespace-nowrap">{new Date(job.savedAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Skills */}
+                        <div className="flex flex-wrap gap-2 mb-3" onClick={() => setSelectedJob(job)}>
+                          {job.skills.slice(0, 5).map((skill, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                          {job.skills.length > 5 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{job.skills.length - 5} more
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Notes */}
+                        {job.notes && (
+                          <div onClick={() => setSelectedJob(job)}>
+                            <p className="text-sm text-muted-foreground bg-muted p-3 rounded break-words line-clamp-2">
+                              {job.notes}
+                            </p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
