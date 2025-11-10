@@ -657,7 +657,7 @@ export default function ResumesPage() {
                                     <Target className="w-5 h-5 text-purple-600" />
                                   </div>
                                   <div>
-                                    <h4 className="font-semibold text-sm">✨ Smart Profile Auto-Fill</h4>
+                                    <h4 className="font-semibold text-sm">Smart Profile Auto-Fill</h4>
                                     <p className="text-xs text-muted-foreground">
                                       Let the genie extract your skills and preferences from this resume
                                     </p>

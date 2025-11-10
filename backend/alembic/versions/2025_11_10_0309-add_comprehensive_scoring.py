@@ -1,7 +1,7 @@
 """add comprehensive scoring
 
-Revision ID: 2025_11_10_0309
-Revises: 2025_11_08_2132
+Revision ID: add_comprehensive_scoring
+Revises: add_company_position_to_wishes
 Create Date: 2025-11-10 03:09:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '2025_11_10_0309'
-down_revision = '2025_11_08_2132'
+revision = 'add_comprehensive_scoring'
+down_revision = 'add_company_position_to_wishes'
 branch_labels = None
 depends_on = None
 
