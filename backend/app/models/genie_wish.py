@@ -26,8 +26,10 @@ class GenieWish(Base):
     recommendations = Column(JSON)  # List of recommendations
     action_items = Column(JSON)  # List of action items/skills
     resources = Column(JSON)  # List of resources with title, url, description
-    confidence_score = Column(Float)  # AI confidence score
+    confidence_score = Column(Float)  # AI confidence score (legacy)
     job_match_score = Column(Float)  # Job match score
+    overall_score = Column(Float)  # Comprehensive resume quality score (0-100)
+    score_breakdown = Column(JSON)  # Breakdown of score components
     
     # Processing status
     is_processed = Column(Boolean, default=False)

@@ -70,6 +70,8 @@ class GenieWishDetailResponse(GenieWishResponse):
     resources: Optional[List[Dict[str, str]]]
     confidence_score: Optional[float]
     job_match_score: Optional[float]
+    overall_score: Optional[float]
+    score_breakdown: Optional[Dict[str, Any]]
     company_name: Optional[str]
     position_title: Optional[str]
 
@@ -269,6 +271,29 @@ Focus on making action_items a clean list of specific skill names that would imp
             genie_wish.resources = ai_struct.get("resources", [])
             genie_wish.confidence_score = ai_struct.get("confidence_score", 0.8)
             genie_wish.job_match_score = ai_struct.get("job_match_score", 0.7)
+            
+            # Generate comprehensive score
+            try:
+                logger.info("Generating comprehensive resume score...")
+                comprehensive_score_data = await openai_service.generate_comprehensive_score(
+                    resume_text=wish_request.wish_text,
+                    job_description=None,  # Could extract from context_data if available
+                    similarity_score=genie_wish.job_match_score
+                )
+                genie_wish.overall_score = comprehensive_score_data["overall_score"]
+                genie_wish.score_breakdown = comprehensive_score_data["score_breakdown"]
+                logger.info(f"Comprehensive score generated: {genie_wish.overall_score}")
+            except Exception as score_error:
+                logger.warning(f"Failed to generate comprehensive score: {score_error}. Using defaults.")
+                genie_wish.overall_score = 75.0
+                genie_wish.score_breakdown = {
+                    "style_formatting": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                    "grammar_spelling": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                    "job_match": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.30},
+                    "ats_compatibility": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15},
+                    "content_quality": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15}
+                }
+            
             genie_wish.is_processed = True
             genie_wish.processing_status = "completed"
             genie_wish.processed_at = datetime.utcnow()
@@ -414,6 +439,8 @@ async def list_wishes(
                 resources=resources if is_done else None,
                 confidence_score=confidence_score if is_done else None,
                 job_match_score=job_match_score if is_done else None,
+                overall_score=wish.overall_score if is_done else None,
+                score_breakdown=wish.score_breakdown if is_done else None,
                 company_name=wish.company_name,
                 position_title=wish.position_title,
             )
@@ -519,6 +546,8 @@ async def get_wish(
             resources=resources,
             confidence_score=confidence_score,
             job_match_score=job_match_score,
+            overall_score=wish.overall_score,
+            score_breakdown=wish.score_breakdown,
             company_name=wish.company_name,
             position_title=wish.position_title,
         )

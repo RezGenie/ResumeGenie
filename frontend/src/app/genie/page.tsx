@@ -89,6 +89,14 @@ interface WishDetailsResponse {
   resources?: Array<{ title?: string; url?: string; description?: string }>;
   confidence_score?: number;
   job_match_score?: number;
+  overall_score?: number;
+  score_breakdown?: {
+    style_formatting: { score: number; feedback: string; weight: number };
+    grammar_spelling: { score: number; feedback: string; weight: number };
+    job_match: { score: number; feedback: string; weight: number };
+    ats_compatibility: { score: number; feedback: string; weight: number };
+    content_quality: { score: number; feedback: string; weight: number };
+  };
   company_name?: string;
   position_title?: string;
 }
@@ -227,6 +235,14 @@ const overlayVariants = {
 interface AnalysisResults {
   resumeScore: number;
   matchScore: number;
+  overallScore?: number;
+  scoreBreakdown?: {
+    style_formatting: { score: number; feedback: string; weight: number };
+    grammar_spelling: { score: number; feedback: string; weight: number };
+    job_match: { score: number; feedback: string; weight: number };
+    ats_compatibility: { score: number; feedback: string; weight: number };
+    content_quality: { score: number; feedback: string; weight: number };
+  };
   skillGaps: string[];
   insights: string[];
   recommendations: string[];
@@ -1013,6 +1029,8 @@ export default function StudioPage() {
       setAnalysisResults({
         resumeScore: Math.round((wishDetails!.confidence_score || 0) * 100),
         matchScore: Math.round((wishDetails!.job_match_score || 0) * 100),
+        overallScore: wishDetails!.overall_score,
+        scoreBreakdown: wishDetails!.score_breakdown,
         skillGaps: parsedActionItems,
         insights: parsedRecommendations,
         recommendations: parsedRecommendations,
@@ -1802,20 +1820,61 @@ export default function StudioPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Overall Score</span>
+                    <span className="text-sm font-medium">Overall Quality Score</span>
                     <Badge
                       variant="secondary"
-                      className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
+                      className={`${
+                        analysisResults?.overallScore
+                          ? analysisResults.overallScore >= 90
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                            : analysisResults.overallScore >= 80
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                            : analysisResults.overallScore >= 70
+                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
+                            : analysisResults.overallScore >= 60
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                      }`}
                     >
-                      {analysisResults
+                      {analysisResults?.overallScore
+                        ? `${Math.round(analysisResults.overallScore)}/100`
+                        : analysisResults
                         ? `${analysisResults.resumeScore}%`
-                        : "---%"}
+                        : "---"}
                     </Badge>
                   </div>
                   <Progress
-                    value={analysisResults?.resumeScore || 0}
+                    value={analysisResults?.overallScore || analysisResults?.resumeScore || 0}
                     className="h-2"
                   />
+                  {analysisResults?.scoreBreakdown && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <p className="text-xs font-medium text-muted-foreground">Score Breakdown:</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex justify-between">
+                          <span>Style & Format:</span>
+                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.style_formatting.score)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Grammar:</span>
+                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.grammar_spelling.score)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Job Match:</span>
+                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.job_match.score)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>ATS Ready:</span>
+                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.ats_compatibility.score)}</span>
+                        </div>
+                        <div className="flex justify-between col-span-2">
+                          <span>Content Quality:</span>
+                          <span className="font-medium">{Math.round(analysisResults.scoreBreakdown.content_quality.score)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Key Insights:</p>
                     {analysisResults ? (

@@ -657,6 +657,129 @@ Format your response as a JSON object:
         final_confidence = min(base_confidence + quality_bonus + similarity_factor, 0.95)
         return round(final_confidence, 2)
 
+    async def generate_comprehensive_score(
+        self,
+        resume_text: str,
+        job_description: Optional[str] = None,
+        similarity_score: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate comprehensive resume quality score with breakdown.
+        
+        Args:
+            resume_text: Resume text content
+            job_description: Optional job description for job match scoring
+            similarity_score: Optional pre-calculated similarity score
+            
+        Returns:
+            Dict with overall_score and score_breakdown
+        """
+        prompt = f"""
+Analyze this resume and provide a comprehensive quality score breakdown.
+
+Resume Text:
+{resume_text[:4000]}
+
+{"Job Description:" if job_description else ""}
+{job_description[:2000] if job_description else ""}
+
+Please evaluate the resume across these dimensions and provide scores (0-100):
+
+1. **Style & Formatting** (20% weight): Layout, visual appeal, professional presentation, section organization
+2. **Grammar & Spelling** (20% weight): Language quality, grammar correctness, spelling accuracy
+3. **Job Match** (30% weight): Alignment with job requirements, relevant experience, skills match
+4. **ATS Compatibility** (15% weight): Keyword optimization, format compatibility, parsing friendliness
+5. **Content Quality** (15% weight): Achievement quantification, impact demonstration, clarity
+
+Provide your response as a JSON object:
+{{
+    "style_formatting": {{"score": 0-100, "feedback": "brief feedback"}},
+    "grammar_spelling": {{"score": 0-100, "feedback": "brief feedback"}},
+    "job_match": {{"score": 0-100, "feedback": "brief feedback"}},
+    "ats_compatibility": {{"score": 0-100, "feedback": "brief feedback"}},
+    "content_quality": {{"score": 0-100, "feedback": "brief feedback"}},
+    "overall_assessment": "2-3 sentence summary of resume quality"
+}}
+
+Be realistic - typical scores range from 60-85. Only exceptional resumes score above 90.
+"""
+        
+        try:
+            response_text = await self.get_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are an expert resume evaluator with years of experience in recruitment and ATS systems."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.5,
+                max_tokens=1500
+            )
+            
+            # Parse the JSON response
+            score_data = json.loads(response_text)
+            
+            # Calculate weighted overall score
+            weights = {
+                "style_formatting": 0.20,
+                "grammar_spelling": 0.20,
+                "job_match": 0.30,
+                "ats_compatibility": 0.15,
+                "content_quality": 0.15
+            }
+            
+            overall_score = 0.0
+            score_breakdown = {}
+            
+            for component, weight in weights.items():
+                component_data = score_data.get(component, {})
+                score = component_data.get("score", 75)  # Default to 75 if missing
+                feedback = component_data.get("feedback", "No feedback provided")
+                
+                overall_score += score * weight
+                score_breakdown[component] = {
+                    "score": score,
+                    "feedback": feedback,
+                    "weight": weight
+                }
+            
+            # If we have a similarity score, use it to adjust job_match
+            if similarity_score is not None and job_description:
+                adjusted_job_match = int(similarity_score * 100)
+                score_breakdown["job_match"]["score"] = adjusted_job_match
+                # Recalculate overall score with adjusted job match
+                overall_score = sum(
+                    score_breakdown[comp]["score"] * score_breakdown[comp]["weight"]
+                    for comp in weights.keys()
+                )
+            
+            return {
+                "overall_score": round(overall_score, 1),
+                "score_breakdown": score_breakdown,
+                "overall_assessment": score_data.get("overall_assessment", "Resume evaluated successfully")
+            }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse comprehensive score JSON: {e}")
+            # Return default scores
+            return self._get_default_comprehensive_score()
+        except Exception as e:
+            logger.error(f"Error generating comprehensive score: {e}")
+            return self._get_default_comprehensive_score()
+    
+    def _get_default_comprehensive_score(self) -> Dict[str, Any]:
+        """Return default comprehensive score when AI fails."""
+        default_score = 75.0
+        return {
+            "overall_score": default_score,
+            "score_breakdown": {
+                "style_formatting": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                "grammar_spelling": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.20},
+                "job_match": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.30},
+                "ats_compatibility": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15},
+                "content_quality": {"score": 75, "feedback": "Unable to evaluate", "weight": 0.15}
+            },
+            "overall_assessment": "Resume evaluation completed with default scoring"
+        }
+
 
 # Global OpenAI service instance
 openai_service = OpenAIService()
