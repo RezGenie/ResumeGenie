@@ -51,14 +51,21 @@ get_async_db = get_db
 async def init_db():
     """
     Initialize database tables.
+    Handles connection errors gracefully.
     """
-    async with engine.begin() as conn:
-        # Import all models to ensure they are registered with SQLAlchemy
-        from app.models import User, Resume, JobComparison, GenieWish, DailyWishCount  # noqa: F401
-        
-        # Create all tables
-        await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created successfully")
+    try:
+        async with engine.begin() as conn:
+            # Import all models to ensure they are registered with SQLAlchemy
+            from app.models import User, Resume, JobComparison, GenieWish, DailyWishCount  # noqa: F401
+            
+            # Create all tables
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.warning(f"Database initialization warning: {e}")
+        logger.warning("Application will continue but database operations may fail until database is available")
+        # Don't raise - allow app to start even if DB isn't ready initially
+        # This enables health checks and other endpoints to work
 
 
 async def close_db():

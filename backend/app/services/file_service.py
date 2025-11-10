@@ -63,16 +63,26 @@ class FileService:
     
     def __init__(self):
         """Initialize storage client based on environment."""
-        self.s3_client = Minio(
-            settings.storage_endpoint,
-            access_key=settings.storage_access_key,
-            secret_key=settings.storage_secret_key,
-            secure=settings.storage_secure
-        )
-        self._validate_storage_access()
+        try:
+            self.s3_client = Minio(
+                settings.storage_endpoint,
+                access_key=settings.storage_access_key,
+                secret_key=settings.storage_secret_key,
+                secure=settings.storage_secure
+            )
+            self._validate_storage_access()
+            self.storage_available = True
+        except Exception as e:
+            logger.warning(f"Storage service initialization warning: {e}")
+            logger.warning("File uploads will fail until storage is properly configured")
+            self.s3_client = None
+            self.storage_available = False
     
     def _validate_storage_access(self):
         """Validate access to the storage bucket."""
+        if not self.s3_client:
+            return
+            
         try:
             provider = "R2" if settings.is_production else "MinIO"
             if not settings.is_production:
@@ -85,10 +95,12 @@ class FileService:
                 self.s3_client.list_objects(settings.storage_bucket_name, prefix="", recursive=False)
             
             logger.info(f"Successfully connected to {provider} bucket: {settings.storage_bucket_name}")
+            self.storage_available = True
         except Exception as e:
-            logger.error(f"Storage access error ({provider}): {e}")
-            if settings.is_production:
-                raise
+            logger.warning(f"Storage access warning ({provider}): {e}")
+            logger.warning(f"Storage service may not be available. File uploads will fail until {provider} is configured properly")
+            self.storage_available = False
+            # Don't raise - allow app to start
     
     @staticmethod
     def validate_file_type(file: UploadFile) -> tuple[bool, str]:
