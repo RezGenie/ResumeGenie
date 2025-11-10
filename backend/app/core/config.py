@@ -3,12 +3,24 @@ from functools import lru_cache
 import os
 
 
+def _get_database_url() -> str:
+    """
+    Get database URL from environment variable, converting to async driver if needed.
+    Render provides DATABASE_URL with 'postgresql://' but we need 'postgresql+asyncpg://'
+    """
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        # Convert postgresql:// to postgresql+asyncpg:// for async support
+        if db_url.startswith("postgresql://"):
+            db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return db_url
+    # Default for local development
+    return "postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie"
+
+
 class Settings(BaseSettings):
-    # Database - use environment variable or default
-    database_url: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie"
-    )
+    # Database - use environment variable or default, ensuring async driver
+    database_url: str = _get_database_url()
     
     # Redis - use environment variable or default
     redis_url: str = os.getenv(
