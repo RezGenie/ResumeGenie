@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Logo } from "@/components/ui/logo"
 
 export default function OptimizingResume() {
   return (
@@ -78,7 +77,6 @@ export default function OptimizingResume() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
                   ATS-Friendly Formatting
                 </CardTitle>
               </CardHeader>
@@ -88,7 +86,7 @@ export default function OptimizingResume() {
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold">Use Standard Headings</h3>
                       <p className="text-sm text-muted-foreground">
@@ -97,7 +95,7 @@ export default function OptimizingResume() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold">Choose Simple Fonts</h3>
                       <p className="text-sm text-muted-foreground">
@@ -106,7 +104,7 @@ export default function OptimizingResume() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold">Include Relevant Keywords</h3>
                       <p className="text-sm text-muted-foreground">
@@ -115,7 +113,7 @@ export default function OptimizingResume() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold">Save as PDF and Word</h3>
                       <p className="text-sm text-muted-foreground">
@@ -141,7 +139,7 @@ export default function OptimizingResume() {
               <CardContent className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="font-semibold mb-3 text-green-600">✓ Do This</h3>
+                    <h3 className="font-semibold mb-3 text-purple-600">✓ Do This</h3>
                     <ul className="space-y-2 text-sm">
                       <li>• Start bullets with action verbs</li>
                       <li>• Quantify achievements with numbers</li>
@@ -151,7 +149,7 @@ export default function OptimizingResume() {
                     </ul>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-3 text-red-600">✗ Avoid This</h3>
+                    <h3 className="font-semibold mb-3 text-purple-600">✗ Avoid This</h3>
                     <ul className="space-y-2 text-sm">
                       <li>• Generic job descriptions</li>
                       <li>• Passive language</li>
@@ -221,7 +219,6 @@ export default function OptimizingResume() {
           >
             <Card>
               <CardContent className="py-8 text-center">
-                <Logo className="h-6 w-6" />
                 <h2 className="text-2xl font-bold mb-4">
                   Ready to Optimize Your Resume?
                 </h2>
@@ -236,7 +233,7 @@ export default function OptimizingResume() {
                       Analyze My Resume
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild size="lg">
+                  <Button variant="outline" asChild size="lg" className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                     <Link href="/guides">
                       View More Guides
                     </Link>
