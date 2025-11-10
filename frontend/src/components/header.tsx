@@ -195,14 +195,14 @@ export function Header() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 bg-primary/10">
                       {userAvatar && userAvatar.startsWith('/') ? (
                         <AvatarImage 
                           src={userAvatar}
                           alt="User avatar"
                         />
                       ) : null}
-                      <AvatarFallback className="bg-purple-600 text-white">
+                      <AvatarFallback className="bg-primary/10 text-primary">
                         {!userAvatar ? user?.email?.charAt(0).toUpperCase() || 'U' : ''}
                       </AvatarFallback>
                     </Avatar>
