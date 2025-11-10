@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 // Upload your avatar images to: /public/avatars/
 // Supported formats: PNG, JPG, WebP (recommended size: 200x200px)
 export const AVATAR_OPTIONS = [
-  { id: "avatar1", label: "Avatar 1", image: "/avatars/avatar1.png" },
+  {id: "avatar1", label: "Avatar 1", image: "/avatars/avatar1.png" },
   { id: "avatar2", label: "Avatar 2", image: "/avatars/avatar2.png" },
   { id: "avatar3", label: "Avatar 3", image: "/avatars/avatar3.png" },
   { id: "avatar4", label: "Avatar 4", image: "/avatars/avatar4.png" },
@@ -23,6 +23,19 @@ export const AVATAR_OPTIONS = [
   { id: "avatar10", label: "Avatar 10", image: "/avatars/avatar10.png" },
   { id: "avatar11", label: "Avatar 11", image: "/avatars/avatar11.png" },
   { id: "avatar12", label: "Avatar 12", image: "/avatars/avatar12.png" },
+  { id: "avatar13", label: "Avatar 13", image: "/avatars/avatar13.png" },
+  { id: "avatar14", label: "Avatar 14", image: "/avatars/avatar14.png" },
+  { id: "avatar15", label: "Avatar 15", image: "/avatars/avatar15.png" },
+  { id: "avatar16", label: "Avatar 16", image: "/avatars/avatar16.png" },
+  { id: "avatar17", label: "Avatar 17", image: "/avatars/avatar17.png" },
+  { id: "avatar18", label: "Avatar 18", image: "/avatars/avatar18.png" },
+  { id: "avatar19", label: "Avatar 19", image: "/avatars/avatar19.png" },
+  { id: "avatar20", label: "Avatar 20", image: "/avatars/avatar20.png" },
+  { id: "avatar21", label: "Avatar 21", image: "/avatars/avatar21.png" },
+  { id: "avatar22", label: "Avatar 22", image: "/avatars/avatar22.png" },
+  { id: "avatar23", label: "Avatar 23", image: "/avatars/avatar23.png" },
+  { id: "avatar24", label: "Avatar 24", image: "/avatars/avatar24.png" },
+
 ];
 
 interface AvatarSelectorProps {
