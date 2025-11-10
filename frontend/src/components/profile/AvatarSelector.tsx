@@ -68,25 +68,25 @@ export function AvatarSelector({
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3"
+          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 items-center justify-items-center"
         >
           {AVATAR_OPTIONS.map((avatar) => (
             <motion.button
               key={avatar.id}
               variants={itemVariants}
               onClick={() => onSelect(avatar.image)}
-              className={`relative p-2 rounded-lg transition-all duration-200 group overflow-hidden ${
+              className={`relative w-20 h-20 rounded-full transition-all duration-200 group border-[3px] flex-shrink-0 ${
                 selectedAvatar === avatar.image
-                  ? "ring-2 ring-purple-600 scale-110"
-                  : "hover:ring-2 hover:ring-purple-300 dark:hover:ring-purple-600"
-              } border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600`}
+                  ? "border-purple-600"
+                  : "border-primary/20 hover:border-primary/40"
+              }`}
               title={avatar.label}
             >
-              <div className="relative w-full h-20 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded">
+              <div className="w-full h-full rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
                 <img 
                   src={avatar.image} 
                   alt={avatar.label}
-                  className="h-full w-full object-cover rounded"
+                  className="w-full h-full object-cover object-center"
                   onError={(e) => {
                     // Fallback if image doesn't load
                     e.currentTarget.style.display = 'none';
@@ -94,7 +94,7 @@ export function AvatarSelector({
                 />
               </div>
               {selectedAvatar === avatar.image && (
-                <div className="absolute top-0 right-0 bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg">
+                <div className="absolute -top-1 -right-1 bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white dark:border-gray-900">
                   ✓
                 </div>
               )}
