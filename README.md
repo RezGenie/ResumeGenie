@@ -18,6 +18,7 @@
 - 📚 [Documentation](#-documentation)
 - 🗺️ [Application Structure](#️-application-structure)
 - 🤝 [Contributing](#-contributing)
+- 📸 [Screenshots](#-screenshots)
 - 📄 [License](#-license)
 - 🌟 [Acknowledgments](#-acknowledgments)
 
@@ -176,7 +177,7 @@ Modern, responsive web application with comprehensive UI/UX:
 ### Dashboard
 ![Dashboard](docs/images/dashboard.png)
 
-### Job Opportunities Page
+### Opportunities Page
 ![Opportunities](docs/images/opportunities.png)
 
 ## 📄 License
