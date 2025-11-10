@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 // Upload your avatar images to: /public/avatars/
 // Supported formats: PNG, JPG, WebP (recommended size: 200x200px)
 export const AVATAR_OPTIONS = [
-  { id: "avatar1", label: "Avatar 1", image: "/avatars/avatar1.png" },
+  {id: "avatar1", label: "Avatar 1", image: "/avatars/avatar1.png" },
   { id: "avatar2", label: "Avatar 2", image: "/avatars/avatar2.png" },
   { id: "avatar3", label: "Avatar 3", image: "/avatars/avatar3.png" },
   { id: "avatar4", label: "Avatar 4", image: "/avatars/avatar4.png" },
@@ -23,6 +23,19 @@ export const AVATAR_OPTIONS = [
   { id: "avatar10", label: "Avatar 10", image: "/avatars/avatar10.png" },
   { id: "avatar11", label: "Avatar 11", image: "/avatars/avatar11.png" },
   { id: "avatar12", label: "Avatar 12", image: "/avatars/avatar12.png" },
+  { id: "avatar13", label: "Avatar 13", image: "/avatars/avatar13.png" },
+  { id: "avatar14", label: "Avatar 14", image: "/avatars/avatar14.png" },
+  { id: "avatar15", label: "Avatar 15", image: "/avatars/avatar15.png" },
+  { id: "avatar16", label: "Avatar 16", image: "/avatars/avatar16.png" },
+  { id: "avatar17", label: "Avatar 17", image: "/avatars/avatar17.png" },
+  { id: "avatar18", label: "Avatar 18", image: "/avatars/avatar18.png" },
+  { id: "avatar19", label: "Avatar 19", image: "/avatars/avatar19.png" },
+  { id: "avatar20", label: "Avatar 20", image: "/avatars/avatar20.png" },
+  { id: "avatar21", label: "Avatar 21", image: "/avatars/avatar21.png" },
+  { id: "avatar22", label: "Avatar 22", image: "/avatars/avatar22.png" },
+  { id: "avatar23", label: "Avatar 23", image: "/avatars/avatar23.png" },
+  { id: "avatar24", label: "Avatar 24", image: "/avatars/avatar24.png" },
+
 ];
 
 interface AvatarSelectorProps {
@@ -68,25 +81,25 @@ export function AvatarSelector({
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3"
+          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 items-center justify-items-center"
         >
           {AVATAR_OPTIONS.map((avatar) => (
             <motion.button
               key={avatar.id}
               variants={itemVariants}
               onClick={() => onSelect(avatar.image)}
-              className={`relative p-2 rounded-lg transition-all duration-200 group overflow-hidden ${
+              className={`relative w-20 h-20 rounded-full transition-all duration-200 group border-[3px] flex-shrink-0 ${
                 selectedAvatar === avatar.image
-                  ? "ring-2 ring-purple-600 scale-110"
-                  : "hover:ring-2 hover:ring-purple-300 dark:hover:ring-purple-600"
-              } border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600`}
+                  ? "border-purple-600"
+                  : "border-primary/20 hover:border-primary/40"
+              }`}
               title={avatar.label}
             >
-              <div className="relative w-full h-20 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded">
+              <div className="w-full h-full rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
                 <img 
                   src={avatar.image} 
                   alt={avatar.label}
-                  className="h-full w-full object-cover rounded"
+                  className="w-full h-full object-cover object-center"
                   onError={(e) => {
                     // Fallback if image doesn't load
                     e.currentTarget.style.display = 'none';
@@ -94,7 +107,7 @@ export function AvatarSelector({
                 />
               </div>
               {selectedAvatar === avatar.image && (
-                <div className="absolute top-0 right-0 bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg">
+                <div className="absolute -top-1 -right-1 bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white dark:border-gray-900">
                   ✓
                 </div>
               )}

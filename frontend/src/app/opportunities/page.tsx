@@ -70,7 +70,7 @@ export default function JobDiscoveryPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshingFromPreferences, setIsRefreshingFromPreferences] = useState(false);
 
@@ -86,10 +86,8 @@ export default function JobDiscoveryPage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        // Use searching state for filter changes, loading for initial load
-        if (jobs.length > 0) {
-          setSearching(true);
-        } else {
+        // Only show loading on initial load
+        if (jobs.length === 0) {
           setLoading(true);
         }
         setError(null);
@@ -119,7 +117,7 @@ export default function JobDiscoveryPage() {
         setJobs([]);
       } finally {
         setLoading(false);
-        setSearching(false);
+        setIsSearching(false);
       }
     };
 
@@ -135,11 +133,14 @@ export default function JobDiscoveryPage() {
       }
     };
 
-    // Debounce search to avoid glitching
+    // Show searching indicator immediately when user types
+    setIsSearching(true);
+
+    // Debounce search - wait for user to finish typing (500ms)
     const timeoutId = setTimeout(() => {
       fetchJobs();
       fetchJobStats();
-    }, 300);
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm, locationFilter, salaryFilter]);
@@ -353,11 +354,14 @@ export default function JobDiscoveryPage() {
                   <div className="flex-1">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5" />
+                      {isSearching && jobs.length > 0 && (
+                        <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5 animate-spin" />
+                      )}
                       <Input
                         placeholder="Search jobs by title, skills, or company..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-12 bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-sm focus:shadow-md placeholder:text-purple-400 dark:placeholder:text-purple-500 h-12 text-base"
+                        className="pl-12 pr-12 bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-sm focus:shadow-md placeholder:text-purple-400 dark:placeholder:text-purple-500 h-12 text-base"
                       />
                     </div>
                   </div>
@@ -453,37 +457,7 @@ export default function JobDiscoveryPage() {
                 </DropdownMenu>
               </div>
 
-              {searching ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <Card key={i} className="h-full">
-                      <CardHeader>
-                        <div className="space-y-3">
-                          <Skeleton className="h-6 w-3/4" />
-                          <Skeleton className="h-4 w-1/2" />
-                          <div className="flex gap-4">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-4 w-32" />
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <Skeleton className="h-12 w-full" />
-                        <div className="flex gap-2">
-                          <Skeleton className="h-6 w-16" />
-                          <Skeleton className="h-6 w-20" />
-                          <Skeleton className="h-6 w-16" />
-                        </div>
-                        <div className="flex gap-2 pt-4">
-                          <Skeleton className="h-9 flex-1" />
-                          <Skeleton className="h-9 flex-1" />
-                          <Skeleton className="h-9 flex-1" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : filteredJobs.length === 0 ? (
+              {filteredJobs.length === 0 ? (
                 <div className="text-center py-16 space-y-6">
                   <div className="space-y-2">
                     <h3 className="text-2xl font-semibold">No matching opportunities found</h3>

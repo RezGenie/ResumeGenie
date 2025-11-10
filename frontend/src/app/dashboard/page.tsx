@@ -538,7 +538,7 @@ export default function Dashboard() {
           <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4">
               <Avatar
-                className="h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity"
+                className="h-16 w-16 bg-primary/10 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => router.push('/profile')}
               >
                 {dashboardUser?.profilePicture && dashboardUser.profilePicture.startsWith('/') ? (
@@ -547,7 +547,7 @@ export default function Dashboard() {
                     alt="User avatar"
                   />
                 ) : null}
-                <AvatarFallback className="bg-purple-600 text-white text-lg font-semibold">
+                <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                   {!dashboardUser?.profilePicture ? (dashboardUser?.name?.charAt(0).toUpperCase() || 'U') : ''}
                 </AvatarFallback>
               </Avatar>

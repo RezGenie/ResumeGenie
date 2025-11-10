@@ -196,14 +196,14 @@ export default function ProfilePage() {
                 className="relative group cursor-pointer"
                 title="Click to change avatar"
               >
-                <Avatar className="h-24 w-24 transition-all duration-200 group-hover:ring-2 group-hover:ring-purple-500 group-hover:scale-105">
+                <Avatar className="h-24 w-24 bg-primary/10 transition-all duration-200 group-hover:ring-2 group-hover:ring-purple-500 group-hover:scale-105">
                   {selectedAvatar && selectedAvatar.startsWith('/') ? (
                     <AvatarImage 
                       src={selectedAvatar}
                       alt="User avatar"
                     />
                   ) : null}
-                  <AvatarFallback className="text-2xl bg-purple-600 text-white">
+                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">
                     {!selectedAvatar ? displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase() : ''}
                   </AvatarFallback>
                 </Avatar>
@@ -496,7 +496,8 @@ export default function ProfilePage() {
                             id="remotePreference"
                             {...form.register("remotePreference")}
                             disabled={!isEditing}
-                            className="rounded border-gray-300"
+                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-600 focus:ring-offset-0 accent-purple-600"
+                            style={{ accentColor: '#9333ea' }}
                           />
                           <Label htmlFor="remotePreference" className="text-sm font-normal">
                             Open to remote work opportunities
@@ -508,7 +509,8 @@ export default function ProfilePage() {
                             id="willingToRelocate"
                             {...form.register("willingToRelocate")}
                             disabled={!isEditing}
-                            className="rounded border-gray-300"
+                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-600 focus:ring-offset-0 accent-purple-600"
+                            style={{ accentColor: '#9333ea' }}
                           />
                           <Label htmlFor="willingToRelocate" className="text-sm font-normal">
                             Willing to relocate for the right opportunity

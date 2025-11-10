@@ -62,25 +62,33 @@ class FileService:
     """Advanced file processing and storage service."""
     
     def __init__(self):
-        """Initialize MinIO client and create bucket if needed."""
-        self.minio_client = Minio(
-            settings.minio_endpoint,
-            access_key=settings.minio_access_key,
-            secret_key=settings.minio_secret_key,
-            secure=settings.minio_secure
+        """Initialize storage client based on environment."""
+        self.s3_client = Minio(
+            settings.storage_endpoint,
+            access_key=settings.storage_access_key,
+            secret_key=settings.storage_secret_key,
+            secure=settings.storage_secure
         )
-        self._ensure_bucket_exists()
+        self._validate_storage_access()
     
-    def _ensure_bucket_exists(self):
-        """Ensure the MinIO bucket exists."""
+    def _validate_storage_access(self):
+        """Validate access to the storage bucket."""
         try:
-            if not self.minio_client.bucket_exists(settings.minio_bucket_name):
-                self.minio_client.make_bucket(settings.minio_bucket_name)
-                logger.info(f"Created MinIO bucket: {settings.minio_bucket_name}")
+            provider = "R2" if settings.is_production else "MinIO"
+            if not settings.is_production:
+                # For MinIO, create bucket if it doesn't exist
+                if not self.s3_client.bucket_exists(settings.storage_bucket_name):
+                    self.s3_client.make_bucket(settings.storage_bucket_name)
+                    logger.info(f"Created MinIO bucket: {settings.storage_bucket_name}")
+            else:
+                # For R2, just check if we can list objects
+                self.s3_client.list_objects(settings.storage_bucket_name, prefix="", recursive=False)
+            
+            logger.info(f"Successfully connected to {provider} bucket: {settings.storage_bucket_name}")
         except Exception as e:
-            logger.warning(f"MinIO not available during startup: {e}")
-            # Continue startup without MinIO for development
-            logger.error(f"MinIO bucket creation error: {e}")
+            logger.error(f"Storage access error ({provider}): {e}")
+            if settings.is_production:
+                raise
     
     @staticmethod
     def validate_file_type(file: UploadFile) -> tuple[bool, str]:
@@ -395,8 +403,8 @@ class FileService:
         try:
             file_stream = BytesIO(file_content)
             
-            self.minio_client.put_object(
-                bucket_name=settings.minio_bucket_name,
+            self.s3_client.put_object(
+                bucket_name=settings.storage_bucket_name,
                 object_name=filename,
                 data=file_stream,
                 length=len(file_content),
@@ -418,10 +426,11 @@ class FileService:
             filename: Filename to delete
         """
         try:
-            self.minio_client.remove_object(settings.minio_bucket_name, filename)
+            self.s3_client.remove_object(settings.storage_bucket_name, filename)
             logger.info(f"File deleted from storage: {filename}")
         except S3Error as e:
-            logger.error(f"MinIO delete error: {e}")
+            provider = "R2" if settings.is_production else "MinIO"
+            logger.error(f"{provider} delete error: {e}")
             raise FileStorageError(f"Failed to delete file from storage: {str(e)}")
     
     async def process_resume_file(
@@ -527,8 +536,8 @@ class FileService:
         try:
             from datetime import timedelta
             
-            url = self.minio_client.presigned_get_object(
-                bucket_name=settings.minio_bucket_name,
+            url = self.s3_client.presigned_get_object(
+                bucket_name=settings.storage_bucket_name,
                 object_name=resume.file_path,
                 expires=timedelta(hours=expires_in_hours)
             )
