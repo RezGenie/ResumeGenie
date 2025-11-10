@@ -236,31 +236,79 @@ export default function Dashboard() {
       newActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setActivities(newActivities.slice(0, 5));
 
-      // Set recommended jobs (could be enhanced with actual recommendations API)
-      const transformedJobs: JobDisplay[] = jobs.slice(0, 3).map((job) => ({
-        // Base Job properties
-        id: job.id,
-        provider: 'internal',
-        provider_job_id: job.id,
-        title: job.job_title || 'Untitled Position',
-        company: job.company_name || 'Unknown Company',
-        location: job.location || 'Location TBD',
-        remote: false,
-        snippet: 'Job description not available',
-        redirect_url: '#',
-        posted_at: job.created_at,
-        created_at: job.created_at,
-        updated_at: job.created_at,
-        // JobDisplay extended properties
-        matchScore: job.match_score || 0,
-        salaryText: '$50,000 - $80,000',
-        type: 'Full-time' as const,
-        experience: 'Mid-level',
-        skills: [],
-        requirements: [],
-        saved: false
-      }));
-      setRecommendedJobs(transformedJobs);
+      // Fetch recommended jobs from the jobs API
+      try {
+        const { jobService } = await import('@/lib/api');
+        const jobsResponse = await jobService.getJobs({}, 0, 6);
+        
+        if (jobsResponse.success && jobsResponse.data.length > 0) {
+          // Mark saved jobs
+          const jobsWithSavedStatus = jobsResponse.data.map(job => ({
+            ...job,
+            saved: savedJobsService.isJobSaved(job.id)
+          }));
+          setRecommendedJobs(jobsWithSavedStatus.slice(0, 3));
+        } else {
+          // Fallback to showing saved jobs if no recommendations
+          const savedJobs = savedJobsService.getSavedJobs().slice(0, 3);
+          if (savedJobs.length > 0) {
+            const savedJobsDisplay: JobDisplay[] = savedJobs.map(job => ({
+              id: job.id,
+              provider: 'saved',
+              provider_job_id: job.id,
+              title: job.title,
+              company: job.company,
+              location: job.location,
+              remote: job.location.toLowerCase().includes('remote'),
+              snippet: job.description || '',
+              redirect_url: job.jobUrl || '#',
+              posted_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              matchScore: 0,
+              salaryText: job.salary || 'Not specified',
+              type: 'Full-time' as const,
+              experience: 'Not specified',
+              skills: job.skills || [],
+              requirements: [],
+              saved: true
+            }));
+            setRecommendedJobs(savedJobsDisplay);
+          } else {
+            setRecommendedJobs([]);
+          }
+        }
+      } catch (jobError) {
+        console.error('Failed to fetch recommended jobs:', jobError);
+        // Show saved jobs as fallback
+        const savedJobs = savedJobsService.getSavedJobs().slice(0, 3);
+        if (savedJobs.length > 0) {
+          const savedJobsDisplay: JobDisplay[] = savedJobs.map(job => ({
+            id: job.id,
+            provider: 'saved',
+            provider_job_id: job.id,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            remote: job.location.toLowerCase().includes('remote'),
+            snippet: job.description || '',
+            redirect_url: job.jobUrl || '#',
+            posted_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            matchScore: 0,
+            salaryText: job.salary || 'Not specified',
+            type: 'Full-time' as const,
+            experience: 'Not specified',
+            skills: job.skills || [],
+            requirements: [],
+            saved: true
+          }));
+          setRecommendedJobs(savedJobsDisplay);
+        } else {
+          setRecommendedJobs([]);
+        }
+      }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -825,10 +873,18 @@ export default function Dashboard() {
                       {recommendedJobs.length === 0 ? (
                         <div className="text-center py-8 flex-1 flex flex-col justify-center">
                           <TrendingUp className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                          <p className="text-muted-foreground">No job recommendations</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Complete your profile to get personalized recommendations
+                          <p className="text-muted-foreground font-medium">Discover Your Next Opportunity</p>
+                          <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
+                            Browse thousands of jobs tailored to your skills and experience
                           </p>
+                          <Button 
+                            size="sm" 
+                            className="mt-4 mx-auto"
+                            onClick={() => router.push('/opportunities')}
+                          >
+                            <Search className="h-4 w-4 mr-1" />
+                            Explore Jobs
+                          </Button>
                         </div>
                       ) : (
                         <div className="space-y-4 flex-1 overflow-y-auto">
