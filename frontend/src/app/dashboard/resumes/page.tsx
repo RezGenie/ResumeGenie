@@ -409,18 +409,10 @@ export default function ResumesPage() {
                                       )}
                                     </div>
 
-                                    {resume.analysisData && (
-                                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
-                                        <div className="flex items-center gap-2">
-                                          <Target className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                                          <span className="whitespace-nowrap">Score: {resume.analysisData.overallScore}/100</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <TrendingUp className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                          <span className="whitespace-nowrap">Market Fit: {resume.analysisData.marketAlignment}%</span>
-                                        </div>
-                                      </div>
-                                    )}
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                      <Target className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                      <span>Ready for analysis</span>
+                                    </div>
                                   </div>
                                 )}
 
@@ -713,137 +705,77 @@ export default function ResumesPage() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 }}
-                          className="grid grid-cols-2 gap-4"
                         >
-                          <Card className="border-purple-200 dark:border-purple-800 hover:shadow-lg transition-shadow">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-                                  <Target className="w-5 h-5 text-purple-600" />
+                          <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-blue-900/20">
+                            <CardContent className="p-6">
+                              <div className="flex items-start gap-4">
+                                <div className="p-3 bg-purple-600 rounded-lg flex-shrink-0">
+                                  <Target className="w-6 h-6 text-white" />
                                 </div>
-                                <h4 className="font-semibold">ATS Compatibility</h4>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-lg mb-2">Get AI-Powered Resume Analysis</h4>
+                                  <p className="text-sm text-muted-foreground mb-4">
+                                    Upload your resume to the Genie for comprehensive analysis including ATS compatibility, 
+                                    job match scoring, and personalized improvement recommendations.
+                                  </p>
+                                  <Button
+                                    onClick={() => window.location.href = '/genie'}
+                                    className="bg-purple-600 hover:bg-purple-700"
+                                  >
+                                    <Target className="w-4 h-4 mr-2" />
+                                    Analyze with Genie
+                                  </Button>
+                                </div>
                               </div>
-                              {selectedResume.analysisData ? (
-                                <motion.div
-                                  initial={{ scale: 0.8 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ type: "spring", delay: 0.4 }}
-                                >
-                                  <div className="text-4xl font-bold text-purple-600">
-                                    {selectedResume.analysisData.overallScore}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground mb-2">out of 100</div>
-                                  <Progress
-                                    value={selectedResume.analysisData.overallScore}
-                                    className="h-2"
-                                  />
-                                </motion.div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Clock className="w-4 h-4 animate-spin" />
-                                  <span>Processing...</span>
-                                </div>
-                              )}
                             </CardContent>
                           </Card>
+                        </motion.div>
 
-                          <Card className="border-purple-200 dark:border-purple-800 hover:shadow-lg transition-shadow">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-2 mb-3">
+                        {/* Resume Info */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.6 }}
+                        >
+                          <Card className="border-purple-200 dark:border-purple-800">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-center gap-2 text-lg">
                                 <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-                                  <TrendingUp className="w-5 h-5 text-purple-600" />
+                                  <FileText className="w-5 h-5 text-purple-600" />
                                 </div>
-                                <h4 className="font-semibold">Market Alignment</h4>
+                                <span>Resume Details</span>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">File Name:</span>
+                                <span className="font-medium">{selectedResume.fileName}</span>
                               </div>
-                              {selectedResume.analysisData ? (
-                                <motion.div
-                                  initial={{ scale: 0.8 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ type: "spring", delay: 0.5 }}
-                                >
-                                  <div className="text-4xl font-bold text-purple-600">
-                                    {selectedResume.analysisData.marketAlignment}%
-                                  </div>
-                                  <div className="text-sm text-muted-foreground mb-2">market fit</div>
-                                  <Progress
-                                    value={selectedResume.analysisData.marketAlignment}
-                                    className="h-2"
-                                  />
-                                </motion.div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Clock className="w-4 h-4 animate-spin" />
-                                  <span>Processing...</span>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">File Size:</span>
+                                <span className="font-medium">{localResumeService.formatFileSize(selectedResume.fileSize)}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Uploaded:</span>
+                                <span className="font-medium">{new Date(selectedResume.uploadedAt).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Status:</span>
+                                <Badge variant={selectedResume.status === 'ready' ? 'default' : 'secondary'}>
+                                  {selectedResume.status === 'ready' ? 'Ready' : selectedResume.status}
+                                </Badge>
+                              </div>
+                              {selectedResume.isPrimary && (
+                                <div className="pt-2 border-t">
+                                  <Badge className="bg-purple-600">
+                                    <Star className="w-3 h-3 mr-1" />
+                                    Primary Resume
+                                  </Badge>
                                 </div>
                               )}
                             </CardContent>
                           </Card>
                         </motion.div>
-
-                        {/* Skills */}
-                        {selectedResume.extractedData?.skills && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.6 }}
-                          >
-                            <Card className="border-purple-200 dark:border-purple-800">
-                              <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-                                    <Award className="w-5 h-5 text-purple-600" />
-                                  </div>
-                                  <span>Skills & Expertise</span>
-                                  <Badge variant="secondary" className="ml-auto">
-                                    {selectedResume.extractedData.skills.length} skills
-                                  </Badge>
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="flex flex-wrap gap-2">
-                                  {selectedResume.extractedData.skills.map((skill, idx) => (
-                                    <motion.div
-                                      key={idx}
-                                      initial={{ opacity: 0, scale: 0.8 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      transition={{ delay: 0.7 + idx * 0.05 }}
-                                    >
-                                      <Badge
-                                        variant="secondary"
-                                        className="hover:shadow-md transition-shadow"
-                                      >
-                                        {skill}
-                                      </Badge>
-                                    </motion.div>
-                                  ))}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-                        )}
-
-                        {/* Summary */}
-                        {selectedResume.extractedData?.summary && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.7 }}
-                          >
-                            <Card className="border-purple-200 dark:border-purple-800">
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-                                    <FileText className="w-5 h-5 text-purple-600" />
-                                  </div>
-                                  <h4 className="font-semibold">Professional Summary</h4>
-                                </div>
-                                <p className="text-muted-foreground leading-relaxed">
-                                  {selectedResume.extractedData.summary}
-                                </p>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-                        )}
 
                         {/* Actions */}
                         <motion.div
