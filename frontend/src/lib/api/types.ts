@@ -129,8 +129,7 @@ export interface PaginatedResponse<T> extends APIResponse<T[]> {
   };
 }
 
-// 
-Genie Wish Types
+// Genie Wish Types
 export interface ScoreComponent {
   score: number;
   feedback: string;
