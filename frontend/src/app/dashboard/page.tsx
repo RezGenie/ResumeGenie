@@ -541,14 +541,15 @@ export default function Dashboard() {
                 className="h-16 w-16 bg-primary/10 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => router.push('/profile')}
               >
-                {dashboardUser?.profilePicture && dashboardUser.profilePicture.startsWith('/') ? (
+                {dashboardUser?.profilePicture ? (
                   <AvatarImage 
                     src={dashboardUser.profilePicture}
                     alt="User avatar"
+                    className="object-cover"
                   />
                 ) : null}
                 <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
-                  {!dashboardUser?.profilePicture ? (dashboardUser?.name?.charAt(0).toUpperCase() || 'U') : ''}
+                  {dashboardUser?.name?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div>
