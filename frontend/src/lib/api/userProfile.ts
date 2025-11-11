@@ -1,13 +1,16 @@
 // User Profile Service - Manages personal information locally
 // This complements the user preferences service which handles job preferences
 
+// TODO: MIGRATION NEEDED - Profile pictures currently stored as base64 in localStorage
+// This is an MVP approach with limitations (no cross-device sync, storage size issues)
+
 export interface UserProfile {
   name: string;
   phone?: string;
   location?: string;
   bio?: string;
   profilePicture?: string;
-  avatar?: string; // Emoji character for profile picture
+  avatar?: string; // Currently: base64 string or preset avatar path | Future: Cloud storage URL
 }
 
 class UserProfileService {

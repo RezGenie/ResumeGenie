@@ -197,14 +197,15 @@ export default function ProfilePage() {
                 title="Click to change avatar"
               >
                 <Avatar className="h-24 w-24 bg-primary/10 transition-all duration-200 group-hover:ring-2 group-hover:ring-purple-500 group-hover:scale-105">
-                  {selectedAvatar && selectedAvatar.startsWith('/') ? (
+                  {selectedAvatar ? (
                     <AvatarImage 
                       src={selectedAvatar}
                       alt="User avatar"
+                      className="object-cover"
                     />
                   ) : null}
                   <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                    {!selectedAvatar ? displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase() : ''}
+                    {displayName.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 rounded-full transition-colors duration-200">

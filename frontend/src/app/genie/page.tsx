@@ -1714,7 +1714,7 @@ export default function StudioPage() {
                                   }}
                                 >
                                   <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 text-xs whitespace-nowrap">
-                                    ✓ Primary Resume
+                                    &#128970; Primary Resume
                                   </Badge>
                                 </motion.div>
                               )}
@@ -1762,8 +1762,8 @@ export default function StudioPage() {
                         >
                           {resumeFile.resumeData.processing_status === "completed" ? (
                             <>
-                              <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
-                                <CheckCircle2 className="h-4 w-4" />
+                              <div className="flex items-center gap-1.5">
+                                <CheckCircle2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                                 <span className="font-medium">Ready for analysis</span>
                               </div>
                             </>

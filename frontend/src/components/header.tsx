@@ -196,14 +196,15 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8 bg-primary/10">
-                      {userAvatar && userAvatar.startsWith('/') ? (
+                      {userAvatar ? (
                         <AvatarImage 
                           src={userAvatar}
                           alt="User avatar"
+                          className="object-cover"
                         />
                       ) : null}
                       <AvatarFallback className="bg-primary/10 text-primary">
-                        {!userAvatar ? user?.email?.charAt(0).toUpperCase() || 'U' : ''}
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     {/* Online indicator */}
