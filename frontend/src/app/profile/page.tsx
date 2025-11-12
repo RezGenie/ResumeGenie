@@ -21,7 +21,8 @@ import {
   DollarSign,
   MapPin,
   Code,
-  Building2
+  Building2,
+  Crown
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import { userPreferencesService } from "@/lib/api/userPreferences";
 import { userProfileService } from "@/lib/api/userProfile";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
+import { SubscriptionManagementDialog } from "@/components/profile/SubscriptionManagementDialog";
 import { EnhancedSelect } from "@/components/profile/EnhancedSelect";
 import { AvatarSelector } from "@/components/profile/AvatarSelector";
 
@@ -85,6 +87,7 @@ export default function ProfilePage() {
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -570,11 +573,46 @@ export default function ProfilePage() {
               </Card>
             </motion.div>
 
+            {/* Subscription Management */}
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Crown className="h-5 w-5 text-purple-600" />
+                    Subscription & Billing
+                  </CardTitle>
+                  <CardDescription>Manage your subscription plan and billing</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-700 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Crown className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Manage Subscription</h3>
+                          <p className="text-sm text-muted-foreground">View plans, upgrade, or manage your billing</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => setShowSubscriptionDialog(true)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        Manage
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
             {/* Security Settings */}
             <motion.div variants={itemVariants}>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
                     Security Settings
                   </CardTitle>
                   <CardDescription>Manage your password and account security</CardDescription>
@@ -642,6 +680,10 @@ export default function ProfilePage() {
         <Footer />
 
         {/* Dialogs */}
+        <SubscriptionManagementDialog
+          open={showSubscriptionDialog}
+          onOpenChange={setShowSubscriptionDialog}
+        />
         <ChangePasswordDialog
           open={showPasswordDialog}
           onOpenChange={setShowPasswordDialog}

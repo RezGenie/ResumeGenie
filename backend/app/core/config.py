@@ -89,13 +89,36 @@ class Settings(BaseSettings):
     adzuna_app_key: str = ""
     adzuna_country: str = "ca"  # Canada
     adzuna_base_url: str = "https://api.adzuna.com/v1/api/jobs"
-    adzuna_rate_limit: int = 10
-    adzuna_max_pages: int = 5
+    adzuna_rate_limit: str = "10"  # Changed to str to handle empty values
+    adzuna_max_pages: str = "5"  # Changed to str to handle empty values
+    
+    @property
+    def adzuna_rate_limit_int(self) -> int:
+        """Get adzuna_rate_limit as integer"""
+        try:
+            return int(self.adzuna_rate_limit) if self.adzuna_rate_limit else 10
+        except ValueError:
+            return 10
+    
+    @property
+    def adzuna_max_pages_int(self) -> int:
+        """Get adzuna_max_pages as integer"""
+        try:
+            return int(self.adzuna_max_pages) if self.adzuna_max_pages else 5
+        except ValueError:
+            return 5
     
     # Job Processing Configuration
     job_embedding_batch_size: int = 50
     job_cleanup_days: int = 30
     job_ingestion_interval: int = 3600  # seconds
+    
+    # Stripe Configuration
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_pro_price_id: str = ""  # Set after creating product in Stripe
+    stripe_unlimited_price_id: str = ""  # Set after creating product in Stripe
 
     class Config:
         env_file = ".env"

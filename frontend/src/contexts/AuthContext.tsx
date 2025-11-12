@@ -148,17 +148,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (fetchError) {
         clearTimeout(timeoutId);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          console.log('CheckAuth: Request timed out, clearing auth state');
+          console.log('CheckAuth: Request timed out, keeping auth state');
         } else {
-          console.error('CheckAuth: Network error:', fetchError);
+          console.error('CheckAuth: Network error, keeping auth state:', fetchError);
         }
-        // Clear tokens on timeout or error
-        clearAuthState();
+        // Don't clear tokens on network errors - keep user logged in
+        // Only clear on explicit 401 responses (handled above)
       }
     } catch (error) {
-      console.error('CheckAuth: Auth check failed:', error);
-      // Clear tokens on error
-      clearAuthState();
+      console.error('CheckAuth: Auth check failed, keeping auth state:', error);
+      // Don't clear tokens on errors - keep user logged in
+      // Only clear on explicit 401 responses
     } finally {
       console.log('CheckAuth: Setting loading to false');
       setIsLoading(false);

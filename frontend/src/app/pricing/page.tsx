@@ -1,13 +1,19 @@
 "use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { subscriptionService } from "@/lib/api/subscriptions";
 
 const plans = [
   {
     name: "Free",
+    tier: "free" as const,
     price: "$0/mo",
     features: ["3 wishes per day", "Basic resume analysis", "Access to guides"],
     cta: "Get Started",
@@ -15,6 +21,7 @@ const plans = [
   },
   {
     name: "Pro",
+    tier: "pro" as const,
     price: "$12/mo",
     features: ["10 wishes per day", "Advanced AI analysis", "Priority support", "Job match scoring"],
     cta: "Upgrade to Pro",
@@ -22,6 +29,7 @@ const plans = [
   },
   {
     name: "Unlimited",
+    tier: "unlimited" as const,
     price: "$29/mo",
     features: ["Unlimited wishes", "Full AI insights", "Personalized career coaching", "Early access to new features"],
     cta: "Go Unlimited",
@@ -30,6 +38,47 @@ const plans = [
 ];
 
 export default function PricingPage() {
+  const { isAuthenticated } = useAuth();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handleUpgrade = async (tier: 'pro' | 'unlimited', planName: string) => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to upgrade", {
+        description: "You need to be logged in to subscribe to a plan"
+      });
+      return;
+    }
+
+    setLoadingPlan(planName);
+    try {
+      const { url } = await subscriptionService.createCheckout(tier);
+      // Redirect to Stripe Checkout
+      window.location.href = url;
+    } catch (error: any) {
+      // Don't log to console - handle gracefully with toast
+      
+      // Check if it's a network error
+      if (error.name === 'NetworkError' || error.name === 'TypeError' || error.message?.toLowerCase().includes('network')) {
+        toast.error("Connection failed", {
+          description: "Unable to reach the payment service. Please try again in a moment."
+        });
+      } 
+      // Check if it's a Stripe configuration error
+      else if (error.message?.includes('Stripe') || error.message?.includes('price') || error.message?.includes('API key')) {
+        toast.error("Payment system not configured", {
+          description: "Stripe integration needs to be set up. Please contact support."
+        });
+      }
+      // Generic error
+      else {
+        toast.error("Failed to start checkout", {
+          description: "Please try again or contact support"
+        });
+      }
+      
+      setLoadingPlan(null);
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -54,13 +103,14 @@ export default function PricingPage() {
           className="mb-8"
         >
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-muted-foreground">
-                Pricing Under Development
-              </h3>
-              <div className="mt-2 text-sm text-muted-foreground">
-                <p>
-                  All features are currently free during the development phase. Payment processing will be available soon!
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                  Development Notice
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  All features are currently free during development. Payment processing will be available soon.
                 </p>
               </div>
             </div>
@@ -88,8 +138,26 @@ export default function PricingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button size="lg" className="w-full mt-auto">
-                    {plan.cta}
+                  <Button 
+                    size="lg" 
+                    className="w-full mt-auto"
+                    onClick={() => {
+                      if (plan.tier === 'free') {
+                        window.location.href = isAuthenticated ? '/dashboard' : '/genie';
+                      } else {
+                        handleUpgrade(plan.tier, plan.name);
+                      }
+                    }}
+                    disabled={loadingPlan === plan.name}
+                  >
+                    {loadingPlan === plan.name ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
                   </Button>
                 </CardContent>
               </Card>

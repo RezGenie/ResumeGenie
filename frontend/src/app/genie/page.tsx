@@ -1221,7 +1221,7 @@ export default function StudioPage() {
         >
           {/* Wish Counter */}
           <motion.div variants={itemVariants}>
-            <Card className="max-w-3xl mx-auto bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-lg">
+            <Card className="max-w-3xl mx-auto bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-lg hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-600 transition-all">
               <CardHeader className="text-center">
                 <CardTitle className="flex items-center justify-center gap-2 text-gray-900 dark:text-gray-100">
                   <Sparkles className="h-6 w-6 text-purple-600" />
@@ -1560,7 +1560,7 @@ export default function StudioPage() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Resume Upload */}
             <motion.div variants={itemVariants}>
-              <Card className={`h-full ${showInitialHighlight && !analysisResults
+              <Card className={`h-full hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all ${showInitialHighlight && !analysisResults
                 ? getHighlightClass(true, initialHighlightFading)
                 : ""
                 }`}>
@@ -1783,7 +1783,7 @@ export default function StudioPage() {
 
             {/* Job Posting */}
             <motion.div variants={itemVariants}>
-              <Card className={`h-full ${showInitialHighlight && !analysisResults
+              <Card className={`h-full hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all ${showInitialHighlight && !analysisResults
                 ? getHighlightClass(true, initialHighlightFading)
                 : ""
                 }`}>
@@ -1898,7 +1898,7 @@ export default function StudioPage() {
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {/* Resume Analysis */}
-            <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -1999,7 +1999,7 @@ export default function StudioPage() {
             </Card>
 
             {/* Job Match Score */}
-            <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -2095,7 +2095,7 @@ export default function StudioPage() {
             </Card>
 
             {/* Skill Gap Analysis */}
-            <Card className={`overflow-hidden relative transition-all duration-300 ${showOutputHighlight && analysisResults
+            <Card className={`overflow-hidden relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -2149,7 +2149,7 @@ export default function StudioPage() {
 
           {/* Wish History */}
           <motion.div variants={itemVariants}>
-            <Card className={`max-w-4xl mx-auto ${showOutputHighlight && wishes.some(w => w.status === 'completed')
+            <Card className={`max-w-4xl mx-auto hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all ${showOutputHighlight && wishes.some(w => w.status === 'completed')
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -2254,7 +2254,7 @@ export default function StudioPage() {
                             }
                           }}
                           className={`border border-muted-foreground/25 rounded-lg p-3 sm:p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${wish.status === "completed"
-                            ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                            ? "cursor-pointer hover:shadow-md hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 dark:bg-card"
                             : "cursor-default dark:bg-card"
                             }`}
                         >
@@ -2419,7 +2419,7 @@ export default function StudioPage() {
                   variants={modalVariants}
                 >
                   <div
-                    className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm"
+                    className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 dark:hover:bg-purple-950/30 hover:shadow-3xl dark:hover:border-purple-600 transition-all"
                     ref={modalRef}
                   >
                     <div className="flex items-center justify-between mb-4">
@@ -2498,7 +2498,7 @@ export default function StudioPage() {
                   exit="exit"
                   variants={modalVariants}
                 >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm">
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-purple-600" />
@@ -2575,7 +2575,7 @@ export default function StudioPage() {
                   exit="exit"
                   variants={modalVariants}
                 >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm">
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
                         <Target className="h-5 w-5 text-purple-600" />
@@ -2663,7 +2663,7 @@ export default function StudioPage() {
                   exit="exit"
                   variants={modalVariants}
                 >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm max-h-[90vh] overflow-hidden flex flex-col">
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm max-h-[90vh] overflow-hidden flex flex-col hover:border-purple-300 dark:hover:bg-purple-950/30 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div

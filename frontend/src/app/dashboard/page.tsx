@@ -6,9 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   Loader2,
-  Briefcase,
-  Calendar,
-  Eye,
   Sparkles,
   TrendingUp,
   Clock,
@@ -33,6 +30,7 @@ import { userProfileService } from '@/lib/api/userProfile';
 import { savedJobsService } from '@/lib/api/savedJobs';
 import { localResumeService } from '@/lib/api/localResumes';
 import { ProfileOnboarding } from '@/components/onboarding/ProfileOnboarding';
+import { ProfileCard } from '@/components/ProfileCard';
 
 // API response interfaces
 interface WishApiResponse {
@@ -597,9 +595,9 @@ export default function Dashboard() {
 
           {/* Stats Overview */}
           <motion.div variants={itemVariants}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/dashboard/my-jobs'}>
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all" onClick={() => window.location.href = '/dashboard/my-jobs'}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -614,7 +612,10 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/dashboard/resumes'}>
+              {/* Profile Card */}
+              <ProfileCard />
+
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all" onClick={() => window.location.href = '/dashboard/resumes'}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -629,7 +630,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => window.location.href = '/genie'}>
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all" onClick={() => window.location.href = '/genie'}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
@@ -651,7 +652,7 @@ export default function Dashboard() {
 
             {/* Recent Activity */}
             <motion.div variants={itemVariants} className="lg:col-span-2">
-              <Card className="h-full flex flex-col">
+              <Card className="h-full flex flex-col hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/20 hover:shadow-lg dark:hover:border-purple-600 transition-all">
                 <CardHeader className="flex-shrink-0 p-4 sm:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                     <Clock className="h-5 w-5 flex-shrink-0" />
@@ -751,7 +752,7 @@ export default function Dashboard() {
                         {savedJobsService.getSavedJobs().slice(0, activityTab === 'jobs' ? 10 : 3).map((job) => (
                           <div
                             key={job.id}
-                            className="border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer hover:border-purple-300"
+                            className="border rounded-lg p-3 hover:shadow-md hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all cursor-pointer"
                             onClick={() => router.push('/dashboard/my-jobs')}
                           >
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
@@ -785,7 +786,7 @@ export default function Dashboard() {
                         {localResumeService.getResumes().slice(0, activityTab === 'resumes' ? 10 : 3).map((resume) => (
                           <div
                             key={resume.id}
-                            className="border rounded-lg p-3 hover:shadow-md transition-all cursor-pointer hover:border-purple-300"
+                            className="border rounded-lg p-3 hover:shadow-md hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all cursor-pointer"
                             onClick={() => router.push('/dashboard/resumes')}
                           >
                             <div className="flex flex-col sm:flex-row sm:items-start gap-3">
@@ -859,7 +860,7 @@ export default function Dashboard() {
 
               {/* Recommended Jobs */}
               <motion.div variants={itemVariants} className="flex-1">
-                <Card className="h-full flex flex-col">
+                <Card className="h-full flex flex-col hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/20 hover:shadow-lg dark:hover:border-purple-600 transition-all">
                   <CardHeader className="flex-shrink-0">
                     <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
@@ -890,7 +891,18 @@ export default function Dashboard() {
                       ) : (
                         <div className="space-y-4 flex-1 overflow-y-auto">
                           {recommendedJobs.map((job) => (
-                            <div key={job.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div 
+                              key={job.id} 
+                              className="border border-purple-200 rounded-lg p-4 bg-purple-50/50 hover:bg-purple-100 hover:shadow-md hover:border-purple-300 dark:bg-transparent dark:border-border dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all cursor-pointer"
+                              onClick={() => {
+                                // Navigate to job details or open job URL
+                                if (job.redirect_url && job.redirect_url !== '#') {
+                                  window.open(job.redirect_url, '_blank');
+                                } else {
+                                  router.push(`/opportunities?jobId=${job.id}`);
+                                }
+                              }}
+                            >
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
                                   <h4 className="font-medium text-sm">{job.title}</h4>
@@ -910,10 +922,48 @@ export default function Dashboard() {
                               <div className="flex items-center justify-between pt-2">
                                 <span className="text-xs text-muted-foreground">{new Date(job.posted_at).toLocaleDateString()}</span>
                                 <div className="flex items-center gap-2">
-                                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
-                                    <Bookmark className="h-3 w-3" />
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className={`h-6 px-2 text-xs hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/40 dark:hover:text-purple-300 ${job.saved ? 'text-purple-600' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (job.saved) {
+                                        savedJobsService.removeSavedJob(job.id);
+                                      } else {
+                                        savedJobsService.saveJob({
+                                          id: job.id,
+                                          title: job.title,
+                                          company: job.company,
+                                          location: job.location,
+                                          description: job.snippet,
+                                          salary: job.salaryText,
+                                          jobUrl: job.redirect_url,
+                                          skills: job.skills || []
+                                        });
+                                      }
+                                      // Update the job's saved status
+                                      setRecommendedJobs(prev => 
+                                        prev.map(j => j.id === job.id ? { ...j, saved: !j.saved } : j)
+                                      );
+                                      // Update saved jobs stats
+                                      setSavedJobsStats(savedJobsService.getJobsStats());
+                                    }}
+                                  >
+                                    <Bookmark className={`h-3 w-3 ${job.saved ? 'fill-current' : ''}`} />
                                   </Button>
-                                  <Button size="sm" className="h-6 px-2 text-xs">
+                                  <Button 
+                                    size="sm" 
+                                    className="h-6 px-2 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (job.redirect_url && job.redirect_url !== '#') {
+                                        window.open(job.redirect_url, '_blank');
+                                      } else {
+                                        router.push(`/opportunities?jobId=${job.id}`);
+                                      }
+                                    }}
+                                  >
                                     View
                                   </Button>
                                 </div>
@@ -935,7 +985,7 @@ export default function Dashboard() {
 
               {/* Quick Actions */}
               <motion.div variants={itemVariants}>
-                <Card>
+                <Card className="hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/20 hover:shadow-lg dark:hover:border-purple-600 transition-all">
                   <CardHeader>
                     <CardTitle>Quick Actions</CardTitle>
                   </CardHeader>
@@ -961,7 +1011,7 @@ export default function Dashboard() {
                     <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300" asChild>
                       <a href="/profile">
                         <User className="h-4 w-4 mr-2" />
-                        Complete Profile
+                        My Profile
                       </a>
                     </Button>
                   </CardContent>

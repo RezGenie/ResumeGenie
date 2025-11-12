@@ -122,20 +122,21 @@ RezGenie/
 
 ### Core Documentation
 - 📖 [Complete Setup Guide](docs/setup.md) - Development environment setup
-- 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
-- 🚀 [Deployment Guide](docs/deployment.md) - Production deployment options
 - 📦 [Changelog](docs/CHANGELOG.md) - Version history and features
+- 🚀 [Deployment Guide](docs/deployment.md) - Production deployment options
+- 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
 
 ### Technical Documentation
 - 🍑 [Backend Documentation](backend/README.md) - API architecture and endpoints
-- 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and component library
-- 🏗️ [Design Document](docs/design.md) - System architecture and data models
 - 🗄️ [Database Schema](docs/database.md) - Database design and models
+- 🏗️ [Design Document](docs/design.md) - System architecture and data models
+- 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and component library
+- 💳 [Payment Integration](docs/payment.md) - Stripe subscription setup
 
 ### Project Management
+- 🎓 [Academic Context](docs/academic.md) - Capstone project information  
 - 📋 [Requirements](docs/requirements.md) - Functional requirements and user stories
 - ✅ [Task Tracking](docs/tasks.md) - Implementation progress
-- 🎓 [Academic Context](docs/academic.md) - Capstone project information  
 
 ## 🗺️ Application Structure
 
