@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
 from datetime import date
+from uuid import UUID
 import hashlib
 import logging
 
@@ -46,10 +47,16 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
     
-    # TODO: Implement user lookup from database
-    # For now, return a mock user
-    from app.models.user import User
-    return User(id=int(user_id), email="user@example.com")
+    # Look up user from database
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise credentials_exception
+    
+    return user
 
 async def get_current_active_user(
     current_user: User = Depends(get_current_user)
@@ -81,10 +88,12 @@ async def get_current_user_optional(
         if user_id is None:
             return None
             
-        # TODO: Implement user lookup from database
-        # For now, return a mock user
-        from app.models.user import User
-        return User(id=int(user_id), email="user@example.com")
+        # Look up user from database
+        result = await db.execute(
+            select(User).where(User.id == UUID(user_id))
+        )
+        user = result.scalar_one_or_none()
+        return user
     except JWTError:
         return None
 

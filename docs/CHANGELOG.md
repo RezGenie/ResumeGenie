@@ -2,6 +2,40 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
+## [0.19.0] - 2025-01-12
+
+### Add Subscription Management Features
+
+- **Stripe Integration Setup**
+  - Added Stripe SDK and configuration for subscription billing
+  - Created subscription models and database schema
+  - Implemented subscription service with create, cancel, and status endpoints
+  - Added webhook handling for subscription events
+  - Created payment documentation with implementation guide
+
+- **Frontend Subscription UI**
+  - Enhanced pricing page with interactive tier selection
+  - Added subscription management dialog in profile settings
+  - Created SubscriptionCard component for current plan display
+  - Implemented upgrade/downgrade flow with Stripe Checkout
+  - Added billing portal access for payment method management
+
+- **Dashboard Improvements**
+  - Made recommended job buttons functional (save, view, navigate)
+  - Added real-time job saving/unsaving with UI updates
+  - Improved job card interactions with proper event handling
+  - Fixed job skills array handling for saved jobs
+
+- **Header & Navigation Updates**
+  - Changed main CTA from "Upload Resume" to "New Wish"
+  - Updated icon from Upload to Sparkles for brand consistency
+  - Maintained outline button style for better visual hierarchy
+
+- **Documentation**
+  - Created concise payment integration guide (Stripe)
+  - Added payment doc link to main README
+  - Updated environment examples with Stripe configuration
+
 ## [0.18.0] - 2025-11-10
 
 ### CP-65: Comprehensive Resume Scoring System

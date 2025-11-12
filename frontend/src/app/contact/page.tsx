@@ -171,7 +171,7 @@ export default function Contact() {
                 Have questions about RezGenie or want to collaborate? We&apos;d love to hear from you!
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                   <a 
                     href="https://github.com/RezGenie/ResumeGenie/issues" 
                     target="_blank" 
@@ -181,7 +181,7 @@ export default function Contact() {
                     Report Issues
                   </a>
                 </Button>
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                   <Link href="/">
                     <Logo className="h-6 w-6" />
                     Try RezGenie

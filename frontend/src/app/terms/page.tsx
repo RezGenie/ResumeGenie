@@ -193,7 +193,7 @@ export default function Terms() {
                   </li>
                 </ul>
                 <div className="mt-4">
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                     <Link href="/privacy">
                       View Privacy Policy
                     </Link>
@@ -256,13 +256,13 @@ export default function Terms() {
                   If you have any questions about these Terms of Service, please contact us.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                     <Link href="/contact">
                       <Mail className="mr-2 h-4 w-4" />
                       Contact Us
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800">
                     <a 
                       href="https://github.com/RezGenie/ResumeGenie" 
                       target="_blank" 

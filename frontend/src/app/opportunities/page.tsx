@@ -15,7 +15,8 @@ import {
   Eye,
   ExternalLink,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -497,14 +498,23 @@ export default function JobDiscoveryPage() {
                   {/* Desktop: Grid View */}
                   <div className="hidden lg:block">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {paginatedJobs.map((job) => (
+                      {paginatedJobs.map((job, index) => (
                         <motion.div
                           key={job.id}
                           variants={itemVariants}
-                          whileHover={{ y: -2 }}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ y: -4, scale: 1.01 }}
                           className="group"
                         >
-                          <Card className="h-full hover:shadow-lg transition-all duration-200">
+                          <Card 
+                            className="h-full hover:shadow-lg hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer"
+                            onClick={() => {
+                              setSelectedJob(job);
+                              setIsJobModalOpen(true);
+                            }}
+                          >
                             <CardHeader>
                               <div className="flex items-start justify-between">
                                 <div className="space-y-1 flex-1">
@@ -570,7 +580,10 @@ export default function JobDiscoveryPage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleToggleSaveJob(job.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleSaveJob(job.id);
+                                    }}
                                     className={job.saved
                                       ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"
                                       : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"}
@@ -579,20 +592,11 @@ export default function JobDiscoveryPage() {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedJob(job);
-                                      setIsJobModalOpen(true);
+                                    className="whitespace-nowrap gap-1 bg-purple-600 hover:bg-purple-700"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(job.redirect_url, '_blank');
                                     }}
-                                    className="gap-1 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="whitespace-nowrap gap-1"
-                                    onClick={() => window.open(job.redirect_url, '_blank')}
                                   >
                                     <ExternalLink className="w-4 h-4" />
                                     Apply Now

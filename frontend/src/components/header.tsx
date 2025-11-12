@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Menu, X, User, LogOut, Upload, BarChart3, LayoutDashboard } from "lucide-react"
+import { Menu, X, User, LogOut, Upload, BarChart3, LayoutDashboard, Crown, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -184,11 +184,11 @@ export function Header() {
           
           {user ? (
             <>
-              {/* Quick Upload Button for Desktop */}
+              {/* Quick Action Button for Desktop */}
               <Button variant="outline" size="sm" asChild className="hidden md:flex hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:border-purple-600 dark:hover:text-purple-300 transition-all duration-200">
                 <Link href="/genie">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Resume
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  New Wish
                 </Link>
               </Button>
               
