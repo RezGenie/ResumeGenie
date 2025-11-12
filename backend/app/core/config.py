@@ -1,29 +1,51 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
+import os
 
 
 class Settings(BaseSettings):
-    # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie"
+    # Database - use environment variable or default
+    database_url: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie"
+    )
     
-    # Redis
-    redis_url: str = "redis://:redis123@redis:6379/0"
+    @field_validator('database_url', mode='before')
+    @classmethod
+    def convert_db_url_to_async(cls, v: str) -> str:
+        """
+        Convert synchronous PostgreSQL URL to async driver.
+        Render provides DATABASE_URL with 'postgresql://' (psycopg2 - sync)
+        but we need 'postgresql+asyncpg://' (asyncpg - async)
+        """
+        if isinstance(v, str):
+            if v.startswith("postgresql://"):
+                v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+    
+    # Redis - use environment variable or default
+    redis_url: str = os.getenv(
+        "REDIS_URL",
+        "redis://:redis123@redis:6379/0"
+    )
     
     # Storage Configuration (MinIO locally, R2 in production)
-    storage_provider: str = "minio"  # "minio" or "r2"
+    # Auto-detect from environment or provided value
+    storage_provider: str = os.getenv("STORAGE_PROVIDER", "minio")  # "minio" or "r2"
     
     # MinIO Configuration (local development)
-    minio_endpoint: str = "minio:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin123"
-    minio_secure: bool = False
-    minio_bucket_name: str = "rezgenie-uploads"
+    minio_endpoint: str = os.getenv("MINIO_ENDPOINT", "minio:9000")
+    minio_access_key: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    minio_secret_key: str = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
+    minio_secure: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    minio_bucket_name: str = os.getenv("MINIO_BUCKET_NAME", "rezgenie-uploads")
     
     # Cloudflare R2 Configuration (production)
-    r2_endpoint: str = ""
-    r2_access_key: str = ""
-    r2_secret_key: str = ""
-    r2_bucket_name: str = "rezgenie-uploads"
+    r2_endpoint: str = os.getenv("R2_ENDPOINT", "")
+    r2_access_key: str = os.getenv("R2_ACCESS_KEY", "")
+    r2_secret_key: str = os.getenv("R2_SECRET_KEY", "")
+    r2_bucket_name: str = os.getenv("R2_BUCKET_NAME", "rezgenie-uploads")
     r2_secure: bool = True  # Always use HTTPS for R2
     
     @property

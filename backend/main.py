@@ -25,17 +25,29 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug else None,
 )
 
-# Add middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
+# Configure CORS origins based on environment
+if settings.environment == "production":
+    # Production: Only allow Netlify frontend domain
+    cors_origins = [
+        "https://your-frontend-domain.netlify.app",  # Update with your Netlify URL
+    ]
+else:
+    # Development: Allow localhost
+    cors_origins = [
+        "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3001",
-        "http://localhost:3002", 
-        "http://127.0.0.1:3002"
-    ],
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173",
+    ]
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,7 +57,10 @@ app.add_middleware(
 if settings.environment == "production":
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["yourdomain.com", "*.yourdomain.com"]
+        allowed_hosts=[
+            "rezgenie-api.onrender.com",  # Update with your Render domain
+            "localhost:8000",  # For local testing
+        ]
     )
 
 
