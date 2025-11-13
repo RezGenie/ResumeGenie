@@ -183,9 +183,13 @@ Modern, responsive web application with comprehensive UI/UX:
 |-----------|--------------|
 | ![Desktop Dashboard](docs/images/desktop-dashboard.png) | ![Desktop Opportunities](docs/images/desktop-opportunities.png) |
 
-| Profile Settings |
-|------------------|
-| ![Desktop Profile](docs/images/desktop-profile.png) |
+| Guides | Jobs |
+|--------|------|
+| ![Desktop Guides](docs/images/desktop-guides.png) | ![Desktop Jobs](docs/images/desktop-jobs.png) |
+
+| Profile Settings | Resume Upload |
+|------------------|---------------|
+| ![Desktop Profile](docs/images/desktop-profile.png) | ![Desktop Resume](docs/images/desktop-resume.png) |
 
 </details>
 
@@ -200,9 +204,9 @@ Modern, responsive web application with comprehensive UI/UX:
 |---------------|------|---------|
 | ![Mobile Opportunities](docs/images/mobile-opportunities.png) | ![Mobile Jobs](docs/images/mobile-jobs.png) | ![Mobile Resumes](docs/images/mobile-resumes.png) |
 
-| Profile |
-|---------|
-| ![Mobile Profile](docs/images/mobile-profile.png) |
+| Guides | Profile |
+|--------|---------|
+| ![Mobile Guides](docs/images/mobile-guides.png) | ![Mobile Profile](docs/images/mobile-profile.png) |
 
 </details>
 

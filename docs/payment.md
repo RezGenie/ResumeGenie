@@ -3,6 +3,7 @@
 **Decision**: We're using Stripe for RezGenie subscriptions.
 
 ## Why Stripe?
+
 - Industry standard (2.9% + $0.30 per transaction)
 - Best developer experience with excellent docs
 - Built-in subscription management and customer portal
@@ -12,6 +13,7 @@
 ## Quick Setup
 
 ### 1. Install
+
 ```bash
 # Backend
 pip install stripe
@@ -21,11 +23,13 @@ npm install @stripe/stripe-js @stripe/react-stripe-js
 ```
 
 ### 2. Products in Stripe Dashboard
+
 - **Free**: $0/month (no payment)
 - **Pro**: $12/month
 - **Unlimited**: $29/month
 
 ### 3. Backend Endpoints
+
 ```python
 POST /api/v1/subscriptions/create
 POST /api/v1/subscriptions/cancel
@@ -35,12 +39,14 @@ GET /api/v1/subscriptions/portal
 ```
 
 ### 4. Frontend Components
+
 - Checkout modal
 - Payment form (Stripe Elements)
 - Success/error handling
 - Subscription management UI
 
 ## Implementation Checklist
+
 - [x] Create Stripe account and configure products
 - [ ] Add Stripe SDK to backend
 - [ ] Create subscription endpoints
@@ -51,12 +57,14 @@ GET /api/v1/subscriptions/portal
 - [ ] Go live
 
 ## Security
+
 - Use official Stripe SDKs only
 - Verify webhook signatures
 - Never store card details
 - Enable fraud detection in Stripe dashboard
 
 ## Resources
+
 - [Stripe Docs](https://stripe.com/docs)
 - [Stripe Billing](https://stripe.com/docs/billing)
 - [Python SDK](https://github.com/stripe/stripe-python)
