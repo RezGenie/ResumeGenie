@@ -94,6 +94,17 @@ class Settings(BaseSettings):
     debug: bool = True
     log_level: str = "info"
     
+    # CORS - Frontend origins (comma-separated for multiple)
+    cors_origins: str = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000"
+    )
+    
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Get CORS origins as a list"""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+    
     # File Upload
     max_file_size: int = 10485760  # 10MB
     allowed_extensions: list = ["pdf", "docx"]

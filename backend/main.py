@@ -25,24 +25,9 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug else None,
 )
 
-# Configure CORS origins based on environment
-if settings.environment == "production":
-    # Production: Only allow Netlify frontend domain
-    cors_origins = [
-        "https://your-frontend-domain.netlify.app",  # Update with your Netlify URL
-    ]
-else:
-    # Development: Allow localhost
-    cors_origins = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:3002",
-        "http://127.0.0.1:3002",
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:5173",
-    ]
+# Configure CORS origins from environment variable
+cors_origins = settings.cors_origins_list
+logger.info(f"CORS origins configured: {cors_origins}")
 
 # Add CORS middleware
 app.add_middleware(
