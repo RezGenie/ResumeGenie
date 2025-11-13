@@ -161,7 +161,8 @@ class ReportService:
             and_(
                 JobComparison.user_id == user_id,
                 JobComparison.created_at >= cutoff_date,
-                JobComparison.is_processed.is_(True)
+                # Filter for completed comparisons - model uses 'status' column
+                JobComparison.status == "completed"
             )
         ).options(selectinload(JobComparison.user))
         

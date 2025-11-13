@@ -8,10 +8,10 @@ from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.providers.adzuna import AdzunaProvider
-from app.services.match import MatchingService
-from app.models.job import Job
-from app.models.user_preferences import UserPreferences
+from backend.app.services.providers.adzuna import AdzunaProvider
+from backend.app.services.match import MatchingService
+from backend.app.models.job import Job
+from backend.app.models.user_preferences import UserPreferences
 
 
 class TestAdzunaProvider:

@@ -3,6 +3,40 @@ Tests for the Report Generation Service (CP-13)
 Comprehensive testing for missing skills text report functionality.
 """
 
+import sys
+import types
+
+# Provide minimal stubs for third-party modules imported at module scope in app code
+# (prevents import-time failures during test collection in CI/dev machines).
+if 'spacy' not in sys.modules:
+    _fake_spacy = types.ModuleType('spacy')
+    def _fake_load(name=None):
+        def _nlp(text=''):
+            class _Doc:
+                def __init__(self, text=''):
+                    self.text = text
+                    self.ents = []
+                def __iter__(self):
+                    return iter([])
+            return _Doc(text)
+        return _nlp
+    _fake_spacy.load = _fake_load
+    sys.modules['spacy'] = _fake_spacy
+
+if 'fuzzywuzzy' not in sys.modules:
+    _fake_fuzzy = types.ModuleType('fuzzywuzzy')
+    _fake_fuzz = types.ModuleType('fuzz')
+    def _ratio(a, b):
+        # simple heuristic similarity
+        a = str(a or '').lower()
+        b = str(b or '').lower()
+        if not a or not b:
+            return 0
+        matches = sum(1 for x, y in zip(a, b) if x == y)
+        return int((matches / max(len(a), len(b))) * 100)
+    _fake_fuzz.ratio = _ratio
+    _fake_fuzzy.fuzz = _fake_fuzz
+    sys.modules['fuzzywuzzy'] = _fake_fuzzy
 import pytest
 from unittest.mock import Mock, AsyncMock
 from datetime import datetime, timedelta
@@ -39,7 +73,7 @@ class TestReportService:
         return user
 
     @pytest.fixture
-    def sample_comparisons(self):
+    def sample_comparisons(self, sample_user):
         """Sample job comparisons for testing."""
         comparisons = []
         
@@ -54,6 +88,9 @@ class TestReportService:
             comp.overall_match_score = 0.7 + (i * 0.05)  # Varying scores
             comp.missing_skills = ["Python", "React", "AWS", "Docker"][:i + 2]  # Varying missing skills
             comp.created_at = datetime.now() - timedelta(days=i * 10)
+            # Attach the sample user and mark as completed to satisfy filters
+            comp.user = sample_user
+            comp.status = "completed"
             comparisons.append(comp)
         
         return comparisons
@@ -104,8 +141,8 @@ class TestReportService:
         # Mock database query
         mock_result = Mock()
         mock_result.scalars.return_value.all.return_value = sample_comparisons
-        mock_db.execute.return_value = mock_db
-        
+        mock_db.execute.return_value = mock_result
+
         # Mock cache service
         report_service.cache_service.get = AsyncMock(return_value=None)
         report_service.cache_service.set = AsyncMock()
