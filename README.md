@@ -121,12 +121,14 @@ RezGenie/
 ## 📚 Documentation
 
 ### Core Documentation
+
 - 📖 [Complete Setup Guide](docs/setup.md) - Development environment setup
 - 📦 [Changelog](docs/CHANGELOG.md) - Version history and features
 - 🚀 [Deployment Guide](docs/deployment.md) - Production deployment options
 - 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
 
 ### Technical Documentation
+
 - 🍑 [Backend Documentation](backend/README.md) - API architecture and endpoints
 - 🗄️ [Database Schema](docs/database.md) - Database design and models
 - 🏗️ [Design Document](docs/design.md) - System architecture and data models
@@ -134,6 +136,7 @@ RezGenie/
 - 💳 [Payment Integration](docs/payment.md) - Stripe subscription setup
 
 ### Project Management
+
 - 🎓 [Academic Context](docs/academic.md) - Capstone project information  
 - 📋 [Requirements](docs/requirements.md) - Functional requirements and user stories
 - ✅ [Task Tracking](docs/tasks.md) - Implementation progress
@@ -169,17 +172,39 @@ Modern, responsive web application with comprehensive UI/UX:
 
 ## 📸 Screenshots
 
-### Landing Page
-![Landing Page](docs/images/landing.png)
+<details>
+<summary><b>💻 Desktop Views</b> (Click to expand)</summary>
 
-### AI Genie Interface
-![Genie Interface](docs/images/genie.png)
+| Landing Page | AI Genie Interface |
+|--------------|-------------------|
+| ![Desktop Landing](docs/images/desktop-landing.png) | ![Desktop Genie](docs/images/desktop-genie.png) |
 
-### Dashboard
-![Dashboard](docs/images/dashboard.png)
+| Dashboard | Opportunities |
+|-----------|--------------|
+| ![Desktop Dashboard](docs/images/desktop-dashboard.png) | ![Desktop Opportunities](docs/images/desktop-opportunities.png) |
 
-### Opportunities Page
-![Opportunities](docs/images/opportunities.png)
+| Profile Settings |
+|------------------|
+| ![Desktop Profile](docs/images/desktop-profile.png) |
+
+</details>
+
+<details>
+<summary><b>📱 Mobile Views</b> (Click to expand)</summary>
+
+| Landing | Genie | Dashboard |
+|---------|-------|-----------|
+| ![Mobile Landing](docs/images/mobile-landing.png) | ![Mobile Genie](docs/images/mobile-genie.png) | ![Mobile Dashboard](docs/images/mobile-dashboard.png) |
+
+| Opportunities | Jobs | Resumes |
+|---------------|------|---------|
+| ![Mobile Opportunities](docs/images/mobile-opportunities.png) | ![Mobile Jobs](docs/images/mobile-jobs.png) | ![Mobile Resumes](docs/images/mobile-resumes.png) |
+
+| Profile |
+|---------|
+| ![Mobile Profile](docs/images/mobile-profile.png) |
+
+</details>
 
 ## 📄 License
 

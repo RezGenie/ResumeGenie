@@ -13,7 +13,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Bookmark
+  Bookmark,
+  BookOpen
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -31,6 +32,7 @@ import { useEffect } from "react"
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/genie", label: "Genie Wishes", icon: Sparkles },
+  { href: "/guides", label: "Guides", icon: BookOpen },
   { href: "/opportunities", label: "Job Opportunities", icon: Briefcase },
   { href: "/dashboard/my-jobs", label: "My Jobs", icon: Bookmark },
   { href: "/dashboard/resumes", label: "My Resumes", icon: FileText },
@@ -101,9 +103,9 @@ export function Sidebar() {
         opacity: { duration: 0.3, ease: "easeOut" },
         width: { duration: 0.3, ease: [0.4, 0, 0.2, 1] }
       }}
-      className="hidden lg:flex lg:flex-col fixed left-4 top-4 bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg z-40"
+      className="hidden lg:flex lg:flex-col fixed left-4 top-4 bottom-4 bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg z-40"
     >
-      <div className="flex flex-col p-4">
+      <div className="flex flex-col p-4 h-full overflow-y-auto">
         {/* Logo & Toggle */}
         <div className="relative mb-8">
           {!isCollapsed ? (
@@ -190,7 +192,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <TooltipProvider delayDuration={300}>
-          <nav className="space-y-2">
+          <nav className="space-y-2 flex-1 overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href)
@@ -233,7 +235,7 @@ export function Sidebar() {
         </TooltipProvider>
 
         {/* Logout Button */}
-        <div className="pt-6 mt-6 border-t border-purple-200/30 dark:border-purple-800/30">
+        <div className="pt-6 mt-auto border-t border-purple-200/30 dark:border-purple-800/30">
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
