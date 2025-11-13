@@ -207,6 +207,25 @@ services:
       - rezgenie-network
     restart: unless-stopped
 
+  # Pytest runner inside Docker for backend
+  backend-tests:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rezgenie_backend_tests
+    command: pytest -q
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=test
+      - OPENAI_API_KEY=
+      - PYTHONPATH=/app
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    networks:
+      - rezgenie-network
+
 volumes:
   postgres_data:
   redis_data:
