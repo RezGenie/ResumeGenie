@@ -22,7 +22,8 @@ import {
   MapPin,
   Code,
   Building2,
-  Crown
+  Crown,
+  LogOut
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -81,13 +82,17 @@ const itemVariants = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -578,7 +583,6 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Crown className="h-5 w-5 text-purple-600" />
                     Subscription & Billing
                   </CardTitle>
                   <CardDescription>Manage your subscription plan and billing</CardDescription>
@@ -612,7 +616,6 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Lock className="h-5 w-5" />
                     Security Settings
                   </CardTitle>
                   <CardDescription>Manage your password and account security</CardDescription>
@@ -641,7 +644,40 @@ export default function ProfilePage() {
               </Card>
             </motion.div>
 
-            {/* Account Settings */}
+            {/* Session Management */}
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Session Management
+                  </CardTitle>
+                  <CardDescription>Manage your active session</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-700 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                          <LogOut className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Log Out</h3>
+                          <p className="text-sm text-muted-foreground">Sign out of your account</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleLogout}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        Log Out
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Danger Zone */}
             <motion.div variants={itemVariants}>
               <Card>
                 <CardHeader>

@@ -3,10 +3,13 @@
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Logo } from "@/components/ui/logo"
+import { useAuth } from "@/contexts/AuthContext"
 
 export function Footer() {
+  const { user } = useAuth()
+
   return (
-    <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <footer className={`border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${user ? 'hidden lg:block' : ''}`}>
       <div className="container mx-auto px-4 py-12 max-w-7xl md:px-6 lg:px-8 xl:px-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo and Description */}

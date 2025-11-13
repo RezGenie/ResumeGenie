@@ -37,7 +37,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { JobSwipeDeck } from "@/components/jobs/JobSwipeDeck";
 import { JobDetailsModal } from "@/components/jobs/JobDetailsModal";
 import { savedJobsService } from "@/lib/api/savedJobs";
-import { Logo } from "@/components/ui/logo"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -87,11 +86,8 @@ export default function JobDiscoveryPage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        // Only show loading on initial load
-        if (jobs.length === 0) {
-          setLoading(true);
-        }
         setError(null);
+        setIsSearching(true);
 
         // Build filters object
         const filters = {
@@ -134,16 +130,8 @@ export default function JobDiscoveryPage() {
       }
     };
 
-    // Show searching indicator immediately when user types
-    setIsSearching(true);
-
-    // Debounce search - wait for user to finish typing (500ms)
-    const timeoutId = setTimeout(() => {
-      fetchJobs();
-      fetchJobStats();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
+    fetchJobs();
+    fetchJobStats();
   }, [searchTerm, locationFilter, salaryFilter]);
 
   // Listen for preference changes and refresh jobs
@@ -269,18 +257,14 @@ export default function JobDiscoveryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-              <div className="text-center space-y-2">
-                <p className="text-muted-foreground">Loading your opportunities...</p>
-              </div>
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
+              <p className="text-muted-foreground">Loading your opportunities...</p>
             </div>
           </div>
-        </main>
-        <Footer />
+        </div>
       </div>
     );
   }
@@ -320,7 +304,10 @@ export default function JobDiscoveryPage() {
             </div>
           </div>
         </main>
-        <Footer />
+        {/* Hide footer on mobile during error */}
+        <div className="hidden lg:block">
+          <Footer />
+        </div>
       </div>
     );
   }
@@ -330,7 +317,20 @@ export default function JobDiscoveryPage() {
       <div className="min-h-screen bg-background">
         <Header />
 
-        <main className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Mobile: Full-screen Tinder-style swipe view */}
+        {!loading && (
+          <div className="lg:hidden fixed inset-0 top-20 bottom-24 bg-background px-4 pt-4">
+            <div className="h-full w-full max-w-md mx-auto">
+              <JobSwipeDeck onJobDetailsAction={(job) => {
+                setSelectedJob(job);
+                setIsJobModalOpen(true);
+              }} />
+            </div>
+          </div>
+        )}
+
+        {/* Desktop: Traditional view with filters and grid */}
+        <main className="hidden lg:block container mx-auto px-4 py-8 max-w-6xl">
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -485,19 +485,8 @@ export default function JobDiscoveryPage() {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: Swipe Deck */}
-                  <div className="block lg:hidden">
-                    <div className="h-[600px] bg-background rounded-lg">
-                      <JobSwipeDeck onJobDetailsAction={(job) => {
-                        setSelectedJob(job);
-                        setIsJobModalOpen(true);
-                      }} />
-                    </div>
-                  </div>
-
                   {/* Desktop: Grid View */}
-                  <div className="hidden lg:block">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {paginatedJobs.map((job, index) => (
                         <motion.div
                           key={job.id}
@@ -667,13 +656,16 @@ export default function JobDiscoveryPage() {
                         </Button>
                       </div>
                     )}
-                  </div>
                 </>
               )}
             </motion.div>
           </motion.div>
         </main>
-        <Footer />
+        
+        {/* Footer - hidden on mobile for Tinder-style experience */}
+        <div className="hidden lg:block">
+          <Footer />
+        </div>
 
         {/* Job Details Modal for Mobile & Desktop */}
         <AnimatePresence mode="wait">

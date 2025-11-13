@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LayoutWrapper } from "@/components/layout-wrapper";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -35,7 +36,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
+            <LayoutWrapper>
+              {children}
+            </LayoutWrapper>
             <Toaster />
           </AuthProvider>
         </ThemeProvider>

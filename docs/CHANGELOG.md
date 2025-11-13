@@ -4,7 +4,7 @@ All notable changes to the RezGenie project will be documented in this file.
 
 ## [0.19.0] - 2025-01-12
 
-### Add Subscription Management Features
+### CP-66 - Add Subscription Management Features
 
 - **Stripe Integration Setup**
   - Added Stripe SDK and configuration for subscription billing
