@@ -483,55 +483,15 @@ export default function StudioPage() {
     setWishes([]);
   }, [user?.id, isAuthenticated]);
 
-  // Fetch historical wishes when user is authenticated, or load from localStorage for guests
+  // Fetch historical wishes when user is authenticated, or load from backend for guests
   useEffect(() => {
     const fetchWishHistory = async () => {
       try {
-        if (!isAuthenticated) {
-          // Load wishes from localStorage for guest users
-          try {
-            const savedWishes = UserStorage.getItem('genie_wishes');
-            if (savedWishes) {
-              const parsedWishes = JSON.parse(savedWishes);
-              if (Array.isArray(parsedWishes)) {
-                // Convert timestamps back to Date objects
-                const wishesWithDates = parsedWishes.map(wish => ({
-                  ...wish,
-                  timestamp: new Date(wish.timestamp)
-                }));
-                setWishes(wishesWithDates);
-
-                // For guests: Set analysisResults to the most recent completed wish
-                const mostRecentCompletedWish = wishesWithDates
-                  .filter(wish => wish.status === 'completed' && wish.results)
-                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
-                if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
-                  const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
-                  const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
-
-                  setAnalysisResults({
-                    resumeScore: mostRecentCompletedWish.results.score || 0,
-                    matchScore: mostRecentCompletedWish.results.score || 0, // Use same score if no separate match score
-                    skillGaps: parsedRecommendations,
-                    insights: parsedInsights,
-                    recommendations: parsedInsights,
-                  });
-                }
-              }
-            } else {
-              setWishes([]);
-            }
-          } catch (error) {
-            console.warn('Failed to load wishes from localStorage:', error);
-            setWishes([]);
-          }
-          return;
-        }
         const { apiClient } = await import("@/lib/api/client");
-        const historicalWishes = await apiClient.get<WishDetailsResponse[]>(
-          "/genie"
-        );
+        
+        // Fetch wishes from backend for both authenticated and guest users
+        const endpoint = isAuthenticated ? "/genie" : "/genie/guest";
+        const historicalWishes = await apiClient.get<WishDetailsResponse[]>(endpoint);
 
         if (Array.isArray(historicalWishes)) {
           // Convert historical wishes with full details included
@@ -562,10 +522,67 @@ export default function StudioPage() {
             } as Wish;
           });
           setWishes(detailedWishes);
+          
+          // For guests and authenticated users: Set analysisResults to the most recent completed wish
+          if (!isAuthenticated) {
+            const mostRecentCompletedWish = detailedWishes
+              .filter(wish => wish.status === 'completed' && wish.results)
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+            if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+              const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
+              const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
+
+              setAnalysisResults({
+                resumeScore: mostRecentCompletedWish.results.score || 0,
+                matchScore: mostRecentCompletedWish.results.score || 0, // Use same score if no separate match score
+                skillGaps: parsedRecommendations,
+                insights: parsedInsights,
+                recommendations: parsedInsights,
+              });
+            }
+          }
         }
       } catch (err) {
         console.warn("Failed to fetch wish history:", err);
-        // Don't clear wishes on error - keep any current session wishes
+        
+        // Fallback to localStorage for guests only if backend fetch fails
+        if (!isAuthenticated) {
+          try {
+            const savedWishes = UserStorage.getItem('genie_wishes');
+            if (savedWishes) {
+              const parsedWishes = JSON.parse(savedWishes);
+              if (Array.isArray(parsedWishes)) {
+                // Convert timestamps back to Date objects
+                const wishesWithDates = parsedWishes.map(wish => ({
+                  ...wish,
+                  timestamp: new Date(wish.timestamp)
+                }));
+                setWishes(wishesWithDates);
+
+                // For guests: Set analysisResults to the most recent completed wish
+                const mostRecentCompletedWish = wishesWithDates
+                  .filter(wish => wish.status === 'completed' && wish.results)
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+                if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+                  const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
+                  const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
+
+                  setAnalysisResults({
+                    resumeScore: mostRecentCompletedWish.results.score || 0,
+                    matchScore: mostRecentCompletedWish.results.score || 0,
+                    skillGaps: parsedRecommendations,
+                    insights: parsedInsights,
+                    recommendations: parsedInsights,
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to load wishes from localStorage:', error);
+          }
+        }
       }
     };
     fetchWishHistory();
