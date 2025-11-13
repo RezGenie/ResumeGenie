@@ -5,8 +5,8 @@ import { Logo } from "@/components/ui/logo"
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="flex flex-col items-center text-center max-w-md w-full">
         {/* Animated Loading Genie */}
         <motion.div
           animate={{
@@ -18,7 +18,7 @@ export default function Loading() {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="mb-6"
+          className="mb-6 flex items-center justify-center"
         >
           <Logo className="w-16 h-16" />
         </motion.div>

@@ -25,7 +25,7 @@ const plans = [
     price: "$12/mo",
     features: ["10 wishes per day", "Advanced AI analysis", "Priority support", "Job match scoring"],
     cta: "Upgrade to Pro",
-    highlight: true
+    highlight: false
   },
   {
     name: "Unlimited",
@@ -125,7 +125,7 @@ export default function PricingPage() {
               transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
               className="h-full"
             >
-              <Card className={`rounded-2xl p-8 shadow-lg border h-full flex flex-col ${plan.highlight ? 'border-primary' : 'border-muted-foreground/20'} bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20`}>
+              <Card className={`rounded-2xl p-8 shadow-lg border h-full flex flex-col ${plan.highlight ? 'border-primary' : 'border-muted-foreground/20'} bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 hover:shadow-xl hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all cursor-pointer`}>
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
                   <div className="text-3xl font-bold mb-4">{plan.price}</div>
