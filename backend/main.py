@@ -29,7 +29,7 @@ app = FastAPI(
 if settings.environment == "production":
     # Production: Only allow Netlify frontend domain
     cors_origins = [
-        "https://your-frontend-domain.netlify.app",  # Update with your Netlify URL
+        "https://rezgenie.netlify.app",
     ]
 else:
     # Development: Allow localhost
