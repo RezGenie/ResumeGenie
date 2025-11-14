@@ -6,6 +6,7 @@ import { RefreshCw, AlertCircle, Sparkles, Heart } from 'lucide-react';
 import { SwipeableJobCard } from './SwipeableJobCard';
 import { JobDisplay, JobStats } from '@/lib/api/types';
 import { jobService } from '@/lib/api/jobs';
+import { savedJobsService } from '@/lib/api/savedJobs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -21,7 +22,6 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
   // State management
   const [jobs, setJobs] = useState<JobDisplay[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -33,10 +33,10 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
   const nextPageRef = useRef(1);
   const prefetchingRef = useRef(false);
   const hasMoreJobsRef = useRef(true);
+  const initialFetchDoneRef = useRef(false);
 
   // Fetch initial jobs and stats
-  const fetchInitialData = useCallback(async (resetIndex = false) => {
-    setLoading(true);
+  const fetchInitialData = async (resetIndex = false) => {
     setError(null);
     
     // Reset index if requested (for preference updates)
@@ -67,10 +67,8 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     } catch (err) {
       setError('An unexpected error occurred while loading jobs');
       console.error('JobSwipeDeck: Error fetching initial data:', err);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  };
 
   // Prefetch more jobs when running low
   const prefetchJobs = useCallback(async () => {
@@ -111,6 +109,24 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
       [direction === 'right' ? 'liked' : 'passed']: prev[direction === 'right' ? 'liked' : 'passed'] + 1
     }));
 
+    // If swiped right (liked), save the job
+    if (direction === 'right') {
+      const job = jobs.find(j => j.id === jobId);
+      if (job) {
+        savedJobsService.saveJob({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          description: job.snippet,
+          salary: job.salaryText,
+          jobUrl: job.redirect_url,
+          skills: job.skills || []
+        });
+        console.log('Job saved:', job.title);
+      }
+    }
+
     // Move to next card immediately
     setCurrentIndex(prev => prev + 1);
     
@@ -129,10 +145,10 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     
     // Reset animation lock quickly
     setTimeout(() => setIsAnimating(false), 100);
-  }, [jobs.length, currentIndex, prefetchJobs, isAnimating]);
+  }, [jobs, currentIndex, prefetchJobs, isAnimating]);
 
   // Refresh deck with new jobs
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
     setCurrentIndex(0);
     nextPageRef.current = 1;
@@ -141,12 +157,15 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     
     await fetchInitialData();
     setRefreshing(false);
-  }, [fetchInitialData]);
+  };
 
   // Initialize data on mount
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    if (!initialFetchDoneRef.current) {
+      initialFetchDoneRef.current = true;
+      fetchInitialData();
+    }
+  }, []);
 
   // Listen for preference changes and refresh jobs
   useEffect(() => {
@@ -161,34 +180,12 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     return () => {
       window.removeEventListener('userPreferencesUpdated', handlePreferencesUpdate);
     };
-  }, [fetchInitialData]);
+  }, []);
 
   // Get visible cards for rendering
   const visibleCards = jobs.slice(currentIndex, currentIndex + CARDS_TO_SHOW).reverse();
   const hasCards = visibleCards.length > 0;
   const isLastCard = currentIndex >= jobs.length - 1;
-
-  // Loading state with genie theme
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full space-y-4 p-8">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-        >
-          <Sparkles className="w-12 h-12 text-purple-500" />
-        </motion.div>
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">
-            ✨ The Genie is gathering opportunities...
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            Preparing your personalized job matches
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   // Error state with genie theme
   if (error) {
@@ -210,8 +207,8 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     );
   }
 
-  // Empty state - no more jobs
-  if (!hasCards || isLastCard) {
+  // Empty state - no more jobs (only show if we've actually loaded jobs before)
+  if ((!hasCards || isLastCard) && jobs.length > 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-6 p-8">
         <motion.div
@@ -257,7 +254,7 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     <div className="h-full flex flex-col">
 
       {/* Card deck container */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative">
         <AnimatePresence mode="popLayout">
           {visibleCards.map((job, index) => {
             const cardIndex = currentIndex + visibleCards.length - 1 - index;

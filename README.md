@@ -18,6 +18,7 @@
 - 📚 [Documentation](#-documentation)
 - 🗺️ [Application Structure](#️-application-structure)
 - 🤝 [Contributing](#-contributing)
+- 📸 [Screenshots](#-screenshots)
 - 📄 [License](#-license)
 - 🌟 [Acknowledgments](#-acknowledgments)
 
@@ -139,21 +140,26 @@ Want to deploy your own instance of RezGenie? Follow our comprehensive [Deployme
 ## 📚 Documentation
 
 ### Core Documentation
+
 - 📖 [Complete Setup Guide](docs/setup.md) - Development environment setup
 - 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
 - 🚀 [Deployment Guide](docs/deployment_guide.md) - Production Deployment Guide
 - 📦 [Changelog](docs/CHANGELOG.md) - Version history and features
+- 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
 
 ### Technical Documentation
+
 - 🍑 [Backend Documentation](backend/README.md) - API architecture and endpoints
-- 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and component library
-- 🏗️ [Design Document](docs/design.md) - System architecture and data models
 - 🗄️ [Database Schema](docs/database.md) - Database design and models
+- 🏗️ [Design Document](docs/design.md) - System architecture and data models
+- 🖼️ [Frontend Documentation](frontend/README.md) - UI/UX and component library
+- 💳 [Payment Integration](docs/payment.md) - Stripe subscription setup
 
 ### Project Management
+
+- 🎓 [Academic Context](docs/academic.md) - Capstone project information  
 - 📋 [Requirements](docs/requirements.md) - Functional requirements and user stories
 - ✅ [Task Tracking](docs/tasks.md) - Implementation progress
-- 🎓 [Academic Context](docs/academic.md) - Capstone project information  
 
 ## 🗺️ Application Structure
 
@@ -186,17 +192,43 @@ Modern, responsive web application with comprehensive UI/UX:
 
 ## 📸 Screenshots
 
-### Landing Page
-![Landing Page](docs/images/landing.png)
+<details>
+<summary><b>💻 Desktop Views</b> (Click to expand)</summary>
 
-### AI Genie Interface
-![Genie Interface](docs/images/genie.png)
+| Landing Page | AI Genie Interface |
+|--------------|-------------------|
+| ![Desktop Landing](docs/images/desktop-landing.png) | ![Desktop Genie](docs/images/desktop-genie.png) |
 
-### Dashboard
-![Dashboard](docs/images/dashboard.png)
+| Dashboard | Opportunities |
+|-----------|--------------|
+| ![Desktop Dashboard](docs/images/desktop-dashboard.png) | ![Desktop Opportunities](docs/images/desktop-opportunities.png) |
 
-### Job Opportunities Page
-![Opportunities](docs/images/opportunities.png)
+| Guides | Jobs |
+|--------|------|
+| ![Desktop Guides](docs/images/desktop-guides.png) | ![Desktop Jobs](docs/images/desktop-jobs.png) |
+
+| Profile Settings | Resume Upload |
+|------------------|---------------|
+| ![Desktop Profile](docs/images/desktop-profile.png) | ![Desktop Resume](docs/images/desktop-resume.png) |
+
+</details>
+
+<details>
+<summary><b>📱 Mobile Views</b> (Click to expand)</summary>
+
+| Landing | Genie | Dashboard |
+|---------|-------|-----------|
+| ![Mobile Landing](docs/images/mobile-landing.png) | ![Mobile Genie](docs/images/mobile-genie.png) | ![Mobile Dashboard](docs/images/mobile-dashboard.png) |
+
+| Opportunities | Jobs | Resumes |
+|---------------|------|---------|
+| ![Mobile Opportunities](docs/images/mobile-opportunities.png) | ![Mobile Jobs](docs/images/mobile-jobs.png) | ![Mobile Resumes](docs/images/mobile-resumes.png) |
+
+| Guides | Profile |
+|--------|---------|
+| ![Mobile Guides](docs/images/mobile-guides.png) | ![Mobile Profile](docs/images/mobile-profile.png) |
+
+</details>
 
 ## 📄 License
 

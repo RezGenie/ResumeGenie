@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
+import { Upload, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
 // Predefined avatar options - using image paths
 // Upload your avatar images to: /public/avatars/
@@ -49,9 +50,59 @@ export function AvatarSelector({
   onSelect,
   isEditing,
 }: AvatarSelectorProps) {
+  const [customImage, setCustomImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (!isEditing) {
     return null;
   }
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+
+    // TODO: MIGRATION NEEDED - Replace with backend upload
+    // Current: Storing base64 in localStorage (MVP only)
+    // Issues: Large storage size, no cross-device sync, performance impact
+    // Future: Upload to cloud storage (S3/Cloudinary), store URL in database
+    // See: docs/PROFILE_PICTURE_MIGRATION.md for migration plan
+    
+    // Read and convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setCustomImage(result);
+      onSelect(result);
+      toast.success("Custom image uploaded!");
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read image file");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveCustomImage = () => {
+    setCustomImage(null);
+    onSelect(AVATAR_OPTIONS[0].image);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    toast.success("Custom image removed");
+  };
+
+  const isCustomImage = selectedAvatar && !AVATAR_OPTIONS.some(a => a.image === selectedAvatar);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 10 },
@@ -76,7 +127,66 @@ export function AvatarSelector({
   return (
     <div className="space-y-4">
       <Label>Choose Your Avatar</Label>
+      
+      {/* Custom Image Upload Section */}
+      <Card className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-blue-900/20 p-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-shrink-0">
+            {isCustomImage ? (
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-purple-600 shadow-lg">
+                  <img 
+                    src={selectedAvatar} 
+                    alt="Custom avatar"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <button
+                  onClick={handleRemoveCustomImage}
+                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-colors"
+                  title="Remove custom image"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-24 h-24 rounded-full border-2 border-dashed border-purple-300 dark:border-purple-700 flex items-center justify-center bg-purple-50 dark:bg-purple-900/20">
+                <Upload className="h-8 w-8 text-purple-400" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="font-semibold text-sm mb-1">Upload Custom Image</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              {isCustomImage 
+                ? "Your custom profile picture is active" 
+                : "Upload your own profile picture (max 5MB)"}
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="avatar-upload"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 dark:hover:bg-purple-950/20 dark:hover:text-purple-400 dark:hover:border-purple-800"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {isCustomImage ? "Change Image" : "Upload Image"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Predefined Avatars */}
       <Card className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-blue-900/20 p-6">
+        <h3 className="font-semibold text-sm mb-4">Or Choose an Avatar</h3>
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -87,9 +197,12 @@ export function AvatarSelector({
             <motion.button
               key={avatar.id}
               variants={itemVariants}
-              onClick={() => onSelect(avatar.image)}
+              onClick={() => {
+                setCustomImage(null);
+                onSelect(avatar.image);
+              }}
               className={`relative w-20 h-20 rounded-full transition-all duration-200 group border-[3px] flex-shrink-0 ${
-                selectedAvatar === avatar.image
+                selectedAvatar === avatar.image && !isCustomImage
                   ? "border-purple-600"
                   : "border-primary/20 hover:border-primary/40"
               }`}
@@ -106,7 +219,7 @@ export function AvatarSelector({
                   }}
                 />
               </div>
-              {selectedAvatar === avatar.image && (
+              {selectedAvatar === avatar.image && !isCustomImage && (
                 <div className="absolute -top-1 -right-1 bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white dark:border-gray-900">
                   ✓
                 </div>
@@ -116,7 +229,9 @@ export function AvatarSelector({
         </motion.div>
       </Card>
       <p className="text-sm text-muted-foreground">
-        Select an avatar to personalize your profile
+        {isCustomImage 
+          ? "Using your custom profile picture" 
+          : "Select an avatar to personalize your profile"}
       </p>
     </div>
   );

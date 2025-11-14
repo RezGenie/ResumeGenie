@@ -755,7 +755,124 @@ async def _update_daily_count(user: User, db: AsyncSession) -> None:
 
 # GUEST ENDPOINTS
 
-@router.post("/guest", response_model=GenieWishResponse, status_code=status.HTTP_201_CREATED)
+@router.get("/guest", response_model=List[GenieWishDetailResponse])
+async def list_guest_wishes(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    skip: int = 0,
+    limit: int = 20
+):
+    """
+    List genie wishes for guest users.
+    Only returns wishes created by the same guest session.
+    
+    - **skip**: Number of wishes to skip (default: 0)
+    - **limit**: Maximum number of wishes to return (default: 20, max: 100)
+    """
+    try:
+        # Validate limit
+        limit = min(limit, 100)
+        
+        # Get guest session ID from request
+        session_id = await get_or_create_guest_session(request, db)
+        
+        # Get guest user for this session
+        guest_email = f"guest_{session_id[:8]}@temporary.com"
+        result = await db.execute(select(User).where(User.email == guest_email))
+        guest_user = result.scalar_one_or_none()
+        
+        if not guest_user:
+            # No guest user means no wishes yet
+            return []
+        
+        # Build query to get wishes for this guest user
+        query = select(GenieWish).where(GenieWish.user_id == guest_user.id)
+        query = query.order_by(desc(GenieWish.created_at)).offset(skip).limit(limit)
+        
+        # Execute query
+        result = await db.execute(query)
+        wishes = result.scalars().all()
+        
+        # Create response list with full details
+        wish_list = []
+        for wish in wishes:
+            # Parse stored AI results - use new fields first, fallback to response_text
+            ai_response_text = wish.ai_response
+            recommendations = wish.recommendations
+            action_items = wish.action_items
+            resources = wish.resources
+            confidence_score = wish.confidence_score
+            job_match_score = wish.job_match_score
+            
+            # Parse JSON fields if they come as strings
+            if isinstance(recommendations, str):
+                try:
+                    recommendations = json.loads(recommendations)
+                except (json.JSONDecodeError, TypeError):
+                    recommendations = []
+            
+            if isinstance(action_items, str):
+                try:
+                    action_items = json.loads(action_items)
+                except (json.JSONDecodeError, TypeError):
+                    action_items = []
+            
+            if isinstance(resources, str):
+                try:
+                    resources = json.loads(resources)
+                except (json.JSONDecodeError, TypeError):
+                    resources = []
+            
+            # Fallback to parsing response_text if new fields are empty
+            if not ai_response_text and wish.response_text:
+                try:
+                    parsed_response = json.loads(wish.response_text)
+                    ai_response_text = ai_response_text or parsed_response.get("response", "")
+                    recommendations = recommendations or parsed_response.get("recommendations", [])
+                    action_items = action_items or parsed_response.get("action_items", [])
+                    resources = resources or parsed_response.get("resources", [])
+                    confidence_score = confidence_score or parsed_response.get("confidence_score", 0.8)
+                    job_match_score = job_match_score or parsed_response.get("job_match_score", 0.7)
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse response_text for guest wish {wish.id}")
+            
+            wish_list.append(
+                GenieWishDetailResponse(
+                    id=str(wish.id),
+                    wish_type=wish.wish_type,
+                    wish_text=wish.request_text or "",
+                    context_data=None,
+                    is_processed=wish.is_processed or wish.status == "completed",
+                    processing_status=wish.processing_status or wish.status or "pending",
+                    processing_error=wish.processing_error or wish.error_message,
+                    created_at=wish.created_at.isoformat(),
+                    processed_at=wish.processed_at.isoformat() if wish.processed_at else (wish.completed_at.isoformat() if wish.completed_at else None),
+                    ai_response=ai_response_text,
+                    recommendations=recommendations,
+                    action_items=action_items,
+                    resources=resources,
+                    confidence_score=confidence_score,
+                    job_match_score=job_match_score,
+                    overall_score=wish.overall_score,
+                    score_breakdown=wish.score_breakdown,
+                    company_name=None,
+                    position_title=None,
+                )
+            )
+        
+        return wish_list
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"List guest wishes error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve wishes"
+        )
+
+
+@router.post("/guest", response_model=GenieWishDetailResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit(max_calls=3, window_minutes=1440)  # 3 wishes per day for guests
 async def create_guest_wish(
     wish_request: WishRequest,
@@ -766,6 +883,7 @@ async def create_guest_wish(
     Create a new AI-powered wish as a guest user.
     
     Guest users are limited to 3 wishes per day.
+    Returns full details including AI analysis results since guest wishes are processed synchronously.
     """
     try:
         # Get or create guest session

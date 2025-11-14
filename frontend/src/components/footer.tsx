@@ -1,10 +1,58 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Logo } from "@/components/ui/logo"
+import { useAuth } from "@/contexts/AuthContext"
 
 export function Footer() {
+  const { user } = useAuth()
+  const [isMobile, setIsMobile] = React.useState(false)
+
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Show mini footer for authenticated users OR mobile users
+  if (user || isMobile) {
+    return (
+      <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mt-auto">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Logo and Copyright */}
+            <div className="flex items-center gap-2">
+              <Logo size={24} />
+              <span className="text-sm text-muted-foreground">
+                © 2025 RezGenie. All rights reserved.
+              </span>
+            </div>
+            
+            {/* Quick Links */}
+            <div className="flex items-center gap-6 text-sm">
+              <Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">
+                Contact
+              </Link>
+              <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    )
+  }
+
   return (
     <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-12 max-w-7xl md:px-6 lg:px-8 xl:px-12">

@@ -1,248 +1,143 @@
 # 🚀 RezGenie Deployment Guide
 
-## Current Status
-- **Environment:** Development
-- **Deployment:** Docker Compose (local)
-- **Status:** Ready for production deployment
+**Status:** Production-ready | **Time:** 30-45 minutes
 
 ---
 
-## 📊 Backend Deployment Options - Quick Comparison
+## Platform Comparison
 
-| Platform | Monthly Cost | Pros | Cons |
-|----------|-------------|------|------|
-| **Railway.app** ⭐ | $20-30 | Easiest setup, Docker native, pgvector support, auto-scaling | No native MinIO |
-| **Render.com** ⭐ | Free-$35 | Free tier, Docker support, pgvector, auto-deploy | Cold starts on free tier |
-| **Fly.io** | $15-25 | Full control, can run MinIO, global edge | More complex setup |
-| **DigitalOcean** | $30-50 | Reliable, managed services, Spaces storage | Higher cost |
-| **VPS (Hetzner)** | $10-20 | Cheapest, full control, run docker-compose as-is | Manual management |
+| Platform | Cost | Best For |
+|----------|------|----------|
+| **Render.com** ⭐ | Free-$35 | Free tier demo, easy upgrade |
+| **Railway.app** | $20-30 | Production (easiest setup) |
+| **VPS (Hetzner)** | $10-20 | Full control (manual) |
 
 ---
 
-## 🏆 Top 2 Recommendations
+## Quick Deploy (Render.com)
 
-### 1. Railway.app (Best Overall) ⭐
+### 1. Cloudflare R2 Storage Setup (5 min)
 
-**Why Railway:**
-- Easiest setup for Docker containers
-- Native PostgreSQL + Redis plugins
-- Auto-scaling and zero-downtime deploys
-- GitHub auto-deploy integration
-- Perfect for capstone demo
+1. Create R2 bucket at [dash.cloudflare.com](https://dash.cloudflare.com) → R2
+2. Name: `rezgenie-uploads`
+3. Generate API token (Read/Write permissions)
+4. Save: Access Key ID, Secret Key, Account ID
+5. Endpoint: `https://{ACCOUNT_ID}.r2.cloudflarestorage.com`
 
-**Setup Steps:**
-1. Deploy Docker container directly
-2. Add PostgreSQL + Redis plugins
-3. Switch MinIO → Cloudflare R2 (free 10GB)
-4. GitHub auto-deploy
-5. **Setup time:** 30 minutes
+### 2. Render Backend Setup (15 min)
 
-**Cost:** $20-30/month for production-ready setup
+1. Login to [render.com](https://render.com)
+2. **New Web Service** → Connect GitHub repo
+3. Configure:
+   - Name: `rezgenie-backend`
+   - Environment: `Docker`
+   - Region: Choose closest
+   - Instance: Free (or Starter $7/mo)
+4. **Add PostgreSQL** → Create new database (Free tier)
+5. **Add Redis** (optional, $7/mo for caching)
 
-**Storage Solution:**
-- Replace MinIO with **Cloudflare R2**
-  - Free 10GB storage
-  - S3-compatible (works with existing boto3 code)
-  - Zero egress fees
-  - Only need to change 2 env vars
+### 3. Environment Variables (10 min)
 
----
-
-### 2. Render.com (Best Free Start) ⭐
-
-**Why Render:**
-- Free tier for testing
-- Same stack support as Railway
-- Upgrade to $25/month for production
-- **Setup time:** 45 minutes
-
-**Perfect for:**
-- Capstone presentation (free tier)
-- Upgrade later for production
-
----
-
-## 🗄️ Storage Solution
-
-### Replace MinIO with Cloudflare R2
-
-**Why Cloudflare R2:**
-- ✅ Free 10GB storage
-- ✅ S3-compatible (works with existing boto3 code)
-- ✅ Zero egress fees
-- ✅ Only need to change 2 env vars
-
-**Migration Steps:**
-```python
-# Current MinIO config
-MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-
-# New Cloudflare R2 config
-MINIO_ENDPOINT=<account-id>.r2.cloudflarestorage.com
-MINIO_ACCESS_KEY=<r2-access-key>
-```
-
-No code changes needed - R2 is S3-compatible!
-
----
-
-## 🎯 Recommended Deployment Stack
-
-### For Capstone Presentation:
-```
-Frontend: Vercel (free, auto-deploy from GitHub)
-Backend: Render.com (free tier)
-Database: Render PostgreSQL (free tier)
-Storage: Cloudflare R2 (free 10GB)
-Redis: Render Redis (free tier)
-```
-
-**Total Cost:** $0 (perfect for demo!)
-
-### For Production:
-```
-Frontend: Vercel ($0 - hobby plan)
-Backend: Railway.app ($20-30/month)
-Database: Railway PostgreSQL (included)
-Storage: Cloudflare R2 (free 10GB)
-Redis: Railway Redis (included)
-```
-
-**Total Cost:** ~$25/month
-
----
-
-## 📋 Deployment Checklist
-
-### Pre-Deployment
-- [ ] All tests passing
-- [ ] Environment variables documented
-- [ ] Database migrations tested
-- [ ] Docker build successful
-- [ ] Security audit complete
-
-### Platform Setup
-- [ ] Create Railway/Render account
-- [ ] Connect GitHub repository
-- [ ] Add PostgreSQL + Redis services
-- [ ] Configure Cloudflare R2 bucket
-- [ ] Set environment variables
-
-### Environment Variables
+Add to Render Web Service → Environment:
 ```bash
-# Required for production
-OPENAI_API_KEY=sk-...
+# Database (auto-filled from Render PostgreSQL)
 DATABASE_URL=postgresql://...
-JWT_SECRET_KEY=<strong-32-char-secret>
-REDIS_URL=redis://...
-MINIO_ENDPOINT=<account>.r2.cloudflarestorage.com
-MINIO_ACCESS_KEY=<r2-key>
-MINIO_SECRET_KEY=<r2-secret>
+
+# OpenAI
+OPENAI_API_KEY=sk-...
+
+# Security
+JWT_SECRET_KEY=<generate-32-char-secret>
+
+# R2 Storage
+MINIO_ENDPOINT={ACCOUNT_ID}.r2.cloudflarestorage.com
+MINIO_ACCESS_KEY={R2_ACCESS_KEY}
+MINIO_SECRET_KEY={R2_SECRET_KEY}
+MINIO_BUCKET_NAME=rezgenie-uploads
+
+# Config
 ENVIRONMENT=production
 DEBUG=false
+
+# Redis (if using)
+REDIS_URL=redis://...
+
+# CORS (update with your Netlify URL)
+BACKEND_CORS_ORIGINS=["https://your-app.netlify.app"]
 ```
 
-### Post-Deployment
-- [ ] Run database migrations
+### 4. Deploy & Verify (5 min)
+
+1. Click **Create Web Service** (auto-deploys)
+2. Wait for build (~5 min)
+3. Test: `https://your-service.onrender.com/docs`
+4. Update frontend `.env`: `NEXT_PUBLIC_API_URL=https://your-service.onrender.com`
+
+---
+
+## Deployment Stack
+
+### Free Tier (Demo)
+
+- Frontend: Netlify ✅ (already deployed)
+- Backend: Render Free
+- Database: Render PostgreSQL Free
+- Storage: Cloudflare R2 (10GB free)
+- **Total: $0**
+
+### Production
+
+- Frontend: Netlify (free)
+- Backend: Render Starter ($7/mo) or Railway ($20-30/mo)
+- Database: Included
+- Redis: $7/mo (optional)
+- Storage: R2 (free 10GB)
+- **Total: $7-30/mo**
+
+---
+
+## Checklist
+
+**Pre-Deploy:**
+- [ ] All tests passing
+- [ ] Docker build works locally
+- [ ] Generate strong JWT secret (32+ chars)
+
+**Deploy:**
+- [ ] R2 bucket created with API credentials
+- [ ] Render PostgreSQL created
+- [ ] All environment variables set
+- [ ] Service deployed successfully
+
+**Post-Deploy:**
+- [ ] Test `/docs` endpoint
 - [ ] Test file upload
-- [ ] Test AI features
-- [ ] Verify authentication
-- [ ] Check logs for errors
-- [ ] Test from mobile device
+- [ ] Test authentication
+- [ ] Update frontend API URL
+- [ ] Enable pgvector: `CREATE EXTENSION IF NOT EXISTS vector;`
 
 ---
 
-## 🚀 Quick Deploy Guide
+## Troubleshooting
 
-### Railway.app (30 minutes)
+**Cold starts (free tier):** First request ~30-60s (normal, upgrade to $7/mo for instant)
 
-1. **Create Railway Account**
-   ```bash
-   # Install Railway CLI (optional)
-   npm install -g @railway/cli
-   railway login
-   ```
-
-2. **Deploy Backend**
-   - Connect GitHub repo
-   - Railway auto-detects Dockerfile
-   - Add PostgreSQL plugin
-   - Add Redis plugin
-   - Set environment variables
-
-3. **Setup Cloudflare R2**
-   - Create R2 bucket at dash.cloudflare.com
-   - Generate API token
-   - Update MINIO_ENDPOINT env var
-
-4. **Deploy Frontend (Vercel)**
-   - Connect GitHub repo
-   - Set NEXT_PUBLIC_API_URL to Railway backend URL
-   - Auto-deploy on push
-
-**Done!** Your app is live 🎉
-
----
-
-## 💡 Team Decision Points
-
-**Questions to discuss:**
-1. **Budget:** Free tier for demo or $25/month for production?
-2. **Timeline:** Need free tier first, upgrade later?
-3. **Comfort level:** Managed services (Railway) vs VPS (Hetzner)?
-
-**Our Recommendation:** Start with Render.com free tier for capstone presentation, then upgrade to Railway.app ($25/month) if continuing development.
-
----
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-**PostgreSQL pgvector not available:**
-```bash
-# Railway/Render: Enable pgvector extension
+**pgvector missing:** Run in Render PostgreSQL shell:
+```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-**File uploads failing:**
-```bash
-# Check Cloudflare R2 credentials
-# Verify MINIO_ENDPOINT format
-# Test with AWS CLI: aws s3 ls --endpoint-url=...
-```
+**File uploads fail:** Verify R2 credentials and endpoint format
 
-**Cold starts on free tier:**
-- Expected on Render free tier
-- First request takes 30-60 seconds
-- Upgrade to paid tier for instant response
+**CORS errors:** Add frontend URL to `BACKEND_CORS_ORIGINS`
 
 ---
 
-## 📞 Next Steps
+## Production Upgrade
 
-1. **Team decides on platform** (Railway vs Render)
-2. **Create deployment configs** (railway.json or render.yaml)
-3. **Deploy in 1 hour** following quick guide above
+When ready for production:
+1. Upgrade Render instance to Starter ($7/mo) for no cold starts
+2. Add Redis ($7/mo) for better caching
+3. Or migrate to Railway ($20-30/mo) for full managed stack
 
-**Ready to deploy?** Follow the Railway quick guide above! 🚀
-
-## Environment Variables Checklist
-- [ ] `OPENAI_API_KEY` - Production API key
-- [ ] `DATABASE_URL` - Production database
-- [ ] `JWT_SECRET_KEY` - Strong secret (32+ chars)
-- [ ] `REDIS_URL` - Production Redis instance
-- [ ] `MINIO_ENDPOINT` - Production S3/MinIO
-- [ ] `ENVIRONMENT=production`
-- [ ] `DEBUG=false`
-
-## Pre-Deployment Checklist
-- [ ] All tests passing
-- [ ] Security audit complete
-- [ ] Environment variables configured
-- [ ] Database migrations tested
-- [ ] Backup strategy in place
-- [ ] Monitoring configured
-- [ ] SSL certificates ready
-- [ ] Domain configured
+**Need detailed steps?** See backend `README.md` for platform-specific guides.

@@ -77,7 +77,13 @@ export class APIClient {
 
       const data = await response.json();
       return data;
-    } catch (error) {
+    } catch (error: any) {
+      // For network errors (fetch failed), throw a more user-friendly error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        const networkError = new Error('Network request failed');
+        networkError.name = 'NetworkError';
+        throw networkError;
+      }
       throw error;
     }
   }

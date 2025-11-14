@@ -47,13 +47,21 @@ pydantic-settings==2.0.3
 email-validator==2.1.0
 python-magic==0.4.27
 
+# Payment processing
+stripe==7.9.0
+
 # Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.2
 pytest-mock==3.12.0
+pytest-docker==2.0.0
 
 # Development
 black==23.11.0
 isort==5.12.0
 flake8==6.1.0
+
+# Build tools to avoid distutils hack errors in some envs
+setuptools>=68.0.0
+wheel>=0.41.0

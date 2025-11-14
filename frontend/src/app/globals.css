@@ -245,3 +245,12 @@
   animation: border-flow 3s linear infinite;
   border-image: linear-gradient(45deg, #a855f7, #d946ef, #a855f7) 1;
 }
+
+/* Mobile safe area utilities */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}

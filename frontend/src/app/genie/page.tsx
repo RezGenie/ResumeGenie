@@ -483,55 +483,15 @@ export default function StudioPage() {
     setWishes([]);
   }, [user?.id, isAuthenticated]);
 
-  // Fetch historical wishes when user is authenticated, or load from localStorage for guests
+  // Fetch historical wishes when user is authenticated, or load from backend for guests
   useEffect(() => {
     const fetchWishHistory = async () => {
       try {
-        if (!isAuthenticated) {
-          // Load wishes from localStorage for guest users
-          try {
-            const savedWishes = UserStorage.getItem('genie_wishes');
-            if (savedWishes) {
-              const parsedWishes = JSON.parse(savedWishes);
-              if (Array.isArray(parsedWishes)) {
-                // Convert timestamps back to Date objects
-                const wishesWithDates = parsedWishes.map(wish => ({
-                  ...wish,
-                  timestamp: new Date(wish.timestamp)
-                }));
-                setWishes(wishesWithDates);
-
-                // For guests: Set analysisResults to the most recent completed wish
-                const mostRecentCompletedWish = wishesWithDates
-                  .filter(wish => wish.status === 'completed' && wish.results)
-                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
-                if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
-                  const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
-                  const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
-
-                  setAnalysisResults({
-                    resumeScore: mostRecentCompletedWish.results.score || 0,
-                    matchScore: mostRecentCompletedWish.results.score || 0, // Use same score if no separate match score
-                    skillGaps: parsedRecommendations,
-                    insights: parsedInsights,
-                    recommendations: parsedInsights,
-                  });
-                }
-              }
-            } else {
-              setWishes([]);
-            }
-          } catch (error) {
-            console.warn('Failed to load wishes from localStorage:', error);
-            setWishes([]);
-          }
-          return;
-        }
         const { apiClient } = await import("@/lib/api/client");
-        const historicalWishes = await apiClient.get<WishDetailsResponse[]>(
-          "/genie"
-        );
+        
+        // Fetch wishes from backend for both authenticated and guest users
+        const endpoint = isAuthenticated ? "/genie" : "/genie/guest";
+        const historicalWishes = await apiClient.get<WishDetailsResponse[]>(endpoint);
 
         if (Array.isArray(historicalWishes)) {
           // Convert historical wishes with full details included
@@ -562,10 +522,67 @@ export default function StudioPage() {
             } as Wish;
           });
           setWishes(detailedWishes);
+          
+          // For guests and authenticated users: Set analysisResults to the most recent completed wish
+          if (!isAuthenticated) {
+            const mostRecentCompletedWish = detailedWishes
+              .filter(wish => wish.status === 'completed' && wish.results)
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+            if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+              const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
+              const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
+
+              setAnalysisResults({
+                resumeScore: mostRecentCompletedWish.results.score || 0,
+                matchScore: mostRecentCompletedWish.results.score || 0, // Use same score if no separate match score
+                skillGaps: parsedRecommendations,
+                insights: parsedInsights,
+                recommendations: parsedInsights,
+              });
+            }
+          }
         }
       } catch (err) {
         console.warn("Failed to fetch wish history:", err);
-        // Don't clear wishes on error - keep any current session wishes
+        
+        // Fallback to localStorage for guests only if backend fetch fails
+        if (!isAuthenticated) {
+          try {
+            const savedWishes = UserStorage.getItem('genie_wishes');
+            if (savedWishes) {
+              const parsedWishes = JSON.parse(savedWishes);
+              if (Array.isArray(parsedWishes)) {
+                // Convert timestamps back to Date objects
+                const wishesWithDates = parsedWishes.map(wish => ({
+                  ...wish,
+                  timestamp: new Date(wish.timestamp)
+                }));
+                setWishes(wishesWithDates);
+
+                // For guests: Set analysisResults to the most recent completed wish
+                const mostRecentCompletedWish = wishesWithDates
+                  .filter(wish => wish.status === 'completed' && wish.results)
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+                if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
+                  const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
+                  const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
+
+                  setAnalysisResults({
+                    resumeScore: mostRecentCompletedWish.results.score || 0,
+                    matchScore: mostRecentCompletedWish.results.score || 0,
+                    skillGaps: parsedRecommendations,
+                    insights: parsedInsights,
+                    recommendations: parsedInsights,
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to load wishes from localStorage:', error);
+          }
+        }
       }
     };
     fetchWishHistory();
@@ -1194,7 +1211,7 @@ export default function StudioPage() {
 
 
 
-      <div className="container mx-auto px-4 py-20 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <motion.div
           initial="hidden"
@@ -1221,7 +1238,7 @@ export default function StudioPage() {
         >
           {/* Wish Counter */}
           <motion.div variants={itemVariants}>
-            <Card className="max-w-3xl mx-auto bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-lg">
+            <Card className="max-w-3xl mx-auto bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-lg hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-600 transition-all">
               <CardHeader className="text-center">
                 <CardTitle className="flex items-center justify-center gap-2 text-gray-900 dark:text-gray-100">
                   <Sparkles className="h-6 w-6 text-purple-600" />
@@ -1560,7 +1577,7 @@ export default function StudioPage() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Resume Upload */}
             <motion.div variants={itemVariants}>
-              <Card className={`h-full ${showInitialHighlight && !analysisResults
+              <Card className={`h-full hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all ${showInitialHighlight && !analysisResults
                 ? getHighlightClass(true, initialHighlightFading)
                 : ""
                 }`}>
@@ -1714,7 +1731,7 @@ export default function StudioPage() {
                                   }}
                                 >
                                   <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 text-xs whitespace-nowrap">
-                                    ✓ Primary Resume
+                                    &#128970; Primary Resume
                                   </Badge>
                                 </motion.div>
                               )}
@@ -1762,8 +1779,8 @@ export default function StudioPage() {
                         >
                           {resumeFile.resumeData.processing_status === "completed" ? (
                             <>
-                              <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
-                                <CheckCircle2 className="h-4 w-4" />
+                              <div className="flex items-center gap-1.5">
+                                <CheckCircle2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                                 <span className="font-medium">Ready for analysis</span>
                               </div>
                             </>
@@ -1783,7 +1800,7 @@ export default function StudioPage() {
 
             {/* Job Posting */}
             <motion.div variants={itemVariants}>
-              <Card className={`h-full ${showInitialHighlight && !analysisResults
+              <Card className={`h-full hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all ${showInitialHighlight && !analysisResults
                 ? getHighlightClass(true, initialHighlightFading)
                 : ""
                 }`}>
@@ -1799,27 +1816,27 @@ export default function StudioPage() {
                 </CardDescription>
                 <CardContent className="space-y-4">
                   {/* Company and Position Inputs */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground block">
                         Company Name (optional)
                       </label>
                       <Input
                         placeholder="e.g., Acme Corp"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        className="h-9 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        className="w-full h-10 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-muted-foreground block">
                         Position Title (optional)
                       </label>
                       <Input
                         placeholder="e.g., Senior Software Engineer"
                         value={positionTitle}
                         onChange={(e) => setPositionTitle(e.target.value)}
-                        className="h-9 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        className="w-full h-10 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
                   </div>
@@ -1898,7 +1915,7 @@ export default function StudioPage() {
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {/* Resume Analysis */}
-            <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -1999,7 +2016,7 @@ export default function StudioPage() {
             </Card>
 
             {/* Job Match Score */}
-            <Card className={`relative transition-all duration-300 ${showOutputHighlight && analysisResults
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -2095,7 +2112,7 @@ export default function StudioPage() {
             </Card>
 
             {/* Skill Gap Analysis */}
-            <Card className={`overflow-hidden relative transition-all duration-300 ${showOutputHighlight && analysisResults
+            <Card className={`overflow-hidden relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -2149,7 +2166,7 @@ export default function StudioPage() {
 
           {/* Wish History */}
           <motion.div variants={itemVariants}>
-            <Card className={`max-w-4xl mx-auto ${showOutputHighlight && wishes.some(w => w.status === 'completed')
+            <Card className={`max-w-4xl mx-auto hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all ${showOutputHighlight && wishes.some(w => w.status === 'completed')
               ? getHighlightClass(true, outputHighlightFading)
               : ""
               }`}>
@@ -2254,7 +2271,7 @@ export default function StudioPage() {
                             }
                           }}
                           className={`border border-muted-foreground/25 rounded-lg p-3 sm:p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm ${wish.status === "completed"
-                            ? "cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                            ? "cursor-pointer hover:shadow-md hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 dark:bg-card"
                             : "cursor-default dark:bg-card"
                             }`}
                         >
@@ -2419,7 +2436,7 @@ export default function StudioPage() {
                   variants={modalVariants}
                 >
                   <div
-                    className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm"
+                    className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 dark:hover:bg-purple-950/30 hover:shadow-3xl dark:hover:border-purple-600 transition-all"
                     ref={modalRef}
                   >
                     <div className="flex items-center justify-between mb-4">
@@ -2498,7 +2515,7 @@ export default function StudioPage() {
                   exit="exit"
                   variants={modalVariants}
                 >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm">
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-purple-600" />
@@ -2575,7 +2592,7 @@ export default function StudioPage() {
                   exit="exit"
                   variants={modalVariants}
                 >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm">
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
                         <Target className="h-5 w-5 text-purple-600" />
@@ -2663,7 +2680,7 @@ export default function StudioPage() {
                   exit="exit"
                   variants={modalVariants}
                 >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm max-h-[90vh] overflow-hidden flex flex-col">
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm max-h-[90vh] overflow-hidden flex flex-col hover:border-purple-300 dark:hover:bg-purple-950/30 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div

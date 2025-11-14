@@ -15,7 +15,8 @@ import {
   Eye,
   ExternalLink,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { JobSwipeDeck } from "@/components/jobs/JobSwipeDeck";
 import { JobDetailsModal } from "@/components/jobs/JobDetailsModal";
 import { savedJobsService } from "@/lib/api/savedJobs";
-import { Logo } from "@/components/ui/logo"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -86,11 +86,8 @@ export default function JobDiscoveryPage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        // Only show loading on initial load
-        if (jobs.length === 0) {
-          setLoading(true);
-        }
         setError(null);
+        setIsSearching(true);
 
         // Build filters object
         const filters = {
@@ -133,16 +130,8 @@ export default function JobDiscoveryPage() {
       }
     };
 
-    // Show searching indicator immediately when user types
-    setIsSearching(true);
-
-    // Debounce search - wait for user to finish typing (500ms)
-    const timeoutId = setTimeout(() => {
-      fetchJobs();
-      fetchJobStats();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
+    fetchJobs();
+    fetchJobStats();
   }, [searchTerm, locationFilter, salaryFilter]);
 
   // Listen for preference changes and refresh jobs
@@ -268,18 +257,14 @@ export default function JobDiscoveryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-              <div className="text-center space-y-2">
-                <p className="text-muted-foreground">Loading your opportunities...</p>
-              </div>
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
+              <p className="text-muted-foreground">Loading your opportunities...</p>
             </div>
           </div>
-        </main>
-        <Footer />
+        </div>
       </div>
     );
   }
@@ -319,7 +304,10 @@ export default function JobDiscoveryPage() {
             </div>
           </div>
         </main>
-        <Footer />
+        {/* Hide footer on mobile during error */}
+        <div className="hidden lg:block">
+          <Footer />
+        </div>
       </div>
     );
   }
@@ -329,7 +317,20 @@ export default function JobDiscoveryPage() {
       <div className="min-h-screen bg-background">
         <Header />
 
-        <main className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Mobile: Full-screen Tinder-style swipe view */}
+        {!loading && (
+          <div className="lg:hidden fixed inset-0 top-20 bottom-24 bg-background px-4 pt-4">
+            <div className="h-full w-full max-w-md mx-auto">
+              <JobSwipeDeck onJobDetailsAction={(job) => {
+                setSelectedJob(job);
+                setIsJobModalOpen(true);
+              }} />
+            </div>
+          </div>
+        )}
+
+        {/* Desktop: Traditional view with filters and grid */}
+        <main className="hidden lg:block container mx-auto px-4 py-8 max-w-6xl">
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -484,27 +485,25 @@ export default function JobDiscoveryPage() {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: Swipe Deck */}
-                  <div className="block lg:hidden">
-                    <div className="h-[600px] bg-background rounded-lg">
-                      <JobSwipeDeck onJobDetailsAction={(job) => {
-                        setSelectedJob(job);
-                        setIsJobModalOpen(true);
-                      }} />
-                    </div>
-                  </div>
-
                   {/* Desktop: Grid View */}
-                  <div className="hidden lg:block">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {paginatedJobs.map((job) => (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {paginatedJobs.map((job, index) => (
                         <motion.div
                           key={job.id}
                           variants={itemVariants}
-                          whileHover={{ y: -2 }}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ y: -4, scale: 1.01 }}
                           className="group"
                         >
-                          <Card className="h-full hover:shadow-lg transition-all duration-200">
+                          <Card 
+                            className="h-full hover:shadow-lg hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer"
+                            onClick={() => {
+                              setSelectedJob(job);
+                              setIsJobModalOpen(true);
+                            }}
+                          >
                             <CardHeader>
                               <div className="flex items-start justify-between">
                                 <div className="space-y-1 flex-1">
@@ -570,7 +569,10 @@ export default function JobDiscoveryPage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleToggleSaveJob(job.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleSaveJob(job.id);
+                                    }}
                                     className={job.saved
                                       ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"
                                       : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"}
@@ -579,20 +581,11 @@ export default function JobDiscoveryPage() {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedJob(job);
-                                      setIsJobModalOpen(true);
+                                    className="whitespace-nowrap gap-1 bg-purple-600 hover:bg-purple-700"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(job.redirect_url, '_blank');
                                     }}
-                                    className="gap-1 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="whitespace-nowrap gap-1"
-                                    onClick={() => window.open(job.redirect_url, '_blank')}
                                   >
                                     <ExternalLink className="w-4 h-4" />
                                     Apply Now
@@ -663,13 +656,16 @@ export default function JobDiscoveryPage() {
                         </Button>
                       </div>
                     )}
-                  </div>
                 </>
               )}
             </motion.div>
           </motion.div>
         </main>
-        <Footer />
+        
+        {/* Footer - hidden on mobile for Tinder-style experience */}
+        <div className="hidden lg:block">
+          <Footer />
+        </div>
 
         {/* Job Details Modal for Mobile & Desktop */}
         <AnimatePresence mode="wait">

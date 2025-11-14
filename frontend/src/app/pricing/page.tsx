@@ -1,13 +1,19 @@
 "use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { subscriptionService } from "@/lib/api/subscriptions";
 
 const plans = [
   {
     name: "Free",
+    tier: "free" as const,
     price: "$0/mo",
     features: ["3 wishes per day", "Basic resume analysis", "Access to guides"],
     cta: "Get Started",
@@ -15,13 +21,15 @@ const plans = [
   },
   {
     name: "Pro",
+    tier: "pro" as const,
     price: "$12/mo",
     features: ["10 wishes per day", "Advanced AI analysis", "Priority support", "Job match scoring"],
     cta: "Upgrade to Pro",
-    highlight: true
+    highlight: false
   },
   {
     name: "Unlimited",
+    tier: "unlimited" as const,
     price: "$29/mo",
     features: ["Unlimited wishes", "Full AI insights", "Personalized career coaching", "Early access to new features"],
     cta: "Go Unlimited",
@@ -30,6 +38,47 @@ const plans = [
 ];
 
 export default function PricingPage() {
+  const { isAuthenticated } = useAuth();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handleUpgrade = async (tier: 'pro' | 'unlimited', planName: string) => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to upgrade", {
+        description: "You need to be logged in to subscribe to a plan"
+      });
+      return;
+    }
+
+    setLoadingPlan(planName);
+    try {
+      const { url } = await subscriptionService.createCheckout(tier);
+      // Redirect to Stripe Checkout
+      window.location.href = url;
+    } catch (error: any) {
+      // Don't log to console - handle gracefully with toast
+      
+      // Check if it's a network error
+      if (error.name === 'NetworkError' || error.name === 'TypeError' || error.message?.toLowerCase().includes('network')) {
+        toast.error("Connection failed", {
+          description: "Unable to reach the payment service. Please try again in a moment."
+        });
+      } 
+      // Check if it's a Stripe configuration error
+      else if (error.message?.includes('Stripe') || error.message?.includes('price') || error.message?.includes('API key')) {
+        toast.error("Payment system not configured", {
+          description: "Stripe integration needs to be set up. Please contact support."
+        });
+      }
+      // Generic error
+      else {
+        toast.error("Failed to start checkout", {
+          description: "Please try again or contact support"
+        });
+      }
+      
+      setLoadingPlan(null);
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -53,22 +102,16 @@ export default function PricingPage() {
           transition={{ duration: 0.6 }}
           className="mb-8"
         >
-          <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-amber-600">
-                  Pricing Under Development
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                  Development Notice
                 </h3>
-                <div className="mt-2 text-sm text-amber-600">
-                  <p>
-                    All features are currently free during the development phase. Payment processing will be available soon!
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  All features are currently free during development. Payment processing will be available soon.
+                </p>
               </div>
             </div>
           </div>
@@ -82,7 +125,7 @@ export default function PricingPage() {
               transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
               className="h-full"
             >
-              <Card className={`rounded-2xl p-8 shadow-lg border h-full flex flex-col ${plan.highlight ? 'border-primary' : 'border-muted-foreground/20'} bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20`}>
+              <Card className={`rounded-2xl p-8 shadow-lg border h-full flex flex-col ${plan.highlight ? 'border-primary' : 'border-muted-foreground/20'} bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 hover:shadow-xl hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all cursor-pointer`}>
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
                   <div className="text-3xl font-bold mb-4">{plan.price}</div>
@@ -95,8 +138,26 @@ export default function PricingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button size="lg" className="w-full mt-auto">
-                    {plan.cta}
+                  <Button 
+                    size="lg" 
+                    className="w-full mt-auto"
+                    onClick={() => {
+                      if (plan.tier === 'free') {
+                        window.location.href = isAuthenticated ? '/dashboard' : '/genie';
+                      } else {
+                        handleUpgrade(plan.tier, plan.name);
+                      }
+                    }}
+                    disabled={loadingPlan === plan.name}
+                  >
+                    {loadingPlan === plan.name ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
                   </Button>
                 </CardContent>
               </Card>

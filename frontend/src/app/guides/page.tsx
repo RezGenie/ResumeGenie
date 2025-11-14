@@ -112,7 +112,7 @@ export default function Guides() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <span className="text-green-500 mt-1">✓</span>
+                    <span className="text-purple-500 mt-1">✓</span>
                     <div>
                       <h3 className="font-semibold">Tailor for Each Role</h3>
                       <p className="text-sm text-muted-foreground">
@@ -121,7 +121,7 @@ export default function Guides() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <span className="text-green-500 mt-1">✓</span>
+                    <span className="text-purple-500 mt-1">✓</span>
                     <div>
                       <h3 className="font-semibold">Use Action Verbs</h3>
                       <p className="text-sm text-muted-foreground">
@@ -130,7 +130,7 @@ export default function Guides() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <span className="text-green-500 mt-1">✓</span>
+                    <span className="text-purple-500 mt-1">✓</span>
                     <div>
                       <h3 className="font-semibold">Quantify Achievements</h3>
                       <p className="text-sm text-muted-foreground">
@@ -141,7 +141,7 @@ export default function Guides() {
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <span className="text-green-500 mt-1">✓</span>
+                    <span className="text-purple-500 mt-1">✓</span>
                     <div>
                       <h3 className="font-semibold">Keep It Concise</h3>
                       <p className="text-sm text-muted-foreground">
@@ -150,7 +150,7 @@ export default function Guides() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <span className="text-green-500 mt-1">✓</span>
+                    <span className="text-purple-500 mt-1">✓</span>
                     <div>
                       <h3 className="font-semibold">ATS-Friendly Format</h3>
                       <p className="text-sm text-muted-foreground">
@@ -159,7 +159,7 @@ export default function Guides() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <span className="text-green-500 mt-1">✓</span>
+                    <span className="text-purple-500 mt-1">✓</span>
                     <div>
                       <h3 className="font-semibold">Include Keywords</h3>
                       <p className="text-sm text-muted-foreground">

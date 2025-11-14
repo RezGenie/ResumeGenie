@@ -8,6 +8,7 @@ from .job import Job
 from .user_preferences import UserPreferences
 from .job_swipe import JobSwipe
 from .saved_job import SavedJob
+from .subscription import Subscription, SubscriptionTier, SubscriptionStatus
 
 __all__ = [
     "User",
@@ -21,5 +22,8 @@ __all__ = [
     "Job",
     "UserPreferences", 
     "JobSwipe",
-    "SavedJob"
+    "SavedJob",
+    "Subscription",
+    "SubscriptionTier",
+    "SubscriptionStatus"
 ]
