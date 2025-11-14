@@ -53,10 +53,9 @@ class EnhancedCacheService:
     def __init__(self):
         """Initialize Redis connection."""
         try:
-            self.redis_client = redis.Redis(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                password=settings.REDIS_PASSWORD,
+            # Use redis_url from settings which supports both host:port and full URL formats
+            self.redis_client = redis.from_url(
+                settings.redis_url,
                 decode_responses=True,
                 socket_connect_timeout=5,
                 socket_timeout=5
