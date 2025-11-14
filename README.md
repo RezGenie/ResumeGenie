@@ -64,6 +64,8 @@ RezGenie is an intelligent resume analysis and optimization platform that levera
 ### Infrastructure
 
 - **Containerization**: Docker & Docker Compose
+- **Production Hosting**: Netlify (frontend), Render (backend + PostgreSQL + Redis)
+- **Storage**: Cloudflare R2 (production), MinIO (local development)
 - **Monitoring**: Comprehensive logging and health checks
 - **Documentation**: Automated API documentation
 
@@ -113,16 +115,33 @@ RezGenie/
    ```
 
 4. **Access the application**
-   - **API Documentation**: <http://localhost:8000/docs>
    - **Frontend**: <http://localhost:3000>
+   - **API Documentation**: <http://localhost:8000/docs>
    - **MinIO Console**: <http://localhost:9001>
+
+## 🌐 Production Deployment
+
+RezGenie is deployed and live at:
+- **Frontend**: [https://rezgenie.netlify.app](https://rezgenie.netlify.app)
+- **Backend API**: [https://rezgenie-api.onrender.com](https://rezgenie-api.onrender.com)
+
+### Deploy Your Own Instance
+
+Want to deploy your own instance of RezGenie? Follow our comprehensive [Deployment Guide](docs/deployment_guide.md) which covers:
+- Setting up PostgreSQL and Redis on Render
+- Configuring Cloudflare R2 for file storage
+- Deploying the backend to Render
+- Deploying the frontend to Netlify
+- Environment variables and CORS configuration
+
+**Time**: ~30-45 minutes | **Cost**: Free tier available
 
 ## 📚 Documentation
 
 ### Core Documentation
 - 📖 [Complete Setup Guide](docs/setup.md) - Development environment setup
 - 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
-- 🚀 [Deployment Guide](docs/deployment.md) - Production deployment options
+- 🚀 [Deployment Guide](docs/deployment_guide.md) - Production Deployment Guide
 - 📦 [Changelog](docs/CHANGELOG.md) - Version history and features
 
 ### Technical Documentation
