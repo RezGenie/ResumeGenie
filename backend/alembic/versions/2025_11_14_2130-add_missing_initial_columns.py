@@ -62,6 +62,14 @@ def upgrade() -> None:
         END $$;
     """)
     
+    # Add embedding column for vector similarity search (pgvector)
+    op.execute("""
+        DO $$ BEGIN
+            ALTER TABLE resumes ADD COLUMN IF NOT EXISTS embedding VECTOR(1536);
+        EXCEPTION WHEN duplicate_column THEN NULL;
+        END $$;
+    """)
+    
     # Add missing columns to genie_wishes table (with IF NOT EXISTS)
     op.execute("""
         DO $$ BEGIN
@@ -179,6 +187,13 @@ def downgrade() -> None:
     op.execute("""
         DO $$ BEGIN
             ALTER TABLE resumes DROP COLUMN IF EXISTS is_processed;
+        EXCEPTION WHEN undefined_column THEN NULL;
+        END $$;
+    """)
+    
+    op.execute("""
+        DO $$ BEGIN
+            ALTER TABLE resumes DROP COLUMN IF EXISTS embedding;
         EXCEPTION WHEN undefined_column THEN NULL;
         END $$;
     """)
