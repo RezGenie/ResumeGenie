@@ -148,7 +148,7 @@ Create accounts on:
 4. **Add Environment Variables** - Click **Show advanced** → **New variable**:
 
    ```bash
-   REACT_APP_API_URL=https://rezgenie-api.onrender.com/api/v1
+   NEXT_PUBLIC_API_URL=https://rezgenie-api.onrender.com/api/v1
    ```
    
    Replace `rezgenie-api.onrender.com` with your actual Render backend URL.
