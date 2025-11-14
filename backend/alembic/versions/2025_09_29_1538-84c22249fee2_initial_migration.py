@@ -49,7 +49,6 @@ def upgrade() -> None:
         sa.Column('is_processed', sa.Boolean(), nullable=True, server_default='false'),
         sa.Column('processing_status', sa.String(length=50), nullable=True, server_default='pending'),
         sa.Column('processing_error', sa.Text(), nullable=True),
-        sa.Column('embedding', postgresql.ARRAY(sa.Float()), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('processed_at', sa.DateTime(timezone=True), nullable=True),
