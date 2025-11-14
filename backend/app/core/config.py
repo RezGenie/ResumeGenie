@@ -51,32 +51,38 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         """Check if we're running in production environment"""
-        return self.environment == "production"
+        return self.storage_provider == "r2" or self.environment == "production"
     
     @property
     def storage_endpoint(self) -> str:
         """Get the appropriate storage endpoint"""
-        return self.r2_endpoint if self.is_production else self.minio_endpoint
+        if self.storage_provider == "r2":
+            # R2 endpoint should be in format: <account_id>.r2.cloudflarestorage.com (no path, no protocol)
+            endpoint = self.r2_endpoint.replace("https://", "").replace("http://", "")
+            # Remove any trailing slashes or paths
+            endpoint = endpoint.split("/")[0]
+            return endpoint
+        return self.minio_endpoint
     
     @property
     def storage_access_key(self) -> str:
         """Get the appropriate access key"""
-        return self.r2_access_key if self.is_production else self.minio_access_key
+        return self.r2_access_key if self.storage_provider == "r2" else self.minio_access_key
     
     @property
     def storage_secret_key(self) -> str:
         """Get the appropriate secret key"""
-        return self.r2_secret_key if self.is_production else self.minio_secret_key
+        return self.r2_secret_key if self.storage_provider == "r2" else self.minio_secret_key
     
     @property
     def storage_bucket_name(self) -> str:
         """Get the appropriate bucket name"""
-        return self.r2_bucket_name if self.is_production else self.minio_bucket_name
+        return self.r2_bucket_name if self.storage_provider == "r2" else self.minio_bucket_name
     
     @property
     def storage_secure(self) -> bool:
         """Get the appropriate secure setting"""
-        return self.r2_secure if self.is_production else self.minio_secure
+        return self.r2_secure if self.storage_provider == "r2" else self.minio_secure
     
     # OpenAI
     openai_api_key: str = ""
