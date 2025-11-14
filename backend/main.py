@@ -6,7 +6,7 @@ import logging
 import time
 
 from app.core.config import settings
-from app.core.database import init_db, close_db
+from app.core import database as db
 from app.api.v1 import api_router
 
 # Configure logging
@@ -59,7 +59,10 @@ if settings.environment == "production":
         TrustedHostMiddleware,
         allowed_hosts=[
             "rezgenie-api.onrender.com",  # Update with your Render domain
+            "localhost",
             "localhost:8000",  # For local testing
+            "127.0.0.1",
+            "testserver",  # Allow TestClient host in tests
         ]
     )
 
@@ -140,7 +143,7 @@ async def startup_event():
     """Initialize database and other services on startup."""
     logger.info("Starting RezGenie API...")
     try:
-        await init_db()
+        await db.init_db()
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
@@ -153,7 +156,7 @@ async def shutdown_event():
     """Clean up resources on shutdown."""
     logger.info("Shutting down RezGenie API...")
     try:
-        await close_db()
+        await db.close_db()
         logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")

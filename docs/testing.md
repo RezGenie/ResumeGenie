@@ -124,6 +124,10 @@ cd frontend && rm -rf node_modules .next && npm install
 # Backend issues
 cd backend && pip install -r requirements.txt
 
+# If you see: ModuleNotFoundError: No module named '_distutils_hack'
+# (common in some Conda envs), run:
+python -m pip install -U pip setuptools wheel
+
 # Port in use: kill process and restart
 ```
 
