@@ -45,6 +45,8 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { resumeService, ResumeResponse } from "@/lib/api/resumes";
+import { InterviewQuestionsCards } from "@/components/InterviewQuestionsCards";
+import { interviewQuestionsService } from "@/lib/api/interviewQuestions";
 
 interface UploadedFile {
   id: string;
@@ -289,6 +291,8 @@ export default function StudioPage() {
   const [analysisResults, setAnalysisResults] =
     useState<AnalysisResults | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [interviewQuestions, setInterviewQuestions] = useState<any[]>([]);
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasLoadedPrimaryResume = useRef(false); // Track if we've already loaded primary resume
 
@@ -1135,6 +1139,33 @@ export default function StudioPage() {
         insights: parsedRecommendations,
         recommendations: parsedRecommendations,
       });
+
+      // Generate interview questions after analysis completes
+      if (jobPosting) {
+        setGeneratingQuestions(true);
+        try {
+          const questionsResponse = await interviewQuestionsService.generateQuestions(
+            !isAuthenticated
+              ? {
+                  resumeText: resumeFile?.name || "Resume submitted", // Use filename as fallback
+                  jobDescription: jobPosting,
+                  numQuestions: 10,
+                }
+              : {
+                  resumeId: resumeFile?.resumeData?.id,
+                  jobDescription: jobPosting,
+                  numQuestions: 10,
+                }
+          );
+          setInterviewQuestions(questionsResponse.questions || []);
+        } catch (error) {
+          console.error("Failed to generate interview questions:", error);
+          // Silently fail - don't interrupt the user experience
+        } finally {
+          setGeneratingQuestions(false);
+        }
+      }
+
       // Enable output highlighting after successful analysis
       setShowButtonHighlight(false);
       setShowOutputHighlight(true);
@@ -1290,6 +1321,7 @@ export default function StudioPage() {
                               onClick={() => setIsRecModalOpen(true)}
                               aria-label="Expand recommendations"
                               title="View full recommendations"
+                              suppressHydrationWarning
                             >
                               <Maximize2 className="h-4 w-4" />
                             </Button>
@@ -1814,7 +1846,7 @@ export default function StudioPage() {
                 <CardDescription className="text-sm text-muted-foreground mb-2 px-4">
                   Paste a job description to analyze your resume match, or ask for resume improvement tips
                 </CardDescription>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4" suppressHydrationWarning>
                   {/* Company and Position Inputs */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
@@ -1825,6 +1857,7 @@ export default function StudioPage() {
                         placeholder="e.g., Acme Corp"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
+                        suppressHydrationWarning
                         className="w-full h-10 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
@@ -1836,6 +1869,7 @@ export default function StudioPage() {
                         placeholder="e.g., Senior Software Engineer"
                         value={positionTitle}
                         onChange={(e) => setPositionTitle(e.target.value)}
+                        suppressHydrationWarning
                         className="w-full h-10 border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
@@ -1856,6 +1890,7 @@ export default function StudioPage() {
                         }
                       }}
                       disabled={isDailyLimitReached}
+                      suppressHydrationWarning
                       className={`h-[400px] resize-none overflow-y-auto border-2 transition-all duration-200 bg-background/50 backdrop-blur-sm text-sm leading-relaxed rounded-lg ${isDailyLimitReached
                         ? "border-muted-foreground/20 opacity-60 cursor-not-allowed"
                         : "border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -2160,6 +2195,41 @@ export default function StudioPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Interview Questions - Always visible */}
+            {interviewQuestions.length > 0 ? (
+              <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-3">
+                <InterviewQuestionsCards 
+                  questions={interviewQuestions}
+                  isLoading={generatingQuestions}
+                />
+              </motion.div>
+            ) : (
+              <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-3">
+                <Card className="hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Sparkles className="h-5 w-5 text-purple-600" />
+                      Interview Questions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {generatingQuestions
+                          ? "Generating interview questions..."
+                          : "Submit your resume and job description to generate interview questions"}
+                      </p>
+                      {generatingQuestions && (
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
 
             {/* AI Recommendations now located inside the Genie counter card */}
           </motion.div>

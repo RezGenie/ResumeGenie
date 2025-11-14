@@ -19,6 +19,7 @@ from app.models.user import User
 from app.models.genie_wish import GenieWish, DailyWishCount
 from app.models.resume import Resume
 from app.services.openai_service import openai_service
+from app.services.interview_questions_service import generate_interview_questions
 
 logger = logging.getLogger(__name__)
 
@@ -1326,4 +1327,174 @@ async def get_guest_wish(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve wish"
+        )
+
+
+# Interview Questions Models
+class InterviewQuestionsRequest(BaseModel):
+    resume_id: Optional[str] = Field(None, description="Resume ID to base questions on")
+    resume_text: Optional[str] = Field(None, description="Resume text directly")
+    job_description: str = Field(..., description="Job description to tailor questions")
+    num_questions: int = Field(5, ge=1, le=10, description="Number of questions to generate")
+    difficulty_levels: Optional[List[str]] = Field(
+        ["easy", "medium", "hard"],
+        description="Mix of difficulty levels"
+    )
+
+
+class InterviewQuestion(BaseModel):
+    question: str
+    difficulty: str
+    category: str
+    sampleResponse: str
+    followUp: Optional[str] = None
+
+
+class InterviewQuestionsResponse(BaseModel):
+    success: bool
+    questions: List[InterviewQuestion]
+    totalQuestions: int
+    generatedAt: Optional[str] = None
+    error: Optional[str] = None
+
+
+@router.post("/interview-questions", response_model=InterviewQuestionsResponse)
+@rate_limit(max_calls=20, window_minutes=60)  # 20 requests per hour
+async def generate_interview_questions_endpoint(
+    request: Request,
+    questions_request: InterviewQuestionsRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate interview questions based on resume and job description.
+    
+    - **resume_id**: ID of saved resume (optional, use resume_text instead if not saved)
+    - **resume_text**: Direct resume text (optional if resume_id provided)
+    - **job_description**: Job posting/description to tailor questions
+    - **num_questions**: Number of questions to generate (1-10)
+    - **difficulty_levels**: Mix of difficulty levels (easy, medium, hard)
+    """
+    try:
+        # Get resume text
+        resume_text = questions_request.resume_text
+        
+        if not resume_text and questions_request.resume_id:
+            # Try to fetch from database
+            resume = await db.get(Resume, questions_request.resume_id)
+            if resume and resume.extracted_text:
+                resume_text = resume.extracted_text
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Resume not found or has no extracted text"
+                )
+        
+        if not resume_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either resume_id or resume_text must be provided"
+            )
+        
+        # Generate questions
+        logger.info(f"Generating {questions_request.num_questions} interview questions for user {current_user.email}")
+        
+        result = await generate_interview_questions(
+            resume_text=resume_text,
+            job_description=questions_request.job_description,
+            num_questions=questions_request.num_questions,
+            difficulty_levels=questions_request.difficulty_levels,
+        )
+        
+        if not result["success"]:
+            logger.error(f"Failed to generate questions: {result.get('error')}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to generate interview questions"
+            )
+        
+        return InterviewQuestionsResponse(
+            success=True,
+            questions=[
+                InterviewQuestion(
+                    question=q.get("question", ""),
+                    difficulty=q.get("difficulty", "medium"),
+                    category=q.get("category", "general"),
+                    sampleResponse=q.get("sampleResponse", ""),
+                    followUp=q.get("followUp"),
+                )
+                for q in result.get("questions", [])
+            ],
+            totalQuestions=result.get("totalQuestions", 0),
+            generatedAt=result.get("generatedAt"),
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating interview questions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate interview questions"
+        )
+
+
+@router.post("/interview-questions/guest", response_model=InterviewQuestionsResponse)
+@rate_limit(max_calls=10, window_minutes=60)  # 10 requests per hour for guests
+async def generate_interview_questions_guest(
+    request: Request,
+    questions_request: InterviewQuestionsRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate interview questions for guest users (higher rate limit).
+    Requires resume_text directly (no resume_id lookup).
+    """
+    try:
+        if not questions_request.resume_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="resume_text is required for guest users"
+            )
+        
+        # Generate questions
+        logger.info("Generating interview questions for guest user")
+        
+        result = await generate_interview_questions(
+            resume_text=questions_request.resume_text,
+            job_description=questions_request.job_description,
+            num_questions=questions_request.num_questions,
+            difficulty_levels=questions_request.difficulty_levels,
+        )
+        
+        if not result["success"]:
+            logger.error(f"Failed to generate questions: {result.get('error')}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to generate interview questions"
+            )
+        
+        return InterviewQuestionsResponse(
+            success=True,
+            questions=[
+                InterviewQuestion(
+                    question=q.get("question", ""),
+                    difficulty=q.get("difficulty", "medium"),
+                    category=q.get("category", "general"),
+                    sampleResponse=q.get("sampleResponse", ""),
+                    followUp=q.get("followUp"),
+                )
+                for q in result.get("questions", [])
+            ],
+            totalQuestions=result.get("totalQuestions", 0),
+            generatedAt=result.get("generatedAt"),
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating interview questions for guest: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate interview questions"
         )
