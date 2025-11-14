@@ -17,6 +17,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Enable pgvector extension for vector similarity search
+    op.execute('CREATE EXTENSION IF NOT EXISTS vector')
+    
     # Create users table
     op.create_table('users',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
@@ -93,6 +96,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Drop tables first
     op.drop_index(op.f('ix_daily_wish_counts_user_id'), table_name='daily_wish_counts')
     op.drop_index(op.f('ix_daily_wish_counts_id'), table_name='daily_wish_counts')
     op.drop_table('daily_wish_counts')
