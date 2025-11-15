@@ -271,6 +271,8 @@ export class JobService {
         device: device || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop')
       });
 
+      console.log('Swipe API response:', response);
+
       return {
         success: true,
         data: { 

@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { toast } from "sonner";
 import { DashboardUser, DashboardStats, JobDisplay } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { userPreferencesService } from '@/lib/api/userPreferences';
@@ -1006,6 +1007,7 @@ export default function Dashboard() {
                                     onClick={async (e) => {
                                       e.stopPropagation();
                                       const wasSaved = job.saved;
+                                      const jobIdStr = String(job.id);
                                       
                                       // OPTIMISTIC UPDATE: Update UI immediately
                                       setRecommendedJobs(prev => 
@@ -1015,17 +1017,17 @@ export default function Dashboard() {
                                       try {
                                         if (wasSaved) {
                                           // Remove from saved jobs
-                                          await savedJobsService.removeSavedJob(job.id);
+                                          await savedJobsService.removeSavedJob(jobIdStr);
                                           
                                           // Emit event for activity update
-                                          window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId: job.id } }));
+                                          window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId: jobIdStr } }));
                                         } else {
                                           // Save via backend API
-                                          const response = await jobService.swipeJob(job.id, 'like');
+                                          const response = await jobService.swipeJob(jobIdStr, 'like');
                                           if (response.success && response.data.saved) {
                                             // Also save locally
                                             savedJobsService.saveJob({
-                                              id: job.id,
+                                              id: jobIdStr,
                                               title: job.title,
                                               company: job.company,
                                               location: job.location,
@@ -1039,7 +1041,7 @@ export default function Dashboard() {
                                             window.dispatchEvent(new CustomEvent('jobSaved', { 
                                               detail: { 
                                                 job: {
-                                                  id: job.id,
+                                                  id: jobIdStr,
                                                   title: job.title,
                                                   company: job.company,
                                                   matchScore: job.matchScore

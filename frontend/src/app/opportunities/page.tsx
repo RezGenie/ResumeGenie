@@ -256,11 +256,6 @@ export default function JobDiscoveryPage() {
           // Remove from saved jobs (both locally and backend)
           await savedJobsService.removeSavedJob(jobId);
           
-          toast.success('Job removed', {
-            description: 'Job removed from your saved list',
-            duration: 2000,
-          });
-          
           // Emit event for dashboard update
           window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId } }));
         } else {
@@ -280,12 +275,6 @@ export default function JobDiscoveryPage() {
               jobUrl: job.redirect_url
             });
             
-            toast.success('Job saved!', {
-              description: `${job.title} has been added to your saved jobs`,
-              icon: <BookmarkCheck className="h-4 w-4" />,
-              duration: 2000,
-            });
-            
             // Emit event for dashboard update
             window.dispatchEvent(new CustomEvent('jobSaved', { 
               detail: { 
@@ -303,9 +292,6 @@ export default function JobDiscoveryPage() {
             setJobs(prev => prev.map(j =>
               j.id === jobId ? { ...j, saved: wasCurrentlySaved } : j
             ));
-            toast.error('Failed to save job', {
-              description: 'Please try again later',
-            });
           }
         }
       } catch (backendError) {
@@ -314,9 +300,6 @@ export default function JobDiscoveryPage() {
         setJobs(prev => prev.map(j =>
           j.id === jobId ? { ...j, saved: wasCurrentlySaved } : j
         ));
-        toast.error('Failed to save job', {
-          description: 'Please check your connection and try again',
-        });
       }
     } catch (err) {
       console.error('Failed to toggle job save status:', err);
