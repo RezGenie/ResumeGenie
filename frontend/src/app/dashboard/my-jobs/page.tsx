@@ -80,7 +80,28 @@ export default function MyJobsPage() {
     loadJobs();
   }, []);
 
-  // Apply filters when jobs or filters change with debounce
+  // Listen for job saved/unsaved events from other pages
+  useEffect(() => {
+    const handleJobSaved = () => {
+      console.log('Job saved event received in My Jobs, reloading...');
+      loadJobs();
+    };
+
+    const handleJobUnsaved = () => {
+      console.log('Job unsaved event received in My Jobs, reloading...');
+      loadJobs();
+    };
+
+    window.addEventListener('jobSaved', handleJobSaved);
+    window.addEventListener('jobUnsaved', handleJobUnsaved);
+
+    return () => {
+      window.removeEventListener('jobSaved', handleJobSaved);
+      window.removeEventListener('jobUnsaved', handleJobUnsaved);
+    };
+  }, [filters, searchTerm]);
+
+  // Apply filters when filters or search term change with debounce
   useEffect(() => {
     setSearching(true);
     const timeoutId = setTimeout(() => {
@@ -90,7 +111,7 @@ export default function MyJobsPage() {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [jobs, filters, searchTerm]);
+  }, [filters, searchTerm]);
 
   const loadJobs = async () => {
     // First sync from backend to get latest saved jobs
@@ -101,6 +122,10 @@ export default function MyJobsPage() {
     const jobStats = savedJobsService.getJobsStats();
     setJobs(savedJobs);
     setStats(jobStats);
+    
+    // Apply filters immediately after loading
+    const filtered = savedJobsService.getFilteredJobs({ ...filters, search: searchTerm });
+    setFilteredJobs(filtered);
   };
 
   const handleStatusChange = async (jobId: string, status: SavedJob['status']) => {
@@ -410,7 +435,7 @@ export default function MyJobsPage() {
                           {job.salary && (
                             <div className="flex items-center gap-1">
                               <DollarSign className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate font-medium text-purple-600">{job.salary}</span>
+                              <span className="truncate">{job.salary}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1 ml-auto">

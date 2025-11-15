@@ -981,8 +981,8 @@ async def swipe_job(
                 detail="Job not found"
             )
         
-        # Check if user already swiped this job
-        existing_swipe = await db.execute(
+        # Check if user already swiped this job - prevent duplicate swipes
+        existing_swipe_result = await db.execute(
             select(JobSwipe).where(
                 and_(
                     JobSwipe.user_id == current_user.id,
@@ -991,13 +991,32 @@ async def swipe_job(
             )
         )
         
-        if existing_swipe.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Job already swiped"
-            )
+        existing_swipe = existing_swipe_result.scalar_one_or_none()
         
-        # Record swipe for analytics
+        if existing_swipe:
+            # Job already swiped - just return existing saved status
+            logger.info(f"Job {swipe_request.job_id} already swiped by user {current_user.email}")
+            
+            # Check if it's saved
+            saved_job_result = await db.execute(
+                select(SavedJob).where(
+                    and_(
+                        SavedJob.user_id == current_user.id,
+                        SavedJob.job_id == swipe_request.job_id
+                    )
+                )
+            )
+            saved_job = saved_job_result.scalar_one_or_none()
+            
+            return {
+                "message": "Job already swiped",
+                "job_id": swipe_request.job_id,
+                "action": existing_swipe.action,
+                "saved": saved_job is not None,
+                "saved_job_id": saved_job.id if saved_job else None
+            }
+        
+        # Record new swipe for analytics
         job_swipe = JobSwipe(
             user_id=current_user.id,
             job_id=swipe_request.job_id,
@@ -1009,6 +1028,7 @@ async def swipe_job(
         
         # If it's a like, also save the job
         saved_job_id = None
+        job_was_saved = False
         if swipe_request.action == "like":
             # Check if already saved
             existing_save = await db.execute(
@@ -1020,7 +1040,13 @@ async def swipe_job(
                 )
             )
             
-            if not existing_save.scalar_one_or_none():
+            existing_saved_job = existing_save.scalar_one_or_none()
+            if existing_saved_job:
+                # Job already saved, return existing ID
+                saved_job_id = existing_saved_job.id
+                job_was_saved = True
+            else:
+                # Save new job
                 saved_job = SavedJob(
                     user_id=current_user.id,
                     job_id=swipe_request.job_id,
@@ -1029,18 +1055,21 @@ async def swipe_job(
                 db.add(saved_job)
                 await db.flush()
                 saved_job_id = saved_job.id
+                job_was_saved = True
         
         await db.commit()
         
         response = {
             "message": f"Job {swipe_request.action} recorded successfully",
             "job_id": swipe_request.job_id,
-            "action": swipe_request.action
+            "action": swipe_request.action,
+            "saved": job_was_saved
         }
         
         if saved_job_id:
             response["saved_job_id"] = saved_job_id
-            response["message"] += " and saved to your jobs"
+            if job_was_saved:
+                response["message"] += " and saved to your jobs"
         
         logger.info(f"Swipe processed successfully for user: {current_user.email}")
         return response

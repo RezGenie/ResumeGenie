@@ -53,23 +53,19 @@ export function SwipeableJobCard({
       setIsDragging(false);
       setIsExiting(false);
       
-      // Only animate to position if already mounted, otherwise let initial prop handle it
-      if (isMountedRef.current) {
-        controls.set({ x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 });
-      } else {
-        isMountedRef.current = true;
-        controls.start({ 
-          x: 0, 
-          y: 0, 
-          rotate: 0, 
-          opacity: 1, 
-          scale: 1,
-          transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
-        });
-      }
+      // Smooth transition to active state
+      controls.start({ 
+        x: 0, 
+        y: 0, 
+        rotate: 0, 
+        opacity: 1, 
+        scale: 1,
+        transition: { type: 'spring', stiffness: 300, damping: 30 }
+      });
+      isMountedRef.current = true;
     } else if (!isActive) {
-      // Inactive cards
-      controls.set({ x: 0, y: 0, rotate: 0, opacity: 0.8, scale: 0.95 });
+      // Inactive cards - immediate update to prevent flashing
+      controls.set({ x: 0, y: 0, rotate: 0, opacity: 0.85, scale: 0.96 });
     }
   }, [isActive, isExiting, x, y, controls]);
 
@@ -101,12 +97,12 @@ export function SwipeableJobCard({
       // Call swipe action immediately without await
       setTimeout(() => onSwipeAction(direction, job.id), 100);
     } else {
-      // Snap back to center
-      controls.start({
+      // Snap back to center with smooth animation
+      await controls.start({
         x: 0,
         y: 0,
         rotate: 0,
-        transition: { type: 'spring', stiffness: 400, damping: 30 }
+        transition: { type: 'spring', stiffness: 500, damping: 35 }
       });
       x.set(0);
       y.set(0);
@@ -130,104 +126,138 @@ export function SwipeableJobCard({
   return (
     <motion.div
       ref={cardRef}
-      className={`absolute inset-0 flex items-center justify-center p-4 ${isDragging ? 'z-50' : isActive ? 'z-40' : 'z-30'}`}
+      className={`absolute inset-0 flex items-center justify-center px-3 py-4 sm:p-4 ${isDragging ? 'z-50' : isActive ? 'z-40' : 'z-30'}`}
       style={{ 
         x: isActive ? x : 0,
         y: isActive ? y : 0,
         rotate: isActive ? rotate : 0,
-        opacity: isActive ? (isDragging ? opacity : 1) : 0.8,
-        scale: isActive ? 1 : 0.95,
+        opacity: isActive ? (isDragging ? opacity : 1) : 0.85,
+        scale: isActive ? 1 : 0.96,
         pointerEvents: isActive ? 'auto' : 'none',
-        touchAction: 'pan-y pinch-zoom',
+        touchAction: 'none',
       }}
       animate={controls}
       drag={isActive && !isExiting ? "x" : false}
-      dragConstraints={false}
-      dragElastic={1}
-      dragMomentum={true}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={{ left: 0.2, right: 0.2 }}
+      dragMomentum={false}
+      dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
-      initial={{ opacity: 0, y: 40 }}
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      transition={{ 
+        type: 'spring',
+        stiffness: 300,
+        damping: 30
+      }}
     >
       {/* Swipe indicators - removed for cleaner look */}
       
       {/* Main card content */}
-      <Card className="w-full max-w-md hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 group !bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg overflow-hidden" style={{ maxHeight: '72vh', height: 'auto', minHeight: '450px' }}>
+      <Card className="w-full max-w-md hover:shadow-xl transition-all duration-300 group !bg-gradient-to-br from-purple-50/90 to-blue-50/90 dark:from-purple-950/40 dark:to-blue-950/40 backdrop-blur-sm border-2 border-purple-200/50 dark:border-purple-800/50 rounded-3xl shadow-2xl overflow-hidden" style={{ maxHeight: '75vh', height: 'auto', minHeight: '500px' }}>
         <div className="flex flex-col h-full">
-          <CardHeader className="pb-4 flex-shrink-0">\n            <div className="flex items-start justify-between">\n              <div className="space-y-1 flex-1">\n                <CardTitle className="text-lg group-hover:text-purple-600 transition-colors">\n                  {job.title}\n                </CardTitle>\n                <div className="flex items-center gap-2 text-sm text-muted-foreground">\n                  <Building2 className="h-4 w-4" />\n                  {job.company}\n                </div>\n                <div className="flex items-center gap-4 text-sm text-muted-foreground">\n                  <div className="flex items-center gap-1">\n                    <MapPin className="h-4 w-4" />\n                    {job.location}\n                  </div>\n                  <div className="flex items-center gap-1">\n                    <DollarSign className="h-4 w-4" />\n                    {job.salaryText || 'Salary not specified'}\n                  </div>\n                </div>\n              </div>\n              <div className="text-right space-y-2 flex-shrink-0">\n                <div className="flex items-center gap-1">
-                  <Target className="h-4 w-4 text-purple-600" />
-                  <span className="font-bold text-purple-600">{job.matchScore || 85}%</span>
+          <CardHeader className="pb-3 pt-4 px-4 flex-shrink-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-2 flex-1 min-w-0">
+                <CardTitle className="text-base sm:text-lg font-bold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors leading-tight">
+                  {job.title}
+                </CardTitle>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{job.company}</span>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {job.type}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{job.location}</span>
+                  </div>
+                  {job.salaryText && (
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{job.salaryText}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900/50 px-2 py-1 rounded-full">
+                  <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                  <span className="font-bold text-sm text-purple-600 dark:text-purple-400">{job.matchScore || 0}%</span>
+                </div>
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-purple-300 dark:border-purple-700">
+                  {job.type || 'Full-time'}
                 </Badge>
               </div>
             </div>
           </CardHeader>
           
-          <CardContent className="pt-0 pb-4 flex flex-col space-y-4 overflow-y-auto flex-1 min-h-0">
-            <div className="space-y-4">
-              {/* Job Description - expanded to show more */}
-              <div className="min-h-[120px]">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {job.snippet || 'Join our dynamic team and work on exciting projects that make a real impact in the industry. We are looking for talented individuals who are passionate about technology and innovation.'}
+          <CardContent className="pt-3 pb-3 px-4 flex flex-col space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-3">
+              {/* Job Description - properly formatted */}
+              <div className="min-h-[100px] max-h-[180px] overflow-y-auto">
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {(job.snippet || 'Join our dynamic team and work on exciting projects that make a real impact in the industry. We are looking for talented individuals who are passionate about technology and innovation.')
+                    .replace(/\\n/g, '\n')
+                    .replace(/\\t/g, ' ')
+                    .trim()
+                  }
                 </p>
               </div>
 
               {/* Job Details - 4 blocks in 2 rows */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="text-center p-2 bg-background dark:bg-input/30 border border-input rounded-lg">
-                  <div className="font-medium">Experience</div>
-                  <div className="text-muted-foreground">2-5 years</div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border border-purple-200/50 dark:border-purple-800/50 rounded-xl">
+                  <div className="font-semibold text-[10px] sm:text-xs">Experience</div>
+                  <div className="text-muted-foreground text-[10px] sm:text-xs">2-5 years</div>
                 </div>
-                <div className="text-center p-2 bg-background dark:bg-input/30 border border-input rounded-lg">
-                  <div className="font-medium">Type</div>
-                  <div className="text-muted-foreground">{job.type || 'Full-time'}</div>
+                <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border border-purple-200/50 dark:border-purple-800/50 rounded-xl">
+                  <div className="font-semibold text-[10px] sm:text-xs">Type</div>
+                  <div className="text-muted-foreground text-[10px] sm:text-xs">{job.type || 'Full-time'}</div>
                 </div>
-                <div className="text-center p-2 bg-background dark:bg-input/30 border border-input rounded-lg">
-                  <div className="font-medium">Remote</div>
-                  <div className="text-muted-foreground">{job.location?.includes('Remote') ? 'Yes' : 'Hybrid'}</div>
+                <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border border-purple-200/50 dark:border-purple-800/50 rounded-xl">
+                  <div className="font-semibold text-[10px] sm:text-xs">Remote</div>
+                  <div className="text-muted-foreground text-[10px] sm:text-xs">{job.location?.includes('Remote') ? 'Yes' : 'Hybrid'}</div>
                 </div>
-                <div className="text-center p-2 bg-background dark:bg-input/30 border border-input rounded-lg">
-                  <div className="font-medium">Match</div>
-                  <div className="text-purple-600 dark:text-purple-400 font-bold">{job.matchScore || 85}%</div>
+                <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border border-purple-200/50 dark:border-purple-800/50 rounded-xl">
+                  <div className="font-semibold text-[10px] sm:text-xs">Match</div>
+                  <div className="text-purple-600 dark:text-purple-400 font-bold text-xs sm:text-sm">{job.matchScore || 0}%</div>
                 </div>
               </div>
             </div>
             
             {/* Divider line */}
-            <div className="border-t border-input pt-4"></div>
+            <div className="border-t border-purple-200/50 dark:border-purple-800/50"></div>
             
             {/* Clean action buttons */}
-            <div className="flex gap-2 -mt-4">
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePass}
-                className="flex-1 gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                className="flex-1 gap-1 h-9 text-xs border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-300 dark:hover:border-red-700 transition-all"
                 disabled={isDragging || isExiting}
               >
-                <X className="w-4 h-4" />
-                Pass
+                <X className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Pass</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onViewDetailsAction(job)}
-                className="flex-1 gap-1 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300"
+                className="flex-1 gap-1 h-9 text-xs border-2 border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:border-purple-300 dark:hover:border-purple-700 transition-all"
                 disabled={isDragging || isExiting}
               >
-                <Eye className="w-4 h-4" />
-                Details
+                <Eye className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Details</span>
               </Button>
               <Button
                 size="sm"
                 onClick={() => window.open(job.redirect_url, '_blank')}
-                className="flex-1 gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className="flex-1 gap-1 h-9 text-xs bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-semibold transition-all shadow-md hover:shadow-lg"
                 disabled={isDragging || isExiting}
               >
-                <ExternalLink className="w-4 h-4" />
+                <ExternalLink className="w-3.5 h-3.5" />
                 Apply
               </Button>
             </div>

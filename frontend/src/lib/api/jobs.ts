@@ -263,6 +263,7 @@ export class JobService {
         message: string; 
         job_id: number; 
         action: string;
+        saved?: boolean;
         saved_job_id?: number;
       }>('/jobs/swipe', {
         job_id: parseInt(jobId),
@@ -270,10 +271,12 @@ export class JobService {
         device: device || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop')
       });
 
+      console.log('Swipe API response:', response);
+
       return {
         success: true,
         data: { 
-          saved: action === 'like' && !!response.saved_job_id 
+          saved: response.saved || false
         },
         message: response.message
       };

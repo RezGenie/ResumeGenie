@@ -141,7 +141,7 @@ export default function AuthPage() {
                 </CardHeader>
                 
                 <CardContent className="px-8 pb-8">
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-6" name="auth-form">
                     <AnimatePresence mode="wait">
                       {!isLogin && (
                         <motion.div
@@ -182,7 +182,7 @@ export default function AuthPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        autoComplete="email"
+                        autoComplete="username email"
                         className="h-11 bg-white dark:bg-input"
                       />
                     </motion.div>

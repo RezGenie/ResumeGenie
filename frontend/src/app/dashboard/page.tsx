@@ -13,7 +13,8 @@ import {
   Building2,
   User,
   Search,
-  Bookmark
+  Bookmark,
+  BookmarkCheck
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { toast } from "sonner";
 import { DashboardUser, DashboardStats, JobDisplay } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { userPreferencesService } from '@/lib/api/userPreferences';
@@ -246,6 +248,7 @@ export default function Dashboard() {
             ...job,
             saved: savedJobsService.isJobSaved(job.id)
           }));
+          console.log('Dashboard: Loaded recommended jobs with saved status:', jobsWithSavedStatus.map(j => ({ id: j.id, title: j.title, saved: j.saved })));
           setRecommendedJobs(jobsWithSavedStatus.slice(0, 3));
         } else {
           // Fallback to showing saved jobs if no recommendations
@@ -368,14 +371,68 @@ export default function Dashboard() {
       fetchRealDashboardData();
     };
 
+    const handleJobSaved = (event: Event) => {
+      console.log('Job saved event received, updating dashboard...');
+      const customEvent = event as CustomEvent;
+      const jobData = customEvent.detail?.job;
+      
+      // Update saved jobs stats
+      const jobsStats = savedJobsService.getJobsStats();
+      setSavedJobsStats(jobsStats);
+      
+      // Update recommended jobs to reflect saved state
+      if (jobData) {
+        setRecommendedJobs(prev => 
+          prev.map(job => job.id === jobData.id ? { ...job, saved: true } : job)
+        );
+        
+        // Add to recent activity
+        const newActivity: RecentActivity = {
+          id: `job-saved-${jobData.id}-${Date.now()}`,
+          type: 'application',
+          title: 'Job saved',
+          description: `${jobData.title} at ${jobData.company} - ${jobData.matchScore || 0}% match`,
+          timestamp: new Date().toISOString()
+        };
+        
+        setActivities(prev => [newActivity, ...prev].slice(0, 5));
+      }
+    };
+
+    const handleJobUnsaved = (event: Event) => {
+      console.log('Job unsaved event received, updating dashboard...');
+      const customEvent = event as CustomEvent;
+      const jobId = customEvent.detail?.jobId;
+      
+      // Update saved jobs stats
+      const jobsStats = savedJobsService.getJobsStats();
+      setSavedJobsStats(jobsStats);
+      
+      // Update recommended jobs to reflect unsaved state
+      if (jobId) {
+        setRecommendedJobs(prev => 
+          prev.map(job => job.id === jobId ? { ...job, saved: false } : job)
+        );
+        
+        // Remove from activities if present
+        setActivities(prev => prev.filter(activity => 
+          !activity.id.includes(`job-saved-${jobId}`)
+        ));
+      }
+    };
+
     window.addEventListener('userProfileUpdated', handleProfileUpdate);
     window.addEventListener('userPreferencesUpdated', handleProfileUpdate);
     window.addEventListener('resumeProcessed', handleResumeProcessed);
+    window.addEventListener('jobSaved', handleJobSaved as EventListener);
+    window.addEventListener('jobUnsaved', handleJobUnsaved as EventListener);
 
     return () => {
       window.removeEventListener('userProfileUpdated', handleProfileUpdate);
       window.removeEventListener('userPreferencesUpdated', handleProfileUpdate);
       window.removeEventListener('resumeProcessed', handleResumeProcessed);
+      window.removeEventListener('jobSaved', handleJobSaved as EventListener);
+      window.removeEventListener('jobUnsaved', handleJobUnsaved as EventListener);
     };
   }, [authUser]);
 
@@ -934,7 +991,7 @@ export default function Dashboard() {
                                   </div>
                                 </div>
                                 <Badge variant="secondary" className="text-xs">
-                                  {job.matchScore}% match
+                                  {job.matchScore || 0}% match
                                 </Badge>
                               </div>
                               <div className="flex items-center justify-between pt-2">
@@ -943,10 +1000,16 @@ export default function Dashboard() {
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
-                                    className={`h-6 px-2 text-xs hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/40 dark:hover:text-purple-300 transition-colors ${job.saved ? 'text-purple-600' : ''}`}
+                                    className={`h-6 px-2 text-xs transition-all duration-200 ${
+                                      job.saved 
+                                        ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50' 
+                                        : 'hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:text-purple-300'
+                                    }`}
                                     onClick={async (e) => {
                                       e.stopPropagation();
+                                      console.log('Dashboard: Bookmark clicked for job:', job.id, 'Current saved state:', job.saved);
                                       const wasSaved = job.saved;
+                                      const jobIdStr = String(job.id);
                                       
                                       // OPTIMISTIC UPDATE: Update UI immediately
                                       setRecommendedJobs(prev => 
@@ -955,33 +1018,54 @@ export default function Dashboard() {
                                       
                                       try {
                                         if (wasSaved) {
-                                          // Remove from saved jobs in background
-                                          await savedJobsService.removeSavedJob(job.id);
+                                          // Remove from saved jobs
+                                          console.log('Dashboard: Removing job from saved:', jobIdStr);
+                                          await savedJobsService.removeSavedJob(jobIdStr);
+                                          
+                                          // Emit event for activity update
+                                          window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId: jobIdStr } }));
                                         } else {
-                                          // Save via backend API in background
-                                          const response = await jobService.swipeJob(job.id, 'like');
+                                          // Save via backend API
+                                          console.log('Dashboard: Saving job via backend:', jobIdStr);
+                                          const response = await jobService.swipeJob(jobIdStr, 'like');
+                                          console.log('Dashboard: Swipe response:', response);
                                           if (response.success && response.data.saved) {
                                             // Also save locally
                                             savedJobsService.saveJob({
-                                              id: job.id,
+                                              id: jobIdStr,
                                               title: job.title,
                                               company: job.company,
                                               location: job.location,
-                                              description: job.snippet,
-                                              salary: job.salaryText,
-                                              jobUrl: job.redirect_url,
+                                              description: job.snippet || '',
+                                              salary: job.salaryText || '',
+                                              jobUrl: job.redirect_url || '',
                                               skills: job.skills || []
                                             });
+                                            console.log('Dashboard: Job saved successfully');
+                                            
+                                            // Emit event for activity update
+                                            window.dispatchEvent(new CustomEvent('jobSaved', { 
+                                              detail: { 
+                                                job: {
+                                                  id: jobIdStr,
+                                                  title: job.title,
+                                                  company: job.company,
+                                                  matchScore: job.matchScore
+                                                } 
+                                              } 
+                                            }));
                                           } else {
                                             // ROLLBACK on failure
                                             console.error('Failed to save job:', response.message);
                                             setRecommendedJobs(prev => 
                                               prev.map(j => j.id === job.id ? { ...j, saved: wasSaved } : j)
                                             );
+                                            return;
                                           }
                                         }
                                         // Update saved jobs stats after backend completes
-                                        setSavedJobsStats(savedJobsService.getJobsStats());
+                                        const newStats = savedJobsService.getJobsStats();
+                                        setSavedJobsStats(newStats);
                                       } catch (error) {
                                         // ROLLBACK on error
                                         console.error('Error toggling save:', error);
@@ -991,7 +1075,11 @@ export default function Dashboard() {
                                       }
                                     }}
                                   >
-                                    <Bookmark className={`h-3 w-3 ${job.saved ? 'fill-current' : ''}`} />
+                                    {job.saved ? (
+                                      <BookmarkCheck className="h-3 w-3 fill-current transition-all duration-200 scale-110" />
+                                    ) : (
+                                      <Bookmark className="h-3 w-3 transition-all duration-200 scale-100" />
+                                    )}
                                   </Button>
                                   <Button 
                                     size="sm" 

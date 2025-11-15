@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, AlertCircle, Sparkles, Heart } from 'lucide-react';
+import { RefreshCw, AlertCircle, Sparkles, Heart, BookmarkCheck } from 'lucide-react';
 import { SwipeableJobCard } from './SwipeableJobCard';
 import { JobDisplay, JobStats } from '@/lib/api/types';
 import { jobService } from '@/lib/api/jobs';
 import { savedJobsService } from '@/lib/api/savedJobs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 
 interface JobSwipeDeckProps {
@@ -96,12 +97,20 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     }
   }, []);
 
-  // Handle swipe actions with optimistic updates
+  // Handle swipe actions with optimistic updates and better debouncing
   const handleSwipe = useCallback(async (direction: 'left' | 'right', jobId: string) => {
-    // Prevent multiple rapid swipes
-    if (isAnimating) return;
+    // Prevent multiple rapid swipes with stronger debouncing
+    if (isAnimating) {
+      console.log('Swipe blocked: animation in progress');
+      return;
+    }
     
     setIsAnimating(true);
+    
+    const job = jobs.find(j => j.id === jobId);
+    
+    // OPTIMISTIC UI: Move to next card IMMEDIATELY to prevent glitching
+    setCurrentIndex(prev => prev + 1);
     
     // Update swipe stats optimistically
     setSwipeStats(prev => ({
@@ -109,40 +118,65 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
       [direction === 'right' ? 'liked' : 'passed']: prev[direction === 'right' ? 'liked' : 'passed'] + 1
     }));
 
-    // Send swipe to backend (this will save the job if liked)
+    // Send swipe to backend and wait for confirmation before showing toast
     const action = direction === 'right' ? 'like' : 'pass';
-    try {
-      const response = await jobService.swipeJob(jobId, action);
-      
+    jobService.swipeJob(jobId, action, 'mobile').then(response => {
       if (response.success) {
         console.log(`Swipe ${action} recorded successfully:`, response.message);
         
         // If liked and saved, also save to localStorage for immediate access
-        if (action === 'like' && response.data.saved) {
-          const job = jobs.find(j => j.id === jobId);
-          if (job) {
-            savedJobsService.saveJob({
-              id: job.id,
-              title: job.title,
-              company: job.company,
-              location: job.location,
-              description: job.snippet,
-              salary: job.salaryText,
-              jobUrl: job.redirect_url,
-              skills: job.skills || []
-            });
-            console.log('Job saved locally:', job.title);
-          }
+        if (action === 'like' && response.data.saved && job) {
+          savedJobsService.saveJob({
+            id: job.id,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            description: job.snippet,
+            salary: job.salaryText,
+            jobUrl: job.redirect_url,
+            skills: job.skills || []
+          });
+          
+          // Show success toast ONLY after backend confirms
+          toast.success('Job saved!', {
+            description: `${job.title} has been added to your saved jobs`,
+            icon: <BookmarkCheck className="h-4 w-4" />,
+            duration: 2000,
+          });
+          
+          // Emit event for dashboard update
+          window.dispatchEvent(new CustomEvent('jobSaved', { 
+            detail: { 
+              job: {
+                id: job.id,
+                title: job.title,
+                company: job.company,
+                matchScore: job.matchScore
+              } 
+            } 
+          }));
+          
+          console.log('Job saved locally and event emitted:', job.title);
         }
       } else {
         console.error('Failed to record swipe:', response.message);
+        // Show error toast only on failure
+        if (action === 'like') {
+          toast.error('Failed to save job', {
+            description: 'The job was not saved. Please try again.',
+            duration: 3000,
+          });
+        }
       }
-    } catch (err) {
+    }).catch(err => {
       console.error('Error recording swipe:', err);
-    }
-
-    // Move to next card immediately
-    setCurrentIndex(prev => prev + 1);
+      if (action === 'like') {
+        toast.error('Network error', {
+          description: 'Could not save the job. Check your connection.',
+          duration: 3000,
+        });
+      }
+    });
     
     // Prefetch if running low on cards
     const remainingCards = jobs.length - currentIndex - 1;
@@ -150,8 +184,8 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
       prefetchJobs();
     }
     
-    // Reset animation lock quickly
-    setTimeout(() => setIsAnimating(false), 100);
+    // Reset animation lock after card animation completes (increased delay for stability)
+    setTimeout(() => setIsAnimating(false), 400);
   }, [jobs, currentIndex, prefetchJobs, isAnimating]);
 
   // Refresh deck with new jobs
@@ -262,14 +296,14 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
 
       {/* Card deck container */}
       <div className="flex-1 relative">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence initial={false} mode="sync">
           {visibleCards.map((job, index) => {
             const cardIndex = currentIndex + visibleCards.length - 1 - index;
             const isActive = index === visibleCards.length - 1;
             
             return (
               <SwipeableJobCard
-                key={`${job.id}-${cardIndex}-${currentIndex}`}
+                key={`job-${job.id}-${cardIndex}`}
                 job={job}
                 onSwipeAction={handleSwipe}
                 onViewDetailsAction={onJobDetailsAction}

@@ -14,13 +14,15 @@ import {
   Users,
   Briefcase,
   Award,
-  Target
+  Target,
+  BookmarkCheck
 } from 'lucide-react';
 import { JobDisplay } from '@/lib/api/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Logo } from '@/components/ui/logo';
+import { toast } from 'sonner';
 
 interface JobDetailsModalProps {
   job: JobDisplay | null;
@@ -121,10 +123,16 @@ export function JobDetailsModal({
             <h1 className="text-xl font-bold mb-2 leading-tight">
               {job.title}
             </h1>
-            <div className="flex items-center gap-2 text-muted-foreground mb-3">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Building className="w-4 h-4" />
               <span className="font-medium">{job.company}</span>
             </div>
+            {job.salaryText && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                <DollarSign className="w-4 h-4" />
+                <span>{job.salaryText}</span>
+              </div>
+            )}
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <MapPin className="w-4 h-4" />
@@ -142,23 +150,10 @@ export function JobDetailsModal({
         <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
           {/* Key Information Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Salary */}
-            <div className="bg-muted/50 p-3 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="w-4 h-4 text-purple-600" />
-                <h3 className="font-medium text-sm">
-                  Compensation
-                </h3>
-              </div>
-              <p className="text-sm font-medium">
-                {job.salaryText || 'Salary not specified'}
-              </p>
-            </div>
-
             {/* Job Type */}
             <div className="bg-muted/50 p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
-                <Briefcase className="w-4 h-4 text-purple-600" />
+                <Briefcase className="w-4 h-4 text-muted-foreground" />
                 <h3 className="font-medium text-sm">
                   Employment Type
                 </h3>
@@ -173,6 +168,19 @@ export function JobDetailsModal({
                   </Badge>
                 )}
               </div>
+            </div>
+
+            {/* Posted Date */}
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium text-sm">
+                  Posted Date
+                </h3>
+              </div>
+              <p className="text-sm font-medium">
+                {formatDate(job.posted_at)}
+              </p>
             </div>
           </div>
 
@@ -291,19 +299,54 @@ export function JobDetailsModal({
             
             <Button
               variant="outline"
-              onClick={() => {
+              onClick={async () => {
                 // Import and use savedJobsService
                 const { savedJobsService } = require('@/lib/api/savedJobs');
-                savedJobsService.saveJob({
-                  id: job.id,
-                  title: job.title,
-                  company: job.company,
-                  location: job.location,
-                  salary: job.salaryText,
-                  description: job.snippet,
-                  skills: job.skills || [],
-                  jobUrl: job.redirect_url
+                const { jobService } = require('@/lib/api/jobs');
+                
+                // Show immediate feedback
+                toast.success('Job saved!', {
+                  description: `${job.title} has been added to your saved jobs`,
+                  icon: <BookmarkCheck className="h-4 w-4" />,
+                  duration: 2000,
                 });
+                
+                // Save via backend API
+                try {
+                  const response = await jobService.swipeJob(job.id, 'like', 'modal');
+                  
+                  if (response.success && response.data.saved) {
+                    // Also save locally
+                    savedJobsService.saveJob({
+                      id: job.id,
+                      title: job.title,
+                      company: job.company,
+                      location: job.location,
+                      salary: job.salaryText,
+                      description: job.snippet,
+                      skills: job.skills || [],
+                      jobUrl: job.redirect_url
+                    });
+                    
+                    // Emit event for dashboard update
+                    window.dispatchEvent(new CustomEvent('jobSaved', { 
+                      detail: { 
+                        job: {
+                          id: job.id,
+                          title: job.title,
+                          company: job.company,
+                          matchScore: job.matchScore
+                        } 
+                      } 
+                    }));
+                  }
+                } catch (error) {
+                  console.error('Failed to save job:', error);
+                  toast.error('Failed to save job', {
+                    description: 'Please try again later',
+                  });
+                }
+                
                 onLikeAction(job.id);
                 onCloseAction();
               }}

@@ -225,13 +225,19 @@ class SavedJobsService {
     try {
       const savedJobs = this.getSavedJobs();
       
+      // Ensure ID is a string for consistency
+      const jobWithStringId = {
+        ...job,
+        id: String(job.id)
+      };
+      
       // Check if job already exists
-      if (savedJobs.some(savedJob => savedJob.id === job.id)) {
+      if (savedJobs.some(savedJob => savedJob.id === jobWithStringId.id)) {
         return false; // Job already saved
       }
 
       const newSavedJob: SavedJob = {
-        ...job,
+        ...jobWithStringId,
         savedAt: new Date().toISOString(),
         status: 'saved'
       };
@@ -311,9 +317,10 @@ class SavedJobsService {
   }
 
   // Check if a job is saved
-  isJobSaved(jobId: string): boolean {
+  isJobSaved(jobId: string | number): boolean {
     const savedJobs = this.getSavedJobs();
-    return savedJobs.some(job => job.id === jobId);
+    const jobIdStr = String(jobId);
+    return savedJobs.some(job => job.id === jobIdStr);
   }
 
   // Get filtered jobs
