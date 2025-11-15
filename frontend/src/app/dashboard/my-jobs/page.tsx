@@ -80,7 +80,7 @@ export default function MyJobsPage() {
     loadJobs();
   }, []);
 
-  // Apply filters when jobs or filters change with debounce
+  // Apply filters when filters or search term change with debounce
   useEffect(() => {
     setSearching(true);
     const timeoutId = setTimeout(() => {
@@ -90,7 +90,7 @@ export default function MyJobsPage() {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [jobs, filters, searchTerm]);
+  }, [filters, searchTerm]);
 
   const loadJobs = async () => {
     // First sync from backend to get latest saved jobs
@@ -101,6 +101,10 @@ export default function MyJobsPage() {
     const jobStats = savedJobsService.getJobsStats();
     setJobs(savedJobs);
     setStats(jobStats);
+    
+    // Apply filters immediately after loading
+    const filtered = savedJobsService.getFilteredJobs({ ...filters, search: searchTerm });
+    setFilteredJobs(filtered);
   };
 
   const handleStatusChange = async (jobId: string, status: SavedJob['status']) => {

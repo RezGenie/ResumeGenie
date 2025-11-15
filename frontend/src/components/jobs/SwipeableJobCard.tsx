@@ -53,23 +53,19 @@ export function SwipeableJobCard({
       setIsDragging(false);
       setIsExiting(false);
       
-      // Only animate to position if already mounted, otherwise let initial prop handle it
-      if (isMountedRef.current) {
-        controls.set({ x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 });
-      } else {
-        isMountedRef.current = true;
-        controls.start({ 
-          x: 0, 
-          y: 0, 
-          rotate: 0, 
-          opacity: 1, 
-          scale: 1,
-          transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
-        });
-      }
+      // Smooth transition to active state
+      controls.start({ 
+        x: 0, 
+        y: 0, 
+        rotate: 0, 
+        opacity: 1, 
+        scale: 1,
+        transition: { type: 'spring', stiffness: 300, damping: 30 }
+      });
+      isMountedRef.current = true;
     } else if (!isActive) {
-      // Inactive cards
-      controls.set({ x: 0, y: 0, rotate: 0, opacity: 0.8, scale: 0.95 });
+      // Inactive cards - immediate update to prevent flashing
+      controls.set({ x: 0, y: 0, rotate: 0, opacity: 0.85, scale: 0.96 });
     }
   }, [isActive, isExiting, x, y, controls]);
 
@@ -159,9 +155,9 @@ export function SwipeableJobCard({
       {/* Swipe indicators - removed for cleaner look */}
       
       {/* Main card content */}
-      <Card className="w-full max-w-md hover:shadow-xl transition-all duration-300 group !bg-white dark:!bg-gray-900 border-2 border-purple-200/50 dark:border-purple-800/50 rounded-3xl shadow-2xl overflow-hidden" style={{ maxHeight: '75vh', height: 'auto', minHeight: '500px' }}>
+      <Card className="w-full max-w-md hover:shadow-xl transition-all duration-300 group !bg-gradient-to-br from-purple-50/90 to-blue-50/90 dark:from-purple-950/40 dark:to-blue-950/40 backdrop-blur-sm border-2 border-purple-200/50 dark:border-purple-800/50 rounded-3xl shadow-2xl overflow-hidden" style={{ maxHeight: '75vh', height: 'auto', minHeight: '500px' }}>
         <div className="flex flex-col h-full">
-          <CardHeader className="pb-3 pt-4 px-4 flex-shrink-0 bg-gradient-to-br from-purple-50/80 to-blue-50/80 dark:from-purple-950/50 dark:to-blue-950/50">
+          <CardHeader className="pb-3 pt-4 px-4 flex-shrink-0">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-2 flex-1 min-w-0">
                 <CardTitle className="text-base sm:text-lg font-bold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors leading-tight">

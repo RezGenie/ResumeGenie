@@ -103,17 +103,18 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     
     setIsAnimating(true);
     
+    // OPTIMISTIC UI: Move to next card IMMEDIATELY to prevent glitching
+    setCurrentIndex(prev => prev + 1);
+    
     // Update swipe stats optimistically
     setSwipeStats(prev => ({
       ...prev,
       [direction === 'right' ? 'liked' : 'passed']: prev[direction === 'right' ? 'liked' : 'passed'] + 1
     }));
 
-    // Send swipe to backend (this will save the job if liked)
+    // Send swipe to backend in background (don't wait)
     const action = direction === 'right' ? 'like' : 'pass';
-    try {
-      const response = await jobService.swipeJob(jobId, action);
-      
+    jobService.swipeJob(jobId, action).then(response => {
       if (response.success) {
         console.log(`Swipe ${action} recorded successfully:`, response.message);
         
@@ -137,12 +138,9 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
       } else {
         console.error('Failed to record swipe:', response.message);
       }
-    } catch (err) {
+    }).catch(err => {
       console.error('Error recording swipe:', err);
-    }
-
-    // Move to next card immediately
-    setCurrentIndex(prev => prev + 1);
+    });
     
     // Prefetch if running low on cards
     const remainingCards = jobs.length - currentIndex - 1;
@@ -150,8 +148,8 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
       prefetchJobs();
     }
     
-    // Reset animation lock quickly
-    setTimeout(() => setIsAnimating(false), 100);
+    // Reset animation lock after card animation completes
+    setTimeout(() => setIsAnimating(false), 300);
   }, [jobs, currentIndex, prefetchJobs, isAnimating]);
 
   // Refresh deck with new jobs
@@ -262,14 +260,14 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
 
       {/* Card deck container */}
       <div className="flex-1 relative">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence initial={false} mode="sync">
           {visibleCards.map((job, index) => {
             const cardIndex = currentIndex + visibleCards.length - 1 - index;
             const isActive = index === visibleCards.length - 1;
             
             return (
               <SwipeableJobCard
-                key={`${job.id}-${cardIndex}-${currentIndex}`}
+                key={`job-${job.id}-${cardIndex}`}
                 job={job}
                 onSwipeAction={handleSwipe}
                 onViewDetailsAction={onJobDetailsAction}

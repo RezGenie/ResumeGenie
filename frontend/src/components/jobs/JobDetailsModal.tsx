@@ -121,10 +121,16 @@ export function JobDetailsModal({
             <h1 className="text-xl font-bold mb-2 leading-tight">
               {job.title}
             </h1>
-            <div className="flex items-center gap-2 text-muted-foreground mb-3">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Building className="w-4 h-4" />
               <span className="font-medium">{job.company}</span>
             </div>
+            {job.salaryText && (
+              <div className="flex items-center gap-2 text-sm mb-3">
+                <DollarSign className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium text-foreground">{job.salaryText}</span>
+              </div>
+            )}
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <MapPin className="w-4 h-4" />
@@ -142,23 +148,10 @@ export function JobDetailsModal({
         <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
           {/* Key Information Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Salary */}
-            <div className="bg-muted/50 p-3 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="w-4 h-4 text-purple-600" />
-                <h3 className="font-medium text-sm">
-                  Compensation
-                </h3>
-              </div>
-              <p className="text-sm font-medium">
-                {job.salaryText || 'Salary not specified'}
-              </p>
-            </div>
-
             {/* Job Type */}
             <div className="bg-muted/50 p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
-                <Briefcase className="w-4 h-4 text-purple-600" />
+                <Briefcase className="w-4 h-4 text-muted-foreground" />
                 <h3 className="font-medium text-sm">
                   Employment Type
                 </h3>
@@ -173,6 +166,19 @@ export function JobDetailsModal({
                   </Badge>
                 )}
               </div>
+            </div>
+
+            {/* Posted Date */}
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium text-sm">
+                  Posted Date
+                </h3>
+              </div>
+              <p className="text-sm font-medium">
+                {formatDate(job.posted_at)}
+              </p>
             </div>
           </div>
 
