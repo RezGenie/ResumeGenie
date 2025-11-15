@@ -76,6 +76,15 @@ export function InterviewQuestionsCards({
         handlePrev()
       }
     }
+    dragRef.current = { startX: 0, currentX: 0 }
+  }
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Only toggle expand if this wasn't a drag
+    const dragDistance = Math.abs(dragRef.current.startX - dragRef.current.currentX)
+    if (dragDistance < 10) {
+      toggleExpand()
+    }
   }
 
   const getDifficultyColor = (difficulty?: string) => {
@@ -93,24 +102,15 @@ export function InterviewQuestionsCards({
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Zap className="h-5 w-5 text-purple-600" />
-            Interview Questions
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Practice with AI-generated questions
-          </p>
-        </div>
-        <div className="text-sm font-medium text-muted-foreground">
+      {/* Question Counter */}
+      <div className="flex justify-end">
+        <div className="text-sm text-muted-foreground">
           {currentIndex + 1} / {questions.length}
         </div>
       </div>
 
       {/* Stacked Cards Container */}
-      <div className="relative h-80 perspective">
+      <div className="relative h-96 perspective">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
@@ -128,51 +128,40 @@ export function InterviewQuestionsCards({
             className="absolute inset-0 cursor-grab active:cursor-grabbing"
           >
             <Card
-              className="h-full flex flex-col hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300"
-              onClick={toggleExpand}
+              className="h-full flex flex-col bg-background/50 dark:bg-card border border-muted-foreground/25 hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all duration-300 shadow-none"
+              onClick={handleCardClick}
             >
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base leading-tight flex-1">
-                    {currentQuestion.question}
-                  </CardTitle>
-                  {currentQuestion.difficulty && (
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${getDifficultyColor(
-                        currentQuestion.difficulty
-                      )}`}
-                    >
-                      {currentQuestion.difficulty}
-                    </span>
-                  )}
+                <div className="text-sm text-muted-foreground leading-tight text-gray-700 dark:text-gray-300">
+                  {currentQuestion.question}
                 </div>
               </CardHeader>
 
               {/* Sample Response Section */}
-              <CardContent className="flex-1 flex flex-col overflow-hidden">
-                {isExpanded && currentQuestion.sampleResponse ? (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="flex-1 overflow-y-auto"
-                  >
-                    <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 text-sm leading-relaxed">
-                      <p className="font-semibold text-purple-600 dark:text-purple-400 mb-2">
+              <CardContent className="flex-1 flex flex-col overflow-hidden p-4 pt-2">
+                <div className="border border-muted-foreground/25 rounded-lg p-4 py-6 transition-all duration-200 bg-background/50 backdrop-blur-sm dark:bg-card flex-1 flex flex-col overflow-hidden">
+                  {isExpanded && currentQuestion.sampleResponse ? (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex-1 overflow-y-auto"
+                    >
+                      <p className="font-semibold text-purple-600 dark:text-purple-400 mb-2 text-sm">
                         Sample Response:
                       </p>
-                      <p className="text-foreground/80">{currentQuestion.sampleResponse}</p>
+                      <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{currentQuestion.sampleResponse}</p>
+                    </motion.div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                      <p className="text-sm text-muted-foreground text-center">
+                        {isExpanded
+                          ? "Loading response..."
+                          : "Tap card to see sample response"}
+                      </p>
                     </div>
-                  </motion.div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <p className="text-sm text-muted-foreground text-center">
-                      {isExpanded
-                        ? "Loading response..."
-                        : "Tap card to see sample response"}
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>

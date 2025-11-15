@@ -47,6 +47,7 @@ import { Footer } from "@/components/footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { resumeService, ResumeResponse } from "@/lib/api/resumes";
 import { interviewQuestionsService } from "@/lib/api/interviewQuestions";
+import { InterviewQuestionsCards } from "@/components/InterviewQuestionsCards";
 
 interface UploadedFile {
   id: string;
@@ -2149,11 +2150,8 @@ export default function StudioPage() {
               </CardContent>
             </Card>
 
-            {/* Interview Questions - Always visible with empty state */}
-            <Card className={`overflow-hidden relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
-              ? getHighlightClass(true, outputHighlightFading)
-              : ""
-              }`}>
+            {/* Interview Questions - Stacked Card View */}
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults ? getHighlightClass(true, outputHighlightFading) : ""}`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Sparkles className="h-5 w-5 text-purple-600" />
@@ -2161,54 +2159,25 @@ export default function StudioPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    AI-generated questions tailored to this position
-                  </p>
-                  
-                  {/* Loading state */}
-                  {generatingQuestions && (
-                    <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card h-[280px] flex items-center justify-center">
-                      <div className="text-center py-8">
-                        <div className="flex items-center justify-center mb-3">
-                          <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Generating interview questions...
-                        </p>
+                {interviewQuestions.length > 0 ? (
+                  <InterviewQuestionsCards 
+                    questions={interviewQuestions}
+                    isLoading={generatingQuestions}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {generatingQuestions
+                        ? "Generating interview questions..."
+                        : "Submit your resume and job description to generate interview questions"}
+                    </p>
+                    {generatingQuestions && (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
                       </div>
-                    </div>
-                  )}
-
-                  {/* Questions loaded */}
-                  {!generatingQuestions && interviewQuestions.length > 0 && (
-                    <div 
-                      onClick={() => setIsInterviewQuestionsModalOpen(true)}
-                      className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card h-[280px] flex flex-col overflow-hidden"
-                    >
-                      <ul className="space-y-2 text-sm flex-1 overflow-hidden">
-                        {interviewQuestions.slice(0, 8).map((question: any, index: number) => (
-                          <li
-                            key={index}
-                            className="flex items-start gap-2"
-                          >
-                            <span className="text-purple-600 mt-1">
-                              •
-                            </span>
-                            <span className="text-gray-700 dark:text-gray-300 line-clamp-1">{question.question}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {interviewQuestions.length > 8 && (
-                        <div className="text-center pt-3 border-t border-muted-foreground/10 mt-auto flex-shrink-0">
-                          <span className="text-sm text-purple-600 hover:text-purple-700 hover:underline">
-                            View all {interviewQuestions.length} questions
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
