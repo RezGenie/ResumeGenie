@@ -38,9 +38,9 @@ export function SparklingCursor() {
       mouseRef.current = { x: e.clientX, y: e.clientY }
 
       // Occasionally create a sparkle
-      if (Math.random() > 0.7) {
+      if (Math.random() > 0.85) {
         const angle = Math.random() * Math.PI * 2
-        const velocity = 0.5 + Math.random() * 1
+        const velocity = 0.3 + Math.random() * 0.5
 
         particlesRef.current.push({
           x: e.clientX,
@@ -48,7 +48,7 @@ export function SparklingCursor() {
           vx: Math.cos(angle) * velocity,
           vy: Math.sin(angle) * velocity,
           life: 1,
-          maxLife: 0.5 + Math.random() * 0.3,
+          maxLife: 0.4 + Math.random() * 0.2,
         })
       }
     }
@@ -69,20 +69,33 @@ export function SparklingCursor() {
         p.life -= 0.02
 
         const alpha = p.life / p.maxLife
-        ctx.fillStyle = `rgba(168, 85, 247, ${alpha * 0.6})`
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2)
-        ctx.fill()
+        // Create gradient for particles
+        const particleGradient = ctx.createLinearGradient(p.x - 5, p.y, p.x + 5, p.y)
+        particleGradient.addColorStop(0, `rgba(168, 85, 247, ${alpha * 0.3})`) // purple
+        particleGradient.addColorStop(0.5, `rgba(147, 51, 234, ${alpha * 0.3})`) // deeper purple
+        particleGradient.addColorStop(1, `rgba(236, 72, 153, ${alpha * 0.3})`) // pink
+        ctx.fillStyle = particleGradient
+        ctx.font = '9px Arial'
+        ctx.fillText('✦', p.x - 4, p.y + 3)
       })
 
-      // Draw cursor - simple dot with glow
-      const twinkle = Math.sin(Date.now() * 0.01) * 0.3 + 0.7
-      ctx.fillStyle = `rgba(168, 85, 247, ${twinkle})`
-      ctx.shadowColor = `rgba(168, 85, 247, 0.6)`
-      ctx.shadowBlur = 8
-      ctx.beginPath()
-      ctx.arc(mouseRef.current.x, mouseRef.current.y, 4, 0, Math.PI * 2)
-      ctx.fill()
+      // Draw cursor - star with gradient and subtle glow
+      const twinkle = Math.sin(Date.now() * 0.01) * 0.1 + 0.35
+      // Create gradient for main cursor
+      const cursorGradient = ctx.createLinearGradient(
+        mouseRef.current.x - 6, 
+        mouseRef.current.y, 
+        mouseRef.current.x + 6, 
+        mouseRef.current.y
+      )
+      cursorGradient.addColorStop(0, `rgba(168, 85, 247, ${twinkle})`) // purple
+      cursorGradient.addColorStop(0.5, `rgba(147, 51, 234, ${twinkle})`) // deeper purple
+      cursorGradient.addColorStop(1, `rgba(236, 72, 153, ${twinkle})`) // pink
+      ctx.fillStyle = cursorGradient
+      ctx.shadowColor = `rgba(168, 85, 247, 0.15)`
+      ctx.shadowBlur = 4
+      ctx.font = '12px Arial'
+      ctx.fillText('✦', mouseRef.current.x - 6, mouseRef.current.y + 4)
 
       animationRef.current = requestAnimationFrame(animate)
     }

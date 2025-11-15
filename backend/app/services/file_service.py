@@ -402,7 +402,7 @@ class FileService:
     
     async def upload_file_to_storage(self, file_content: bytes, filename: str, content_type: str) -> str:
         """
-        Upload file to MinIO storage.
+        Upload file to MinIO storage or save locally as fallback.
         
         Args:
             file_content: File content as bytes
@@ -412,22 +412,47 @@ class FileService:
         Returns:
             Storage path/key
         """
+        # Try MinIO/R2 storage first
+        if self.storage_available and self.s3_client is not None:
+            try:
+                file_stream = BytesIO(file_content)
+                
+                self.s3_client.put_object(
+                    bucket_name=settings.storage_bucket_name,
+                    object_name=filename,
+                    data=file_stream,
+                    length=len(file_content),
+                    content_type=content_type
+                )
+                
+                logger.info(f"File uploaded to storage: {filename}")
+                return filename
+                
+            except S3Error as e:
+                logger.error(f"MinIO upload error: {e}")
+                raise FileUploadError(f"Failed to upload file to storage: {str(e)}")
+        
+        # Fallback to local file storage
+        logger.warning("Storage service unavailable, using local file storage")
         try:
-            file_stream = BytesIO(file_content)
+            # Create uploads directory if it doesn't exist
+            upload_dir = Path("uploads")
+            upload_dir.mkdir(exist_ok=True)
             
-            self.s3_client.put_object(
-                bucket_name=settings.storage_bucket_name,
-                object_name=filename,
-                data=file_stream,
-                length=len(file_content),
-                content_type=content_type
-            )
+            # Create user subdirectory
+            user_dir = upload_dir / Path(filename).parent
+            user_dir.mkdir(parents=True, exist_ok=True)
             
-            logger.info(f"File uploaded to storage: {filename}")
+            # Save file locally
+            file_path = upload_dir / filename
+            file_path.write_bytes(file_content)
+            
+            logger.info(f"File saved locally: {file_path}")
             return filename
             
-        except S3Error as e:
-            logger.error(f"MinIO upload error: {e}")
+        except Exception as e:
+            logger.error(f"Local file save error: {e}")
+            raise FileUploadError(f"Failed to save file: {str(e)}")
             raise FileStorageError(f"Failed to upload file to storage: {str(e)}")
     
     async def delete_file_from_storage(self, filename: str):
