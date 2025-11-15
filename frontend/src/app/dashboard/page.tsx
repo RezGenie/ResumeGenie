@@ -409,7 +409,7 @@ export default function Dashboard() {
         const profile = userProfileService.getProfile();
         const displayName = profile.name ||
           (authUser.email.split('@')[0].charAt(0).toUpperCase() +
-            authUser.email.split('@')[0).slice(1));
+            authUser.email.split('@')[0].slice(1));
 
         // Load preferences from backend first, fallback to localStorage
         let preferences = userPreferencesService.getPreferences();
