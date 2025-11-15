@@ -37,11 +37,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
+            <SparklingCursor />
             <LayoutWrapper>
               {children}
             </LayoutWrapper>
             <Toaster />
-            <SparklingCursor />
           </AuthProvider>
         </ThemeProvider>
       </body>

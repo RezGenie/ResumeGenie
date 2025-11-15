@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -24,6 +24,7 @@ import {
   Crosshair,
   Cpu,
   Award,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -45,7 +46,6 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { resumeService, ResumeResponse } from "@/lib/api/resumes";
-import { InterviewQuestionsCards } from "@/components/InterviewQuestionsCards";
 import { interviewQuestionsService } from "@/lib/api/interviewQuestions";
 
 interface UploadedFile {
@@ -271,6 +271,7 @@ export default function StudioPage() {
   const { isAuthenticated, user } = useAuth();
   const [isRecModalOpen, setIsRecModalOpen] = useState(false);
   const [isSkillGapModalOpen, setIsSkillGapModalOpen] = useState(false);
+  const [isInterviewQuestionsModalOpen, setIsInterviewQuestionsModalOpen] = useState(false);
   const [isJobMatchModalOpen, setIsJobMatchModalOpen] = useState(false);
   const [selectedWish, setSelectedWish] = useState<Wish | null>(null);
   const [isWishDetailModalOpen, setIsWishDetailModalOpen] = useState(false);
@@ -293,6 +294,7 @@ export default function StudioPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [interviewQuestions, setInterviewQuestions] = useState<any[]>([]);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasLoadedPrimaryResume = useRef(false); // Track if we've already loaded primary resume
 
@@ -444,42 +446,13 @@ export default function StudioPage() {
     refreshDailyUsage();
   }, [isAuthenticated, refreshDailyUsage]);
 
-  // For guests: Ensure latest recommendations are shown when they've used all wishes
+  // Removed auto-population for daily limit - results should only show after clicking "Grant My Wish"
+
+  // Clear analysis results on page reload/mount
   useEffect(() => {
-    if (!isAuthenticated && dailyWishes >= maxWishes && maxWishes < 999 && !analysisResults) {
-      const savedWishes = UserStorage.getItem('genie_wishes');
-      if (savedWishes) {
-        try {
-          const parsedWishes = JSON.parse(savedWishes);
-          if (Array.isArray(parsedWishes)) {
-            const wishesWithDates = parsedWishes.map(wish => ({
-              ...wish,
-              timestamp: new Date(wish.timestamp)
-            }));
-
-            const mostRecentCompletedWish = wishesWithDates
-              .filter(wish => wish.status === 'completed' && wish.results)
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
-            if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
-              const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
-              const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
-
-              setAnalysisResults({
-                resumeScore: mostRecentCompletedWish.results.score || 0,
-                matchScore: mostRecentCompletedWish.results.score || 0,
-                skillGaps: parsedRecommendations,
-                insights: parsedInsights,
-                recommendations: parsedInsights,
-              });
-            }
-          }
-        } catch (error) {
-          console.warn('Failed to parse wishes from localStorage for recommendations:', error);
-        }
-      }
-    }
-  }, [isAuthenticated, dailyWishes, maxWishes, analysisResults]);
+    setAnalysisResults(null);
+    setInterviewQuestions([]);
+  }, []); // Empty deps = runs only once on mount
 
   // Clear analysis results when user changes to prevent cross-user contamination
   useEffect(() => {
@@ -527,25 +500,7 @@ export default function StudioPage() {
           });
           setWishes(detailedWishes);
           
-          // For guests and authenticated users: Set analysisResults to the most recent completed wish
-          if (!isAuthenticated) {
-            const mostRecentCompletedWish = detailedWishes
-              .filter(wish => wish.status === 'completed' && wish.results)
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
-            if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
-              const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
-              const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
-
-              setAnalysisResults({
-                resumeScore: mostRecentCompletedWish.results.score || 0,
-                matchScore: mostRecentCompletedWish.results.score || 0, // Use same score if no separate match score
-                skillGaps: parsedRecommendations,
-                insights: parsedInsights,
-                recommendations: parsedInsights,
-              });
-            }
-          }
+          // Removed auto-population of analysisResults - results should only show after clicking "Grant My Wish"
         }
       } catch (err) {
         console.warn("Failed to fetch wish history:", err);
@@ -563,24 +518,8 @@ export default function StudioPage() {
                   timestamp: new Date(wish.timestamp)
                 }));
                 setWishes(wishesWithDates);
-
-                // For guests: Set analysisResults to the most recent completed wish
-                const mostRecentCompletedWish = wishesWithDates
-                  .filter(wish => wish.status === 'completed' && wish.results)
-                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
-                if (mostRecentCompletedWish && mostRecentCompletedWish.results) {
-                  const parsedRecommendations = parseRecommendations(mostRecentCompletedWish.results.recommendations);
-                  const parsedInsights = parseRecommendations(mostRecentCompletedWish.results.insights);
-
-                  setAnalysisResults({
-                    resumeScore: mostRecentCompletedWish.results.score || 0,
-                    matchScore: mostRecentCompletedWish.results.score || 0,
-                    skillGaps: parsedRecommendations,
-                    insights: parsedInsights,
-                    recommendations: parsedInsights,
-                  });
-                }
+                
+                // Removed auto-population - results should only show after clicking "Grant My Wish"
               }
             }
           } catch (error) {
@@ -1033,7 +972,7 @@ export default function StudioPage() {
 
       // Add wish to history immediately with real backend ID
       // Create a clean title and descriptive subtitle
-      let wishTitle = "Resume & Job Match Analysis";
+      const wishTitle = "Resume & Job Match Analysis";
       let wishDescription = "";
       
       if (companyName || positionTitle) {
@@ -1101,6 +1040,28 @@ export default function StudioPage() {
       const parsedRecommendations = parseRecommendations(wishDetails!.recommendations);
       const parsedActionItems = parseRecommendations(wishDetails!.action_items);
 
+      // Start generating interview questions in parallel (don't wait)
+      let questionsPromise: Promise<any> | null = null;
+      if (jobPosting) {
+        setGeneratingQuestions(true);
+        questionsPromise = interviewQuestionsService.generateQuestions(
+          !isAuthenticated
+            ? {
+                resumeText: resumeFile?.name || "Resume submitted",
+                jobDescription: jobPosting,
+                numQuestions: 10,
+              }
+            : {
+                resumeId: resumeFile?.resumeData?.id,
+                jobDescription: jobPosting,
+                numQuestions: 10,
+              }
+        ).catch((error) => {
+          console.error("Failed to generate interview questions:", error);
+          return { questions: [] };
+        });
+      }
+
       // Update the wish with real results
       setWishes((prev) => {
         const updatedWishes = prev.map((wish) =>
@@ -1140,33 +1101,7 @@ export default function StudioPage() {
         recommendations: parsedRecommendations,
       });
 
-      // Generate interview questions after analysis completes
-      if (jobPosting) {
-        setGeneratingQuestions(true);
-        try {
-          const questionsResponse = await interviewQuestionsService.generateQuestions(
-            !isAuthenticated
-              ? {
-                  resumeText: resumeFile?.name || "Resume submitted", // Use filename as fallback
-                  jobDescription: jobPosting,
-                  numQuestions: 10,
-                }
-              : {
-                  resumeId: resumeFile?.resumeData?.id,
-                  jobDescription: jobPosting,
-                  numQuestions: 10,
-                }
-          );
-          setInterviewQuestions(questionsResponse.questions || []);
-        } catch (error) {
-          console.error("Failed to generate interview questions:", error);
-          // Silently fail - don't interrupt the user experience
-        } finally {
-          setGeneratingQuestions(false);
-        }
-      }
-
-      // Enable output highlighting after successful analysis
+      // Enable output highlighting and scroll immediately after main analysis
       setShowButtonHighlight(false);
       setShowOutputHighlight(true);
 
@@ -1191,13 +1126,24 @@ export default function StudioPage() {
         }, 1200); // Match CSS transition duration
       }, 10000);
 
+      // Wait for interview questions to complete in the background (doesn't block UI)
+      if (questionsPromise) {
+        try {
+          const questionsResponse = await questionsPromise;
+          setInterviewQuestions(questionsResponse.questions || []);
+        } finally {
+          setGeneratingQuestions(false);
+        }
+      }
+
+      // Re-enable the button after all analysis completes
+      setIsAnalyzing(false);
+
       // Refresh usage count after successful wish
       await refreshDailyUsage();
       
-      // Clear input fields after successful submission
-      setJobPosting("");
-      setCompanyName("");
-      setPositionTitle("");
+      // Keep job posting and context for reference - don't clear
+      // User can manually clear if needed
     } catch (error) {
       // Remove the temporary wish if it failed
       setWishes((prev) => {
@@ -1222,6 +1168,7 @@ export default function StudioPage() {
       // Refresh usage count even after error to get accurate count
       await refreshDailyUsage();
     } finally {
+      // Only set to false if we haven't already (in case of early exit)
       setIsAnalyzing(false);
     }
   };
@@ -1947,7 +1894,7 @@ export default function StudioPage() {
           {/* Analysis Results Cards */}
           <motion.div
             variants={itemVariants}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           >
             {/* Resume Analysis */}
             <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
@@ -2094,10 +2041,10 @@ export default function StudioPage() {
                       
                       <div 
                         onClick={() => setIsJobMatchModalOpen(true)}
-                        className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                        className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card h-[280px] flex flex-col overflow-hidden"
                       >
                         {/* Preview - show first 3 of each */}
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex-1 overflow-hidden">
                           {(() => {
                             const matches = analysisResults.scoreBreakdown.job_match.matches || [];
                             const gaps = analysisResults.scoreBreakdown.job_match.gaps || [];
@@ -2118,7 +2065,7 @@ export default function StudioPage() {
                                   </div>
                                 ))}
                                 {totalItems > 6 && (
-                                  <div className="text-center pt-2 border-t border-muted-foreground/10">
+                                  <div className="text-center pt-2 border-t border-muted-foreground/10 mt-auto flex-shrink-0">
                                     <span className="text-sm text-purple-600 hover:text-purple-700 hover:underline">
                                       View all {totalItems} items
                                     </span>
@@ -2168,9 +2115,9 @@ export default function StudioPage() {
                   {analysisResults && analysisResults.skillGaps.length > 0 && (
                     <div 
                       onClick={() => setIsSkillGapModalOpen(true)}
-                      className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card"
+                      className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card h-[280px] flex flex-col overflow-hidden"
                     >
-                      <ul className="space-y-2 text-sm">
+                      <ul className="space-y-2 text-sm flex-1 overflow-hidden">
                         {analysisResults.skillGaps.slice(0, 8).map((skill: string, index: number) => (
                           <li
                             key={index}
@@ -2184,7 +2131,7 @@ export default function StudioPage() {
                         ))}
                       </ul>
                       {analysisResults.skillGaps.length > 8 && (
-                        <div className="text-center mt-3 pt-3 border-t border-muted-foreground/10">
+                        <div className="text-center pt-3 border-t border-muted-foreground/10 mt-auto flex-shrink-0">
                           <span className="text-sm text-purple-600 hover:text-purple-700 hover:underline">
                             View all {analysisResults.skillGaps.length} skills
                           </span>
@@ -2196,40 +2143,68 @@ export default function StudioPage() {
               </CardContent>
             </Card>
 
-            {/* Interview Questions - Always visible */}
-            {interviewQuestions.length > 0 ? (
-              <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-3">
-                <InterviewQuestionsCards 
-                  questions={interviewQuestions}
-                  isLoading={generatingQuestions}
-                />
-              </motion.div>
-            ) : (
-              <motion.div variants={itemVariants} className="md:col-span-2 lg:col-span-3">
-                <Card className="hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Sparkles className="h-5 w-5 text-purple-600" />
-                      Interview Questions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8">
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {generatingQuestions
-                          ? "Generating interview questions..."
-                          : "Submit your resume and job description to generate interview questions"}
-                      </p>
-                      {generatingQuestions && (
-                        <div className="flex items-center justify-center">
+            {/* Interview Questions - Always visible with empty state */}
+            <Card className={`overflow-hidden relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
+              }`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  Interview Questions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    AI-generated questions tailored to this position
+                  </p>
+                  
+                  {/* Loading state */}
+                  {generatingQuestions && (
+                    <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card h-[280px] flex items-center justify-center">
+                      <div className="text-center py-8">
+                        <div className="flex items-center justify-center mb-3">
                           <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Generating interview questions...
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Questions loaded */}
+                  {!generatingQuestions && interviewQuestions.length > 0 && (
+                    <div 
+                      onClick={() => setIsInterviewQuestionsModalOpen(true)}
+                      className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-primary/50 hover:bg-primary/5 dark:bg-card h-[280px] flex flex-col overflow-hidden"
+                    >
+                      <ul className="space-y-2 text-sm flex-1 overflow-hidden">
+                        {interviewQuestions.slice(0, 8).map((question: any, index: number) => (
+                          <li
+                            key={index}
+                            className="flex items-start gap-2"
+                          >
+                            <span className="text-purple-600 mt-1">
+                              •
+                            </span>
+                            <span className="text-gray-700 dark:text-gray-300 line-clamp-1">{question.question}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {interviewQuestions.length > 8 && (
+                        <div className="text-center pt-3 border-t border-muted-foreground/10 mt-auto flex-shrink-0">
+                          <span className="text-sm text-purple-600 hover:text-purple-700 hover:underline">
+                            View all {interviewQuestions.length} questions
+                          </span>
                         </div>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* AI Recommendations now located inside the Genie counter card */}
           </motion.div>
@@ -2615,25 +2590,136 @@ export default function StudioPage() {
                     <p className="text-sm text-muted-foreground mb-4">
                       Skills from the job posting that could strengthen your profile
                     </p>
-                    <div className="space-y-2 max-h-[60vh] overflow-auto">
-                      {analysisResults?.skillGaps && analysisResults.skillGaps.length > 0
-                        ? analysisResults.skillGaps.map((skill, idx) => (
-                          <div key={idx} className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded transition-colors">
-                            <span className="text-purple-600 mt-1 flex-shrink-0">•</span>
-                            <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{skill.trim()}</div>
+                    <div className="max-h-[60vh] overflow-auto">
+                      {analysisResults?.skillGaps && analysisResults.skillGaps.length > 0 ? (
+                        <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
+                          <div className="space-y-3">
+                            {analysisResults.skillGaps.map((skill, idx) => (
+                              <div key={idx} className="flex items-start gap-3">
+                                <span className="text-purple-600 mt-0.5 flex-shrink-0 font-semibold">•</span>
+                                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{skill.trim()}</div>
+                              </div>
+                            ))}
                           </div>
-                        ))
-                        : [
-                          "The cosmic forces are still aligning your personalized insights ✨",
-                          "Your genie is crafting magical recommendations just for you 🔮",
-                          "The stars haven't revealed your perfect guidance yet - try again! 🌟",
-                          "Your wishes deserve divine attention - let me divine deeper insights! 💫",
-                        ].map((mock, idx) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <span className="text-muted-foreground mt-1">•</span>
-                            <div className="text-sm text-muted-foreground">{mock}</div>
+                        </div>
+                      ) : (
+                        <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card flex items-center justify-center">
+                          <div className="space-y-3 text-center py-8">
+                            {[
+                              "The cosmic forces are still aligning your personalized insights ✨",
+                              "Your genie is crafting magical recommendations just for you 🔮",
+                              "The stars haven't revealed your perfect guidance yet - try again! 🌟",
+                              "Your wishes deserve divine attention - let me divine deeper insights! 💫",
+                            ].map((mock, idx) => (
+                              <div key={idx} className="text-sm text-muted-foreground">{mock}</div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Interview Questions Modal */}
+          <AnimatePresence>
+            {isInterviewQuestionsModalOpen && interviewQuestions.length > 0 && (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={overlayVariants}
+              >
+                <motion.div
+                  className="absolute inset-0 bg-black/50"
+                  onClick={() => setIsInterviewQuestionsModalOpen(false)}
+                />
+                <motion.div
+                  className="relative w-full max-w-3xl mx-auto p-6"
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={modalVariants}
+                >
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-purple-600" />
+                        Interview Questions
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const questionsText = interviewQuestions
+                              .map((q: any, idx: number) => `${idx + 1}. ${q.question}`)
+                              .join('\\n\\n');
+                            navigator.clipboard.writeText(questionsText);
+                          }}
+                          aria-label="Copy questions"
+                          title="Copy questions to clipboard"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsInterviewQuestionsModalOpen(false)}
+                          aria-label="Close questions"
+                          title="Close questions modal"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      AI-generated questions tailored to this position
+                    </p>
+                    <div className="space-y-4 max-h-[60vh] overflow-auto">
+                      {interviewQuestions.map((question: any, idx: number) => {
+                        const isExpanded = expandedQuestions.has(idx);
+                        const toggleExpanded = () => {
+                          const newExpanded = new Set(expandedQuestions);
+                          if (isExpanded) {
+                            newExpanded.delete(idx);
+                          } else {
+                            newExpanded.add(idx);
+                          }
+                          setExpandedQuestions(newExpanded);
+                        };
+                        return (
+                          <div key={idx} className="border border-muted-foreground/25 rounded-lg overflow-hidden bg-background/50 backdrop-blur-sm dark:bg-card">
+                            <button
+                              onClick={toggleExpanded}
+                              className="w-full flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors text-left"
+                            >
+                              <span className="text-purple-600 font-semibold flex-shrink-0 mt-0.5">
+                                {idx + 1}.
+                              </span>
+                              <div className="flex-1">
+                                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                                  {question.question}
+                                </div>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 text-muted-foreground flex-shrink-0 mt-1 transition-transform ${
+                                isExpanded ? 'transform rotate-180' : ''
+                              }`} />
+                            </button>
+                            {isExpanded && question.sampleResponse && (
+                              <div className="px-4 pb-4 pt-0">
+                                <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
+                                  <p className="text-xs font-semibold text-purple-600 mb-2 uppercase tracking-wide">Sample Response</p>
+                                  <p className="text-sm text-foreground/90 leading-relaxed">{question.sampleResponse}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </motion.div>
@@ -2684,7 +2770,7 @@ export default function StudioPage() {
                       {analysisResults.scoreBreakdown.job_match.feedback}
                     </p>
                     
-                    <div className="space-y-4 max-h-[60vh] overflow-auto">
+                    <div className="space-y-5 max-h-[60vh] overflow-auto">
                       {/* What You Have */}
                       {analysisResults.scoreBreakdown.job_match.matches && 
                        analysisResults.scoreBreakdown.job_match.matches.length > 0 && (
@@ -2693,13 +2779,15 @@ export default function StudioPage() {
                             <CheckCircle2 className="h-5 w-5 text-purple-600" />
                             <h4 className="font-medium text-purple-600">What You Have</h4>
                           </div>
-                          <div className="space-y-2">
-                            {analysisResults.scoreBreakdown.job_match.matches.map((match: string, idx: number) => (
-                              <div key={idx} className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded transition-colors">
-                                <span className="text-purple-600 mt-1 flex-shrink-0">✓</span>
-                                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{match}</div>
-                              </div>
-                            ))}
+                          <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
+                            <div className="space-y-3">
+                              {analysisResults.scoreBreakdown.job_match.matches.map((match: string, idx: number) => (
+                                <div key={idx} className="flex items-start gap-3">
+                                  <span className="text-purple-600 mt-0.5 flex-shrink-0 font-semibold">✓</span>
+                                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{match}</div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2712,13 +2800,15 @@ export default function StudioPage() {
                             <X className="h-5 w-5 text-purple-600" />
                             <h4 className="font-medium text-purple-600">What's Missing</h4>
                           </div>
-                          <div className="space-y-2">
-                            {analysisResults.scoreBreakdown.job_match.gaps.map((gap: string, idx: number) => (
-                              <div key={idx} className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded transition-colors">
-                                <span className="text-purple-600 mt-1 flex-shrink-0">✗</span>
-                                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{gap}</div>
-                              </div>
-                            ))}
+                          <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
+                            <div className="space-y-3">
+                              {analysisResults.scoreBreakdown.job_match.gaps.map((gap: string, idx: number) => (
+                                <div key={idx} className="flex items-start gap-3">
+                                  <span className="text-purple-600 mt-0.5 flex-shrink-0 font-semibold">✗</span>
+                                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{gap}</div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2819,7 +2909,7 @@ export default function StudioPage() {
                               Key Insights (
                               {selectedWish.results.insights.length})
                             </h4>
-                            <div className="bg-muted/30 rounded-lg border border-muted-foreground/10 p-4">
+                            <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
                               <div className="space-y-3">
                                 {selectedWish.results.insights.map(
                                   (insight, index) => (
@@ -2827,10 +2917,10 @@ export default function StudioPage() {
                                       key={index}
                                       className="flex items-start gap-3"
                                     >
-                                      <span className="text-purple-600 mt-1 font-bold">
+                                      <span className="text-purple-600 mt-0.5 font-semibold flex-shrink-0">
                                         •
                                       </span>
-                                      <span className="text-sm">{insight}</span>
+                                      <span className="text-sm leading-relaxed">{insight}</span>
                                     </div>
                                   )
                                 )}
@@ -2848,7 +2938,7 @@ export default function StudioPage() {
                               Skills to Highlight (
                               {selectedWish.results.recommendations.length})
                             </h4>
-                            <div className="bg-muted/30 rounded-lg border border-muted-foreground/10 p-4">
+                            <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {selectedWish.results.recommendations.map(
                                   (rec, index) => (
