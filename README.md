@@ -123,19 +123,9 @@ RezGenie/
 ## 🌐 Production Deployment
 
 RezGenie is deployed and live at:
+
 - **Frontend**: [https://rezgenie.netlify.app](https://rezgenie.netlify.app)
 - **Backend API**: [https://rezgenie-api.onrender.com](https://rezgenie-api.onrender.com)
-
-### Deploy Your Own Instance
-
-Want to deploy your own instance of RezGenie? Follow our comprehensive [Deployment Guide](docs/deployment_guide.md) which covers:
-- Setting up PostgreSQL and Redis on Render
-- Configuring Cloudflare R2 for file storage
-- Deploying the backend to Render
-- Deploying the frontend to Netlify
-- Environment variables and CORS configuration
-
-**Time**: ~30-45 minutes | **Cost**: Free tier available
 
 ## 📚 Documentation
 
@@ -143,7 +133,7 @@ Want to deploy your own instance of RezGenie? Follow our comprehensive [Deployme
 
 - 📖 [Complete Setup Guide](docs/setup.md) - Development environment setup
 - 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
-- 🚀 [Deployment Guide](docs/deployment_guide.md) - Production Deployment Guide
+- 🚀 [Deployment Guide](docs/deployment.md) - Production Deployment Guide
 - 📦 [Changelog](docs/CHANGELOG.md) - Version history and features
 - 🧪 [Testing Guide](docs/testing.md) - Testing procedures and checklist
 
