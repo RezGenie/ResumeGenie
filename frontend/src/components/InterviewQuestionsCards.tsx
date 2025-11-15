@@ -101,16 +101,9 @@ export function InterviewQuestionsCards({
   }
 
   return (
-    <div className="w-full space-y-4">
-      {/* Question Counter */}
-      <div className="flex justify-end">
-        <div className="text-sm text-muted-foreground">
-          {currentIndex + 1} / {questions.length}
-        </div>
-      </div>
-
+    <div className="w-full">
       {/* Stacked Cards Container */}
-      <div className="relative h-96 perspective">
+      <div className="relative h-80 perspective -mt-1 mb-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
@@ -128,18 +121,24 @@ export function InterviewQuestionsCards({
             className="absolute inset-0 cursor-grab active:cursor-grabbing"
           >
             <Card
-              className="h-full flex flex-col bg-background/50 dark:bg-card border border-muted-foreground/25 hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all duration-300 shadow-none"
+              className="h-full flex flex-col bg-background/50 dark:bg-card border border-muted-foreground/25 hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all duration-300 shadow-none pt-0"
               onClick={handleCardClick}
             >
-              <CardHeader className="pb-3">
+              <div className="flex justify-end px-4 pt-1 pb-0">
+                <div className="text-xs text-muted-foreground">
+                  {currentIndex + 1} / {questions.length}
+                </div>
+              </div>
+              
+              <CardHeader className="pb-2 pt-0">
                 <div className="text-sm text-muted-foreground leading-tight text-gray-700 dark:text-gray-300">
                   {currentQuestion.question}
                 </div>
               </CardHeader>
 
               {/* Sample Response Section */}
-              <CardContent className="flex-1 flex flex-col overflow-hidden p-4 pt-2">
-                <div className="border border-muted-foreground/25 rounded-lg p-4 py-6 transition-all duration-200 bg-background/50 backdrop-blur-sm dark:bg-card flex-1 flex flex-col overflow-hidden">
+              <CardContent className="flex-1 flex flex-col overflow-hidden p-2 pt-0">
+                <div className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 bg-background/50 backdrop-blur-sm dark:bg-card flex-1 flex flex-col overflow-hidden">
                   {isExpanded && currentQuestion.sampleResponse ? (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}

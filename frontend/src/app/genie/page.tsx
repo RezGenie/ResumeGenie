@@ -1059,29 +1059,6 @@ export default function StudioPage() {
       const parsedRecommendations = parseRecommendations(wishDetails!.recommendations);
       const parsedActionItems = parseRecommendations(wishDetails!.action_items);
 
-      // Start generating interview questions in parallel (don't wait)
-      let questionsPromise: Promise<any> | null = null;
-      if (jobPosting) {
-        setGeneratingQuestions(true);
-        questionsPromise = interviewQuestionsService.generateQuestions(
-          !isAuthenticated
-            ? {
-                resumeText: resumeFile?.name || "Resume submitted",
-                jobDescription: jobPosting,
-                numQuestions: 10,
-              }
-            : {
-                resumeId: resumeFile?.resumeData?.id,
-                jobDescription: jobPosting,
-                numQuestions: 10,
-              },
-          !isAuthenticated // Pass isGuest flag
-        ).catch((error) => {
-          console.error("Failed to generate interview questions:", error);
-          return { questions: [] };
-        });
-      }
-
       // Update the wish with real results
       setWishes((prev) => {
         const updatedWishes = prev.map((wish) =>
@@ -1145,16 +1122,6 @@ export default function StudioPage() {
           setOutputHighlightFading(false);
         }, 1200); // Match CSS transition duration
       }, 10000);
-
-      // Wait for interview questions to complete in the background (doesn't block UI)
-      if (questionsPromise) {
-        try {
-          const questionsResponse = await questionsPromise;
-          setInterviewQuestions(questionsResponse.questions || []);
-        } finally {
-          setGeneratingQuestions(false);
-        }
-      }
 
       // Re-enable the button after all analysis completes
       setIsAnalyzing(false);
@@ -1236,10 +1203,7 @@ export default function StudioPage() {
 
       if (response.success) {
         setCoverLetter(response.cover_letter);
-        setIsCoverLetterModalOpen(true);
-        toast.success("Cover letter generated!", {
-          description: "Your cover letter is ready. You can download it as a Word document."
-        });
+        toast.success("Cover letter generated!");
       } else {
         throw new Error("Failed to generate cover letter");
       }
@@ -1284,6 +1248,53 @@ export default function StudioPage() {
     toast.success("Cover letter downloaded!", {
       description: "Your cover letter has been saved as a text file."
     });
+  };
+
+  const handleGenerateQuestions = async () => {
+    if (!analysisResults) {
+      toast.error("Please run analysis first", {
+        description: "You need to analyze a resume and job posting before generating interview questions."
+      });
+      return;
+    }
+
+    if (!jobPosting) {
+      toast.error("Job posting required", {
+        description: "Please provide a job posting to generate interview questions."
+      });
+      return;
+    }
+
+    setGeneratingQuestions(true);
+
+    try {
+      const response = await (isAuthenticated 
+        ? interviewQuestionsService.generateQuestions({
+            resumeId: resumeFile?.resumeData?.id,
+            jobDescription: jobPosting,
+            numQuestions: 10,
+          })
+        : interviewQuestionsService.generateQuestions({
+            resumeText: resumeFile?.name || "Resume submitted",
+            jobDescription: jobPosting,
+            numQuestions: 10,
+          }, true) // Pass isGuest flag
+      );
+
+      if (response.success) {
+        setInterviewQuestions(response.questions || []);
+        toast.success("Interview questions generated!");
+      } else {
+        throw new Error("Failed to generate interview questions");
+      }
+    } catch (error) {
+      console.error("Error generating interview questions:", error);
+      toast.error("Failed to generate interview questions", {
+        description: "Please try again or check your internet connection."
+      });
+    } finally {
+      setGeneratingQuestions(false);
+    }
   };
 
   const getWishIcon = (type: Wish["type"]) => {
@@ -2007,7 +2018,7 @@ export default function StudioPage() {
           {/* Analysis Results Cards */}
           <motion.div
             variants={itemVariants}
-            className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {/* Resume Analysis */}
             <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults
@@ -2255,67 +2266,101 @@ export default function StudioPage() {
                 </div>
               </CardContent>
             </Card>
+          </motion.div>
 
+          {/* Interview Questions and Cover Letter Row */}
+          <motion.div
+            variants={itemVariants}
+            className="grid md:grid-cols-2 gap-6"
+          >
             {/* Interview Questions - Stacked Card View */}
-            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 ${showOutputHighlight && analysisResults ? getHighlightClass(true, outputHighlightFading) : ""}`}>
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group ${showOutputHighlight && analysisResults ? getHighlightClass(true, outputHighlightFading) : ""}`}
+              onClick={analysisResults && interviewQuestions.length === 0 && !generatingQuestions ? handleGenerateQuestions : undefined}
+            >
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Sparkles className="h-5 w-5 text-purple-600" />
                   Interview Questions
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {interviewQuestions.length > 0 ? (
-                  <InterviewQuestionsCards 
-                    questions={interviewQuestions}
-                    isLoading={generatingQuestions}
-                  />
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground mb-3">
+              <CardContent className="pt-0">
+                {!analysisResults ? (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Run your analysis above to generate interview questions based on your resume and job description
+                  </p>
+                ) : interviewQuestions.length === 0 ? (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
                       {generatingQuestions
                         ? "Generating interview questions..."
-                        : "Submit your resume and job description to generate interview questions"}
+                        : "Click to generate interview questions based on your resume and job description"}
                     </p>
                     {generatingQuestions && (
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center mt-3">
                         <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
                       </div>
                     )}
                   </div>
+                ) : (
+                  <InterviewQuestionsCards 
+                    questions={interviewQuestions}
+                    isLoading={generatingQuestions}
+                  />
                 )}
               </CardContent>
             </Card>
 
             {/* AI Recommendations now located inside the Genie counter card */}
-          </motion.div>
 
-          {/* Cover Letter Button */}
-          {analysisResults && (
-            <motion.div
-              variants={itemVariants}
-              className="flex justify-center"
+            {/* Cover Letter Card */}
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group ${showOutputHighlight && analysisResults ? getHighlightClass(true, outputHighlightFading) : ""}`}
+              onClick={analysisResults ? () => {
+                if (coverLetter) {
+                  setIsCoverLetterModalOpen(true);
+                } else {
+                  handleGenerateCoverLetter();
+                }
+              } : undefined}
             >
-              <Button
-                size="lg"
-                onClick={handleGenerateCoverLetter}
-                disabled={generatingCoverLetter}
-                className="px-8"
-              >
-                {generatingCoverLetter ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating Cover Letter...
-                  </>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                  Sample Cover Letter
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!analysisResults ? (
+                  <p className="text-sm text-muted-foreground text-center pt-2">
+                    Run your analysis above to generate a sample cover letter based on your resume and job description
+                  </p>
+                ) : !coverLetter ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {generatingCoverLetter
+                        ? "Generating cover letter..."
+                        : "Click to generate a sample cover letter based on your resume and job description"}
+                    </p>
+                    {generatingCoverLetter && (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <>
-                    <FileText className="h-5 w-5 mr-2" />
-                    View Sample Cover Letter
-                  </>
+                  <div className="h-96 flex flex-col">
+                    <div className="border border-muted-foreground/25 rounded-lg p-4 transition-all duration-200 hover:shadow-md hover:border-purple-400 hover:bg-purple-50/30 dark:hover:bg-purple-950/10 dark:hover:border-purple-700 bg-background/50 backdrop-blur-sm dark:bg-card flex-1 flex flex-col overflow-hidden cursor-pointer">
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 flex-1 overflow-auto">
+                        {coverLetter}
+                      </div>
+                      <div className="text-center pt-3 border-t border-muted-foreground/25 mt-auto flex-shrink-0">
+                        <span className="text-xs text-purple-600 dark:text-purple-400">Click card to view full letter</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </Button>
-            </motion.div>
-          )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Wish History */}
           <motion.div variants={itemVariants}>
@@ -2734,104 +2779,7 @@ export default function StudioPage() {
           {/* Interview Questions Modal */}
           <AnimatePresence>
             {isInterviewQuestionsModalOpen && interviewQuestions.length > 0 && (
-              <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center"
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                variants={overlayVariants}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-black/50"
-                  onClick={() => setIsInterviewQuestionsModalOpen(false)}
-                />
-                <motion.div
-                  className="relative w-full max-w-3xl mx-auto p-6"
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  variants={modalVariants}
-                >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-purple-600" />
-                        Interview Questions
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            const questionsText = interviewQuestions
-                              .map((q: any, idx: number) => `${idx + 1}. ${q.question}`)
-                              .join('\\n\\n');
-                            navigator.clipboard.writeText(questionsText);
-                          }}
-                          aria-label="Copy questions"
-                          title="Copy questions to clipboard"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setIsInterviewQuestionsModalOpen(false)}
-                          aria-label="Close questions"
-                          title="Close questions modal"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      AI-generated questions tailored to this position
-                    </p>
-                    <div className="space-y-4 max-h-[60vh] overflow-auto">
-                      {interviewQuestions.map((question: any, idx: number) => {
-                        const isExpanded = expandedQuestions.has(idx);
-                        const toggleExpanded = () => {
-                          const newExpanded = new Set(expandedQuestions);
-                          if (isExpanded) {
-                            newExpanded.delete(idx);
-                          } else {
-                            newExpanded.add(idx);
-                          }
-                          setExpandedQuestions(newExpanded);
-                        };
-                        return (
-                          <div key={idx} className="border border-muted-foreground/25 rounded-lg overflow-hidden bg-background/50 backdrop-blur-sm dark:bg-card">
-                            <button
-                              onClick={toggleExpanded}
-                              className="w-full flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors text-left"
-                            >
-                              <span className="text-purple-600 font-semibold flex-shrink-0 mt-0.5">
-                                {idx + 1}.
-                              </span>
-                              <div className="flex-1">
-                                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
-                                  {question.question}
-                                </div>
-                              </div>
-                              <ChevronDown className={`h-4 w-4 text-muted-foreground flex-shrink-0 mt-1 transition-transform ${
-                                isExpanded ? 'transform rotate-180' : ''
-                              }`} />
-                            </button>
-                            {isExpanded && question.sampleResponse && (
-                              <div className="px-4 pb-4 pt-0">
-                                <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
-                                  <p className="text-xs font-semibold text-purple-600 mb-2 uppercase tracking-wide">Sample Response</p>
-                                  <p className="text-sm text-foreground/90 leading-relaxed">{question.sampleResponse}</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
+              null
             )}
           </AnimatePresence>
 
@@ -3104,67 +3052,70 @@ export default function StudioPage() {
           <AnimatePresence>
             {isCoverLetterModalOpen && coverLetter && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-                onClick={() => setIsCoverLetterModalOpen(false)}
+                className="fixed inset-0 z-50 flex items-center justify-center"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={overlayVariants}
               >
                 <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-background border border-muted-foreground/20 rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+                  className="absolute inset-0 bg-black/50"
+                  onClick={() => setIsCoverLetterModalOpen(false)}
+                />
+                <motion.div
+                  className="relative w-full max-w-3xl mx-auto p-6"
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={modalVariants}
                 >
-                  {/* Modal Header */}
-                  <div className="border-b border-muted-foreground/20 p-6 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold flex items-center gap-2">
-                        <FileText className="h-6 w-6 text-blue-600" />
-                        Your Cover Letter
-                      </h2>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {companyName || "Company"} - {positionTitle || "Position"}
-                      </p>
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm hover:border-purple-300 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-purple-600" />
+                        Sample Cover Letter
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCopyCoverLetter}
+                          aria-label="Copy cover letter"
+                          title={isCopied ? "Copied!" : "Copy to clipboard"}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsCoverLetterModalOpen(false)}
+                          aria-label="Close modal"
+                          title="Close modal"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => setIsCoverLetterModalOpen(false)}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <X className="h-6 w-6" />
-                    </button>
-                  </div>
-
-                  {/* Modal Content */}
-                  <div className="overflow-y-auto flex-1 p-6">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 font-serif">
-                      {coverLetter}
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {companyName || "Company"} - {positionTitle || "Position"}
+                    </p>
+                    <div className="max-h-[60vh] overflow-auto">
+                      <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card">
+                        <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                          {coverLetter}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Modal Footer */}
-                  <div className="border-t border-muted-foreground/20 p-6 flex gap-3 justify-end bg-muted/30">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsCoverLetterModalOpen(false)}
-                    >
-                      Close
-                    </Button>
-                    <Button
-                      onClick={handleCopyCoverLetter}
-                      className={isCopied ? "bg-green-600 hover:bg-green-700" : "bg-purple-600 hover:bg-purple-700"}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      {isCopied ? "Copied!" : "Copy"}
-                    </Button>
-                    <Button
-                      onClick={() => handleDownloadCoverLetter('text')}
-                      className="bg-slate-600 hover:bg-slate-700"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Download as Text
-                    </Button>
+                    <div className="flex gap-3 justify-end mt-4">
+                      <Button
+                        onClick={() => handleDownloadCoverLetter('text')}
+                        size="sm"
+                        className="bg-slate-600 hover:bg-slate-700"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Download as Text
+                      </Button>
+                    </div>
                   </div>
                 </motion.div>
               </motion.div>
