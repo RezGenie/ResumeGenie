@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def auto_ingest_jobs():
-    """Check if jobs exist, if not run initial ingestion."""
+    """Check if jobs exist, if not run initial ingestion. Also refresh stale jobs."""
     try:
         # Check if Adzuna credentials are configured
         if not settings.adzuna_app_id or not settings.adzuna_app_key:
@@ -30,14 +30,32 @@ async def auto_ingest_jobs():
             logger.info("To enable job fetching, set ADZUNA_APP_ID and ADZUNA_APP_KEY environment variables")
             return
         
-        # Check if we already have jobs
+        from datetime import timedelta
+        from sqlalchemy import desc
+        
+        # Check existing jobs and their freshness
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(func.count(Job.id)))
             existing_count = result.scalar()
             
+            # Check when the most recent job was posted
             if existing_count > 0:
-                logger.info(f"✅ Database already has {existing_count} jobs. Skipping ingestion.")
-                return
+                recent_result = await db.execute(
+                    select(Job.posted_at).order_by(desc(Job.posted_at)).limit(1)
+                )
+                most_recent = recent_result.scalar()
+                
+                # If we have recent jobs (less than 6 hours old), skip ingestion
+                if most_recent:
+                    from datetime import datetime, timezone
+                    age = datetime.now(timezone.utc) - most_recent
+                    if age < timedelta(hours=6):
+                        logger.info(f"✅ Database has {existing_count} jobs. Most recent is {age.total_seconds()/3600:.1f}h old. Skipping ingestion.")
+                        return
+                    else:
+                        logger.info(f"🔄 Jobs are {age.total_seconds()/3600:.1f}h old. Running refresh...")
+                else:
+                    logger.info(f"🔄 Database has {existing_count} jobs but no posted_at dates. Running refresh...")
         
         logger.info("🔄 No jobs found in database. Running initial job ingestion...")
         logger.info(f"Using Adzuna API for {settings.adzuna_country.upper()}")

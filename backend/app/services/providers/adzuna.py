@@ -398,6 +398,54 @@ class AdzunaProvider:
         
         return results
 
+    async def ingest_and_save(
+        self,
+        db: AsyncSession,
+        what: str,
+        where: str = "",
+        page: int = 1
+    ) -> int:
+        """
+        Fetch jobs from Adzuna and save to database in one call
+        
+        Args:
+            db: Database session
+            what: Search query
+            where: Location filter
+            page: Page number
+            
+        Returns:
+            Number of jobs saved
+        """
+        try:
+            # Fetch jobs from Adzuna
+            response = await self.fetch_jobs(what=what, where=where, page=page)
+            raw_jobs = response.get("results", [])
+            
+            if not raw_jobs:
+                return 0
+            
+            # Normalize jobs
+            normalized_jobs = []
+            for raw_job in raw_jobs:
+                try:
+                    normalized = self.normalize_job_data(raw_job)
+                    normalized_jobs.append(normalized)
+                except Exception as e:
+                    logger.error(f"Failed to normalize job: {e}")
+                    continue
+            
+            # Save to database
+            if normalized_jobs:
+                saved_count = await self.upsert_jobs(normalized_jobs, db)
+                return saved_count
+            
+            return 0
+            
+        except Exception as e:
+            logger.error(f"Error in ingest_and_save: {e}")
+            return 0
+
 
 # Global instance
 adzuna_provider = AdzunaProvider()
