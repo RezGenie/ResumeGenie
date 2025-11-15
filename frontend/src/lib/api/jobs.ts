@@ -263,6 +263,7 @@ export class JobService {
         message: string; 
         job_id: number; 
         action: string;
+        saved?: boolean;
         saved_job_id?: number;
       }>('/jobs/swipe', {
         job_id: parseInt(jobId),
@@ -273,7 +274,7 @@ export class JobService {
       return {
         success: true,
         data: { 
-          saved: action === 'like' && !!response.saved_job_id 
+          saved: response.saved || false
         },
         message: response.message
       };

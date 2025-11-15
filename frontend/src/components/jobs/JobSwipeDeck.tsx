@@ -118,16 +118,7 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
       [direction === 'right' ? 'liked' : 'passed']: prev[direction === 'right' ? 'liked' : 'passed'] + 1
     }));
 
-    // Show immediate feedback for likes
-    if (direction === 'right' && job) {
-      toast.success('Job saved!', {
-        description: `${job.title} has been added to your saved jobs`,
-        icon: <BookmarkCheck className="h-4 w-4" />,
-        duration: 2000,
-      });
-    }
-
-    // Send swipe to backend in background (don't wait)
+    // Send swipe to backend and wait for confirmation before showing toast
     const action = direction === 'right' ? 'like' : 'pass';
     jobService.swipeJob(jobId, action, 'mobile').then(response => {
       if (response.success) {
@@ -144,6 +135,13 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
             salary: job.salaryText,
             jobUrl: job.redirect_url,
             skills: job.skills || []
+          });
+          
+          // Show success toast ONLY after backend confirms
+          toast.success('Job saved!', {
+            description: `${job.title} has been added to your saved jobs`,
+            icon: <BookmarkCheck className="h-4 w-4" />,
+            duration: 2000,
           });
           
           // Emit event for dashboard update

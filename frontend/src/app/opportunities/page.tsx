@@ -8,6 +8,7 @@ import {
   DollarSign,
   Building2,
   Clock,
+  Bookmark,
   Star,
   Target,
   ChevronDown,
@@ -252,13 +253,18 @@ export default function JobDiscoveryPage() {
 
       try {
         if (wasCurrentlySaved) {
-          // Remove from saved jobs (both locally and backend) in background
+          // Remove from saved jobs (both locally and backend)
           await savedJobsService.removeSavedJob(jobId);
+          
+          toast.success('Job removed', {
+            description: 'Job removed from your saved list',
+            duration: 2000,
+          });
           
           // Emit event for dashboard update
           window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId } }));
         } else {
-          // Save the job via backend swipe endpoint in background
+          // Save the job via backend swipe endpoint
           const response = await jobService.swipeJob(jobId, 'like');
           
           if (response.success && response.data.saved) {
@@ -272,6 +278,12 @@ export default function JobDiscoveryPage() {
               description: job.snippet,
               skills: job.skills || [],
               jobUrl: job.redirect_url
+            });
+            
+            toast.success('Job saved!', {
+              description: `${job.title} has been added to your saved jobs`,
+              icon: <BookmarkCheck className="h-4 w-4" />,
+              duration: 2000,
             });
             
             // Emit event for dashboard update
@@ -644,7 +656,7 @@ export default function JobDiscoveryPage() {
                                       </>
                                     ) : (
                                       <>
-                                        <Star className="w-4 h-4 mr-1" />
+                                        <Bookmark className="w-4 h-4 mr-1" />
                                         Save
                                       </>
                                     )}

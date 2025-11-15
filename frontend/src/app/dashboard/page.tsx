@@ -13,7 +13,8 @@ import {
   Building2,
   User,
   Search,
-  Bookmark
+  Bookmark,
+  BookmarkCheck
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -377,8 +378,13 @@ export default function Dashboard() {
       const jobsStats = savedJobsService.getJobsStats();
       setSavedJobsStats(jobsStats);
       
-      // Add to recent activity
+      // Update recommended jobs to reflect saved state
       if (jobData) {
+        setRecommendedJobs(prev => 
+          prev.map(job => job.id === jobData.id ? { ...job, saved: true } : job)
+        );
+        
+        // Add to recent activity
         const newActivity: RecentActivity = {
           id: `job-saved-${jobData.id}-${Date.now()}`,
           type: 'application',
@@ -400,8 +406,13 @@ export default function Dashboard() {
       const jobsStats = savedJobsService.getJobsStats();
       setSavedJobsStats(jobsStats);
       
-      // Remove from activities if present
+      // Update recommended jobs to reflect unsaved state
       if (jobId) {
+        setRecommendedJobs(prev => 
+          prev.map(job => job.id === jobId ? { ...job, saved: false } : job)
+        );
+        
+        // Remove from activities if present
         setActivities(prev => prev.filter(activity => 
           !activity.id.includes(`job-saved-${jobId}`)
         ));
@@ -1003,10 +1014,13 @@ export default function Dashboard() {
                                       
                                       try {
                                         if (wasSaved) {
-                                          // Remove from saved jobs in background
+                                          // Remove from saved jobs
                                           await savedJobsService.removeSavedJob(job.id);
+                                          
+                                          // Emit event for activity update
+                                          window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId: job.id } }));
                                         } else {
-                                          // Save via backend API in background
+                                          // Save via backend API
                                           const response = await jobService.swipeJob(job.id, 'like');
                                           if (response.success && response.data.saved) {
                                             // Also save locally
@@ -1020,6 +1034,18 @@ export default function Dashboard() {
                                               jobUrl: job.redirect_url,
                                               skills: job.skills || []
                                             });
+                                            
+                                            // Emit event for activity update
+                                            window.dispatchEvent(new CustomEvent('jobSaved', { 
+                                              detail: { 
+                                                job: {
+                                                  id: job.id,
+                                                  title: job.title,
+                                                  company: job.company,
+                                                  matchScore: job.matchScore
+                                                } 
+                                              } 
+                                            }));
                                           } else {
                                             // ROLLBACK on failure
                                             console.error('Failed to save job:', response.message);
@@ -1041,7 +1067,11 @@ export default function Dashboard() {
                                       }
                                     }}
                                   >
-                                    <Bookmark className={`h-3 w-3 transition-all duration-200 ${job.saved ? 'fill-current scale-110' : 'scale-100'}`} />
+                                    {job.saved ? (
+                                      <BookmarkCheck className="h-3 w-3 fill-current transition-all duration-200 scale-110" />
+                                    ) : (
+                                      <Bookmark className="h-3 w-3 transition-all duration-200 scale-100" />
+                                    )}
                                   </Button>
                                   <Button 
                                     size="sm" 

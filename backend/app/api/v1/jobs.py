@@ -1009,6 +1009,7 @@ async def swipe_job(
         
         # If it's a like, also save the job
         saved_job_id = None
+        job_was_saved = False
         if swipe_request.action == "like":
             # Check if already saved
             existing_save = await db.execute(
@@ -1020,7 +1021,13 @@ async def swipe_job(
                 )
             )
             
-            if not existing_save.scalar_one_or_none():
+            existing_saved_job = existing_save.scalar_one_or_none()
+            if existing_saved_job:
+                # Job already saved, return existing ID
+                saved_job_id = existing_saved_job.id
+                job_was_saved = True
+            else:
+                # Save new job
                 saved_job = SavedJob(
                     user_id=current_user.id,
                     job_id=swipe_request.job_id,
@@ -1029,18 +1036,21 @@ async def swipe_job(
                 db.add(saved_job)
                 await db.flush()
                 saved_job_id = saved_job.id
+                job_was_saved = True
         
         await db.commit()
         
         response = {
             "message": f"Job {swipe_request.action} recorded successfully",
             "job_id": swipe_request.job_id,
-            "action": swipe_request.action
+            "action": swipe_request.action,
+            "saved": job_was_saved
         }
         
         if saved_job_id:
             response["saved_job_id"] = saved_job_id
-            response["message"] += " and saved to your jobs"
+            if job_was_saved:
+                response["message"] += " and saved to your jobs"
         
         logger.info(f"Swipe processed successfully for user: {current_user.email}")
         return response
