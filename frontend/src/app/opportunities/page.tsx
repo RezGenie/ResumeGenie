@@ -16,8 +16,10 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  BookmarkCheck
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -223,7 +225,7 @@ export default function JobDiscoveryPage() {
     setCurrentPage(1);
   }, [searchTerm, locationFilter, salaryFilter, sortBy]);
 
-  // Handle job save/unsave with optimistic updates
+  // Handle job save/unsave with optimistic updates and user feedback
   const handleToggleSaveJob = async (jobId: string) => {
     try {
       const job = jobs.find(j => j.id === jobId);
@@ -236,10 +238,25 @@ export default function JobDiscoveryPage() {
         j.id === jobId ? { ...j, saved: !wasCurrentlySaved } : j
       ));
 
+      // Show immediate feedback
+      if (!wasCurrentlySaved) {
+        toast.success('Job saved!', {
+          description: `${job.title} has been saved to your jobs`,
+          icon: <BookmarkCheck className="h-4 w-4" />,
+        });
+      } else {
+        toast.info('Job removed', {
+          description: `${job.title} has been removed from your saved jobs`,
+        });
+      }
+
       try {
         if (wasCurrentlySaved) {
           // Remove from saved jobs (both locally and backend) in background
           await savedJobsService.removeSavedJob(jobId);
+          
+          // Emit event for dashboard update
+          window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId } }));
         } else {
           // Save the job via backend swipe endpoint in background
           const response = await jobService.swipeJob(jobId, 'like');
@@ -256,12 +273,27 @@ export default function JobDiscoveryPage() {
               skills: job.skills || [],
               jobUrl: job.redirect_url
             });
+            
+            // Emit event for dashboard update
+            window.dispatchEvent(new CustomEvent('jobSaved', { 
+              detail: { 
+                job: {
+                  id: job.id,
+                  title: job.title,
+                  company: job.company,
+                  matchScore: job.matchScore
+                } 
+              } 
+            }));
           } else {
             // ROLLBACK on failure
             console.error('Failed to save job:', response.message);
             setJobs(prev => prev.map(j =>
               j.id === jobId ? { ...j, saved: wasCurrentlySaved } : j
             ));
+            toast.error('Failed to save job', {
+              description: 'Please try again later',
+            });
           }
         }
       } catch (backendError) {
@@ -270,9 +302,15 @@ export default function JobDiscoveryPage() {
         setJobs(prev => prev.map(j =>
           j.id === jobId ? { ...j, saved: wasCurrentlySaved } : j
         ));
+        toast.error('Failed to save job', {
+          description: 'Please check your connection and try again',
+        });
       }
     } catch (err) {
       console.error('Failed to toggle job save status:', err);
+      toast.error('An error occurred', {
+        description: 'Please try again',
+      });
     }
   };
 
@@ -509,13 +547,13 @@ export default function JobDiscoveryPage() {
                 <>
                   {/* Desktop: Grid View */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {paginatedJobs.map((job, index) => (
+                      {paginatedJobs.map((job) => (
                         <motion.div
-                          key={job.id}
+                          key={`job-${job.id}-${job.saved ? 'saved' : 'unsaved'}`}
                           variants={itemVariants}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
+                          transition={{ duration: 0.3 }}
                           whileHover={{ y: -4, scale: 1.01 }}
                           className="group"
                         >
@@ -599,7 +637,17 @@ export default function JobDiscoveryPage() {
                                       ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"
                                       : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"}
                                   >
-                                    {job.saved ? "Saved" : "Save"}
+                                    {job.saved ? (
+                                      <>
+                                        <BookmarkCheck className="w-4 h-4 mr-1 fill-current" />
+                                        Saved
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Star className="w-4 h-4 mr-1" />
+                                        Save
+                                      </>
+                                    )}
                                   </Button>
                                   <Button
                                     size="sm"

@@ -368,14 +368,58 @@ export default function Dashboard() {
       fetchRealDashboardData();
     };
 
+    const handleJobSaved = (event: Event) => {
+      console.log('Job saved event received, updating dashboard...');
+      const customEvent = event as CustomEvent;
+      const jobData = customEvent.detail?.job;
+      
+      // Update saved jobs stats
+      const jobsStats = savedJobsService.getJobsStats();
+      setSavedJobsStats(jobsStats);
+      
+      // Add to recent activity
+      if (jobData) {
+        const newActivity: RecentActivity = {
+          id: `job-saved-${jobData.id}-${Date.now()}`,
+          type: 'application',
+          title: 'Job saved',
+          description: `${jobData.title} at ${jobData.company} - ${jobData.matchScore || 0}% match`,
+          timestamp: new Date().toISOString()
+        };
+        
+        setActivities(prev => [newActivity, ...prev].slice(0, 5));
+      }
+    };
+
+    const handleJobUnsaved = (event: Event) => {
+      console.log('Job unsaved event received, updating dashboard...');
+      const customEvent = event as CustomEvent;
+      const jobId = customEvent.detail?.jobId;
+      
+      // Update saved jobs stats
+      const jobsStats = savedJobsService.getJobsStats();
+      setSavedJobsStats(jobsStats);
+      
+      // Remove from activities if present
+      if (jobId) {
+        setActivities(prev => prev.filter(activity => 
+          !activity.id.includes(`job-saved-${jobId}`)
+        ));
+      }
+    };
+
     window.addEventListener('userProfileUpdated', handleProfileUpdate);
     window.addEventListener('userPreferencesUpdated', handleProfileUpdate);
     window.addEventListener('resumeProcessed', handleResumeProcessed);
+    window.addEventListener('jobSaved', handleJobSaved as EventListener);
+    window.addEventListener('jobUnsaved', handleJobUnsaved as EventListener);
 
     return () => {
       window.removeEventListener('userProfileUpdated', handleProfileUpdate);
       window.removeEventListener('userPreferencesUpdated', handleProfileUpdate);
       window.removeEventListener('resumeProcessed', handleResumeProcessed);
+      window.removeEventListener('jobSaved', handleJobSaved as EventListener);
+      window.removeEventListener('jobUnsaved', handleJobUnsaved as EventListener);
     };
   }, [authUser]);
 
