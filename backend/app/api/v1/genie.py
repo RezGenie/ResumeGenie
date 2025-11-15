@@ -1498,3 +1498,154 @@ async def generate_interview_questions_guest(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate interview questions"
         )
+
+
+# ==================== COVER LETTER ENDPOINTS ====================
+
+class CoverLetterRequest(BaseModel):
+    job_description: str = Field(..., description="Job posting or description")
+    company_name: Optional[str] = Field(None, description="Optional company name")
+    position_title: Optional[str] = Field(None, description="Optional position title")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "job_description": "We are looking for a Senior Python Developer...",
+                "company_name": "TechCorp",
+                "position_title": "Senior Python Developer"
+            }
+        }
+
+
+class CoverLetterResponse(BaseModel):
+    success: bool
+    cover_letter: str
+    company_name: str
+    position_title: str
+    generated_at: str
+
+
+@router.post("/cover-letter", response_model=CoverLetterResponse)
+@rate_limit(max_calls=20, window_minutes=60)  # 20 cover letters per hour
+async def generate_cover_letter(
+    request: Request,
+    cl_request: CoverLetterRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate a professional cover letter for the authenticated user.
+    
+    Requires a valid resume to be uploaded first.
+    """
+    try:
+        logger.info(f"Cover letter generation requested by user: {current_user.email}")
+        
+        # Get user's most recent resume
+        stmt = select(Resume).where(
+            Resume.user_id == current_user.id
+        ).order_by(
+            desc(Resume.created_at)
+        ).limit(1)
+        
+        result = await db.execute(stmt)
+        resume = result.scalar_one_or_none()
+        
+        if not resume or not resume.extracted_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No resume found. Please upload a resume first."
+            )
+        
+        logger.info(f"Using resume: {resume.id}, extracted_text length: {len(resume.extracted_text)}")
+        
+        # Generate cover letter
+        cover_letter_data = await openai_service.generate_cover_letter(
+            resume_text=resume.extracted_text,
+            job_description=cl_request.job_description,
+            company_name=cl_request.company_name,
+            position_title=cl_request.position_title
+        )
+        
+        return CoverLetterResponse(
+            success=True,
+            cover_letter=cover_letter_data["cover_letter"],
+            company_name=cover_letter_data["company_name"],
+            position_title=cover_letter_data["position_title"],
+            generated_at=cover_letter_data["generated_at"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating cover letter: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate cover letter"
+        )
+
+
+@router.post("/guest/cover-letter", response_model=CoverLetterResponse)
+@rate_limit(max_calls=10, window_minutes=60)  # 10 cover letters per hour for guests
+async def generate_cover_letter_guest(
+    request: Request,
+    cl_request: CoverLetterRequest,
+    db: AsyncSession = Depends(get_db),
+    guest_session = Depends(get_or_create_guest_session)
+):
+    """
+    Generate a professional cover letter for guest users.
+    
+    Requires resume_text to be provided directly (from most recent guest wish).
+    """
+    try:
+        logger.info(f"Cover letter generation requested by guest: {guest_session.guest_id}")
+        
+        # Get most recent guest wish with resume text
+        stmt = select(GenieWish).where(
+            GenieWish.guest_id == guest_session.guest_id
+        ).order_by(desc(GenieWish.created_at)).limit(1)
+        
+        result = await db.execute(stmt)
+        recent_wish = result.scalar_one_or_none()
+        
+        if not recent_wish:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No previous analysis found. Please run an analysis first."
+            )
+        
+        # Extract resume text from context data
+        context_data = recent_wish.context_data or {}
+        resume_text = context_data.get("resume_text") if isinstance(context_data, dict) else None
+        
+        if not resume_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No resume text found from previous analysis."
+            )
+        
+        # Generate cover letter
+        cover_letter_data = await openai_service.generate_cover_letter(
+            resume_text=resume_text,
+            job_description=cl_request.job_description,
+            company_name=cl_request.company_name,
+            position_title=cl_request.position_title
+        )
+        
+        return CoverLetterResponse(
+            success=True,
+            cover_letter=cover_letter_data["cover_letter"],
+            company_name=cover_letter_data["company_name"],
+            position_title=cover_letter_data["position_title"],
+            generated_at=cover_letter_data["generated_at"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating cover letter for guest: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate cover letter"
+        )

@@ -47,6 +47,7 @@ import { Footer } from "@/components/footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { resumeService, ResumeResponse } from "@/lib/api/resumes";
 import { interviewQuestionsService } from "@/lib/api/interviewQuestions";
+import { coverLetterService } from "@/lib/api/coverLetter";
 import { InterviewQuestionsCards } from "@/components/InterviewQuestionsCards";
 
 interface UploadedFile {
@@ -296,6 +297,10 @@ export default function StudioPage() {
   const [interviewQuestions, setInterviewQuestions] = useState<any[]>([]);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
+  const [coverLetter, setCoverLetter] = useState<string | null>(null);
+  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
+  const [isCoverLetterModalOpen, setIsCoverLetterModalOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasLoadedPrimaryResume = useRef(false); // Track if we've already loaded primary resume
 
@@ -340,6 +345,24 @@ export default function StudioPage() {
       }, 1200); // Match CSS transition duration
     }, 8000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Suppress hydration mismatch warnings caused by browser extensions
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args: any[]) => {
+      if (
+        typeof args[0] === 'string' &&
+        args[0].includes('hydrated but some attributes')
+      ) {
+        return; // Suppress hydration mismatch warnings
+      }
+      originalError.apply(console, args);
+    };
+
+    return () => {
+      console.error = originalError;
+    };
   }, []);
 
   // Helper function to get consistent highlight classes
@@ -1178,6 +1201,89 @@ export default function StudioPage() {
       // Only set to false if we haven't already (in case of early exit)
       setIsAnalyzing(false);
     }
+  };
+
+  const handleGenerateCoverLetter = async () => {
+    if (!analysisResults) {
+      toast.error("Please run analysis first", {
+        description: "You need to analyze a resume and job posting before generating a cover letter."
+      });
+      return;
+    }
+
+    if (!jobPosting) {
+      toast.error("Job posting required", {
+        description: "Please provide a job posting to generate a cover letter."
+      });
+      return;
+    }
+
+    setGeneratingCoverLetter(true);
+
+    try {
+      const response = await (isAuthenticated 
+        ? coverLetterService.generateCoverLetter({
+            job_description: jobPosting,
+            company_name: companyName || undefined,
+            position_title: positionTitle || undefined,
+          })
+        : coverLetterService.generateCoverLetterGuest({
+            job_description: jobPosting,
+            company_name: companyName || undefined,
+            position_title: positionTitle || undefined,
+          })
+      );
+
+      if (response.success) {
+        setCoverLetter(response.cover_letter);
+        setIsCoverLetterModalOpen(true);
+        toast.success("Cover letter generated!", {
+          description: "Your cover letter is ready. You can download it as a Word document."
+        });
+      } else {
+        throw new Error("Failed to generate cover letter");
+      }
+    } catch (error) {
+      console.error("Error generating cover letter:", error);
+      toast.error("Failed to generate cover letter", {
+        description: "Please try again or check your internet connection."
+      });
+    } finally {
+      setGeneratingCoverLetter(false);
+    }
+  };
+
+  const handleCopyCoverLetter = async () => {
+    if (!coverLetter) return;
+    
+    try {
+      await navigator.clipboard.writeText(coverLetter);
+      setIsCopied(true);
+      toast.success("Copied to clipboard!", {
+        description: "The cover letter has been copied to your clipboard."
+      });
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      toast.error("Failed to copy", {
+        description: "Could not copy to clipboard. Please try again."
+      });
+    }
+  };
+
+  const handleDownloadCoverLetter = (format: 'text' = 'text') => {
+    if (!coverLetter) return;
+
+    if (format === 'text') {
+      coverLetterService.downloadAsText(
+        coverLetter,
+        companyName || "Company",
+        positionTitle || "Position"
+      );
+    }
+
+    toast.success("Cover letter downloaded!", {
+      description: "Your cover letter has been saved as a text file."
+    });
   };
 
   const getWishIcon = (type: Wish["type"]) => {
@@ -2184,6 +2290,33 @@ export default function StudioPage() {
             {/* AI Recommendations now located inside the Genie counter card */}
           </motion.div>
 
+          {/* Cover Letter Button */}
+          {analysisResults && (
+            <motion.div
+              variants={itemVariants}
+              className="flex justify-center"
+            >
+              <Button
+                size="lg"
+                onClick={handleGenerateCoverLetter}
+                disabled={generatingCoverLetter}
+                className="px-8"
+              >
+                {generatingCoverLetter ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating Cover Letter...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-5 w-5 mr-2" />
+                    View Sample Cover Letter
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
+
           {/* Wish History */}
           <motion.div variants={itemVariants}>
             <Card className={`max-w-4xl mx-auto hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all ${showOutputHighlight && wishes.some(w => w.status === 'completed')
@@ -2961,6 +3094,77 @@ export default function StudioPage() {
                           </div>
                         )}
                     </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Cover Letter Modal */}
+          <AnimatePresence>
+            {isCoverLetterModalOpen && coverLetter && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                onClick={() => setIsCoverLetterModalOpen(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-background border border-muted-foreground/20 rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+                >
+                  {/* Modal Header */}
+                  <div className="border-b border-muted-foreground/20 p-6 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold flex items-center gap-2">
+                        <FileText className="h-6 w-6 text-blue-600" />
+                        Your Cover Letter
+                      </h2>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {companyName || "Company"} - {positionTitle || "Position"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setIsCoverLetterModalOpen(false)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  {/* Modal Content */}
+                  <div className="overflow-y-auto flex-1 p-6">
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 font-serif">
+                      {coverLetter}
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="border-t border-muted-foreground/20 p-6 flex gap-3 justify-end bg-muted/30">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCoverLetterModalOpen(false)}
+                    >
+                      Close
+                    </Button>
+                    <Button
+                      onClick={handleCopyCoverLetter}
+                      className={isCopied ? "bg-green-600 hover:bg-green-700" : "bg-purple-600 hover:bg-purple-700"}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      {isCopied ? "Copied!" : "Copy"}
+                    </Button>
+                    <Button
+                      onClick={() => handleDownloadCoverLetter('text')}
+                      className="bg-slate-600 hover:bg-slate-700"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download as Text
+                    </Button>
                   </div>
                 </motion.div>
               </motion.div>

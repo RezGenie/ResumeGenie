@@ -7,6 +7,7 @@ import openai
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 import numpy as np
 from dataclasses import dataclass
@@ -831,6 +832,82 @@ Be specific and actionable. Scores: 90+=excellent, 75-89=good, 60-74=needs work,
             },
             "overall_assessment": "Your resume shows solid fundamentals. Focus on tailoring it to specific job requirements and quantifying your achievements for maximum impact."
         }
+
+    async def generate_cover_letter(
+        self,
+        resume_text: str,
+        job_description: str,
+        company_name: Optional[str] = None,
+        position_title: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate a professional cover letter based on resume and job description.
+        
+        Args:
+            resume_text: The user's resume text
+            job_description: The job posting/description
+            company_name: Optional company name
+            position_title: Optional position title
+            
+        Returns:
+            Dictionary with cover_letter and metadata
+        """
+        await self._rate_limit_check("chat")
+        
+        try:
+            system_prompt = (
+                "You are an expert cover letter writer and career coach. "
+                "You write compelling, professional cover letters that highlight the candidate's "
+                "strengths and directly address the employer's needs. "
+                "Your cover letters are personalized, engaging, and follow standard business letter format. "
+                "You understand the job market and know how to position candidates for success."
+            )
+            
+            company_context = f"Company: {company_name}\n" if company_name else ""
+            position_context = f"Position: {position_title}\n" if position_title else ""
+            
+            user_prompt = f"""
+Please write a professional cover letter for the following:
+
+{company_context}{position_context}
+
+RESUME:
+{resume_text}
+
+JOB DESCRIPTION:
+{job_description}
+
+Generate a comprehensive cover letter that:
+1. Opens with a strong introduction that shows enthusiasm for the role
+2. Highlights 2-3 key skills/achievements from the resume that match the job requirements
+3. Demonstrates understanding of the company and role
+4. Closes with a strong call to action
+5. Uses professional but personable tone
+6. Is approximately 250-350 words
+
+Format it as a proper business letter (with date, address, salutation, body paragraphs, closing).
+Only output the cover letter text, no additional commentary.
+"""
+            
+            cover_letter_text = await self.get_chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,
+                max_tokens=800,
+            )
+            
+            return {
+                "cover_letter": cover_letter_text,
+                "company_name": company_name or "Hiring Manager",
+                "position_title": position_title or "Position",
+                "generated_at": datetime.now().isoformat(),
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating cover letter: {e}")
+            raise
 
 
 # Global OpenAI service instance
