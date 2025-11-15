@@ -943,38 +943,52 @@ export default function Dashboard() {
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
-                                    className={`h-6 px-2 text-xs hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/40 dark:hover:text-purple-300 ${job.saved ? 'text-purple-600' : ''}`}
+                                    className={`h-6 px-2 text-xs hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/40 dark:hover:text-purple-300 transition-colors ${job.saved ? 'text-purple-600' : ''}`}
                                     onClick={async (e) => {
                                       e.stopPropagation();
-                                      if (job.saved) {
-                                        // Remove from saved jobs
-                                        await savedJobsService.removeSavedJob(job.id);
-                                      } else {
-                                        // Save via backend API
-                                        const response = await jobService.swipeJob(job.id, 'like');
-                                        if (response.success && response.data.saved) {
-                                          // Also save locally
-                                          savedJobsService.saveJob({
-                                            id: job.id,
-                                            title: job.title,
-                                            company: job.company,
-                                            location: job.location,
-                                            description: job.snippet,
-                                            salary: job.salaryText,
-                                            jobUrl: job.redirect_url,
-                                            skills: job.skills || []
-                                          });
-                                        } else {
-                                          console.error('Failed to save job:', response.message);
-                                          return;
-                                        }
-                                      }
-                                      // Update the job's saved status
+                                      const wasSaved = job.saved;
+                                      
+                                      // OPTIMISTIC UPDATE: Update UI immediately
                                       setRecommendedJobs(prev => 
                                         prev.map(j => j.id === job.id ? { ...j, saved: !j.saved } : j)
                                       );
-                                      // Update saved jobs stats
-                                      setSavedJobsStats(savedJobsService.getJobsStats());
+                                      
+                                      try {
+                                        if (wasSaved) {
+                                          // Remove from saved jobs in background
+                                          await savedJobsService.removeSavedJob(job.id);
+                                        } else {
+                                          // Save via backend API in background
+                                          const response = await jobService.swipeJob(job.id, 'like');
+                                          if (response.success && response.data.saved) {
+                                            // Also save locally
+                                            savedJobsService.saveJob({
+                                              id: job.id,
+                                              title: job.title,
+                                              company: job.company,
+                                              location: job.location,
+                                              description: job.snippet,
+                                              salary: job.salaryText,
+                                              jobUrl: job.redirect_url,
+                                              skills: job.skills || []
+                                            });
+                                          } else {
+                                            // ROLLBACK on failure
+                                            console.error('Failed to save job:', response.message);
+                                            setRecommendedJobs(prev => 
+                                              prev.map(j => j.id === job.id ? { ...j, saved: wasSaved } : j)
+                                            );
+                                          }
+                                        }
+                                        // Update saved jobs stats after backend completes
+                                        setSavedJobsStats(savedJobsService.getJobsStats());
+                                      } catch (error) {
+                                        // ROLLBACK on error
+                                        console.error('Error toggling save:', error);
+                                        setRecommendedJobs(prev => 
+                                          prev.map(j => j.id === job.id ? { ...j, saved: wasSaved } : j)
+                                        );
+                                      }
                                     }}
                                   >
                                     <Bookmark className={`h-3 w-3 ${job.saved ? 'fill-current' : ''}`} />

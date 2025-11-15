@@ -223,43 +223,54 @@ export default function JobDiscoveryPage() {
     setCurrentPage(1);
   }, [searchTerm, locationFilter, salaryFilter, sortBy]);
 
-  // Handle job save/unsave
+  // Handle job save/unsave with optimistic updates
   const handleToggleSaveJob = async (jobId: string) => {
     try {
       const job = jobs.find(j => j.id === jobId);
       if (!job) return;
 
-      const isCurrentlySaved = savedJobsService.isJobSaved(jobId);
+      const wasCurrentlySaved = savedJobsService.isJobSaved(jobId);
 
-      if (isCurrentlySaved) {
-        // Remove from saved jobs (both locally and backend)
-        await savedJobsService.removeSavedJob(jobId);
-      } else {
-        // Save the job via backend swipe endpoint
-        const response = await jobService.swipeJob(jobId, 'like');
-        
-        if (response.success && response.data.saved) {
-          // Also save locally for immediate access
-          savedJobsService.saveJob({
-            id: job.id,
-            title: job.title,
-            company: job.company,
-            location: job.location,
-            salary: job.salaryText,
-            description: job.snippet,
-            skills: job.skills || [],
-            jobUrl: job.redirect_url
-          });
-        } else {
-          console.error('Failed to save job:', response.message);
-          return; // Don't update UI if backend save failed
-        }
-      }
-
-      // Update local state
+      // OPTIMISTIC UPDATE: Update UI immediately for instant feedback
       setJobs(prev => prev.map(j =>
-        j.id === jobId ? { ...j, saved: !isCurrentlySaved } : j
+        j.id === jobId ? { ...j, saved: !wasCurrentlySaved } : j
       ));
+
+      try {
+        if (wasCurrentlySaved) {
+          // Remove from saved jobs (both locally and backend) in background
+          await savedJobsService.removeSavedJob(jobId);
+        } else {
+          // Save the job via backend swipe endpoint in background
+          const response = await jobService.swipeJob(jobId, 'like');
+          
+          if (response.success && response.data.saved) {
+            // Also save locally for immediate access
+            savedJobsService.saveJob({
+              id: job.id,
+              title: job.title,
+              company: job.company,
+              location: job.location,
+              salary: job.salaryText,
+              description: job.snippet,
+              skills: job.skills || [],
+              jobUrl: job.redirect_url
+            });
+          } else {
+            // ROLLBACK on failure
+            console.error('Failed to save job:', response.message);
+            setJobs(prev => prev.map(j =>
+              j.id === jobId ? { ...j, saved: wasCurrentlySaved } : j
+            ));
+          }
+        }
+      } catch (backendError) {
+        // ROLLBACK on error
+        console.error('Backend error toggling save:', backendError);
+        setJobs(prev => prev.map(j =>
+          j.id === jobId ? { ...j, saved: wasCurrentlySaved } : j
+        ));
+      }
     } catch (err) {
       console.error('Failed to toggle job save status:', err);
     }

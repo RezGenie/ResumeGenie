@@ -138,12 +138,13 @@ export function SwipeableJobCard({
         opacity: isActive ? (isDragging ? opacity : 1) : 0.8,
         scale: isActive ? 1 : 0.95,
         pointerEvents: isActive ? 'auto' : 'none',
-        touchAction: 'none',
+        touchAction: 'pan-y pinch-zoom',
       }}
       animate={controls}
       drag={isActive && !isExiting ? "x" : false}
       dragConstraints={false}
-      dragElastic={0.7}
+      dragElastic={1}
+      dragMomentum={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
@@ -152,31 +153,9 @@ export function SwipeableJobCard({
       {/* Swipe indicators - removed for cleaner look */}
       
       {/* Main card content */}
-      <Card className="w-full max-w-md hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 group !bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg overflow-hidden">
-        <div className="flex flex-col">
-          <CardHeader className="pb-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1 flex-1">
-                <CardTitle className="text-lg group-hover:text-purple-600 transition-colors">
-                  {job.title}
-                </CardTitle>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Building2 className="h-4 w-4" />
-                  {job.company}
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {job.location}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="h-4 w-4" />
-                    {job.salaryText || 'Salary not specified'}
-                  </div>
-                </div>
-              </div>
-              <div className="text-right space-y-2">
-                <div className="flex items-center gap-1">
+      <Card className="w-full max-w-md hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 group !bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg overflow-hidden" style={{ maxHeight: '72vh', height: 'auto', minHeight: '450px' }}>
+        <div className="flex flex-col h-full">
+          <CardHeader className="pb-4 flex-shrink-0">\n            <div className="flex items-start justify-between">\n              <div className="space-y-1 flex-1">\n                <CardTitle className="text-lg group-hover:text-purple-600 transition-colors">\n                  {job.title}\n                </CardTitle>\n                <div className="flex items-center gap-2 text-sm text-muted-foreground">\n                  <Building2 className="h-4 w-4" />\n                  {job.company}\n                </div>\n                <div className="flex items-center gap-4 text-sm text-muted-foreground">\n                  <div className="flex items-center gap-1">\n                    <MapPin className="h-4 w-4" />\n                    {job.location}\n                  </div>\n                  <div className="flex items-center gap-1">\n                    <DollarSign className="h-4 w-4" />\n                    {job.salaryText || 'Salary not specified'}\n                  </div>\n                </div>\n              </div>\n              <div className="text-right space-y-2 flex-shrink-0">\n                <div className="flex items-center gap-1">
                   <Target className="h-4 w-4 text-purple-600" />
                   <span className="font-bold text-purple-600">{job.matchScore || 85}%</span>
                 </div>
@@ -187,12 +166,12 @@ export function SwipeableJobCard({
             </div>
           </CardHeader>
           
-          <CardContent className="pt-0 pb-4 flex flex-col space-y-4">
-            <div className="space-y-4 overflow-y-auto max-h-[500px]">
+          <CardContent className="pt-0 pb-4 flex flex-col space-y-4 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-4">
               {/* Job Description - expanded to show more */}
-              <div className="min-h-[180px]">
+              <div className="min-h-[120px]">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {job.snippet || 'Join our dynamic team and work on exciting projects that make a real impact in the industry. We are looking for talented individuals who are passionate about technology and innovation. As a key member of our team, you will have the opportunity to work with cutting-edge technologies, collaborate with experienced professionals, and contribute to meaningful projects that shape the future. We offer a competitive compensation package, comprehensive benefits, flexible work arrangements, and a supportive work environment that values growth and development. You will be working on challenging problems that require creative solutions and critical thinking. Our culture emphasizes continuous learning, collaboration, and work-life balance. We believe in empowering our team members to take ownership of their work and make meaningful contributions to our products and services.'}
+                  {job.snippet || 'Join our dynamic team and work on exciting projects that make a real impact in the industry. We are looking for talented individuals who are passionate about technology and innovation.'}
                 </p>
               </div>
 
