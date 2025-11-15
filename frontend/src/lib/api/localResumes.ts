@@ -248,6 +248,46 @@ class LocalResumeService {
     return resumes.find(r => r.isPrimary) || resumes.find(r => r.status === 'ready') || null;
   }
 
+  // Sync resumes from backend to localStorage
+  async syncResumesFromBackend(): Promise<void> {
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) return;
+
+      const { apiClient } = await import('./client');
+      const backendResumes = await apiClient.get<any[]>('/resumes');
+
+      // Convert backend format to LocalResume format
+      const localResumes: LocalResume[] = backendResumes
+        .filter(r => r.processing_status === 'completed')
+        .map((r, index) => ({
+          id: r.id,
+          name: r.original_filename || r.filename || 'Resume',
+          fileName: r.original_filename || r.filename || 'resume.pdf',
+          fileSize: r.file_size || 0,
+          fileType: r.file_type || 'application/pdf',
+          uploadedAt: r.uploaded_at,
+          lastModified: r.updated_at || r.uploaded_at,
+          status: 'ready' as const,
+          isPrimary: index === 0, // First resume is primary
+          downloadUrl: r.download_url,
+          previewUrl: r.preview_url,
+          extractedData: r.extracted_text ? {
+            skills: [],
+            experience: [],
+            education: [],
+            contactInfo: {},
+          } : undefined,
+        }));
+
+      // Save to localStorage
+      this.saveResumes(localResumes);
+    } catch (error) {
+      console.error('Failed to sync resumes from backend:', error);
+      throw error;
+    }
+  }
+
   // Get resume by ID
   getResumeById(resumeId: string): LocalResume | null {
     const resumes = this.getResumes();

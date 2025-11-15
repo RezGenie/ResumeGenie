@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface Particle {
   x: number
@@ -16,8 +16,25 @@ export function SparklingCursor() {
   const particlesRef = useRef<Particle[]>([])
   const mouseRef = useRef({ x: 0, y: 0 })
   const animationRef = useRef<number | null>(null)
+  const [isTouchDevice, setIsTouchDevice] = useState(false)
 
   useEffect(() => {
+    // Detect touch device
+    const checkTouchDevice = () => {
+      return (
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia('(pointer: coarse)').matches
+      )
+    }
+    
+    setIsTouchDevice(checkTouchDevice())
+  }, [])
+
+  useEffect(() => {
+    // Don't render cursor trail on touch devices
+    if (isTouchDevice) return
+
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -109,12 +126,15 @@ export function SparklingCursor() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [])
+  }, [isTouchDevice])
+
+  // Don't render anything on touch devices
+  if (isTouchDevice) return null
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed top-0 left-0 pointer-events-none z-50"
+      className="fixed top-0 left-0 pointer-events-none z-[99999]"
       style={{ cursor: "none" }}
     />
   )

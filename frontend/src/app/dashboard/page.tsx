@@ -409,11 +409,28 @@ export default function Dashboard() {
         const profile = userProfileService.getProfile();
         const displayName = profile.name ||
           (authUser.email.split('@')[0].charAt(0).toUpperCase() +
-            authUser.email.split('@')[0].slice(1));
+            authUser.email.split('@')[0).slice(1));
+
+        // Load preferences from backend first, fallback to localStorage
+        let preferences = userPreferencesService.getPreferences();
+        try {
+          const backendPrefs = await userPreferencesService.loadPreferencesFromBackend();
+          if (backendPrefs) {
+            preferences = backendPrefs;
+          }
+        } catch (error) {
+          console.warn('Failed to load preferences from backend, using localStorage:', error);
+        }
+
+        // Sync resumes from backend to localStorage
+        try {
+          await localResumeService.syncResumesFromBackend();
+        } catch (error) {
+          console.warn('Failed to sync resumes from backend:', error);
+        }
 
         // Get real profile completeness from user preferences
         const profileCompleteness = userPreferencesService.getProfileCompleteness();
-        const preferences = userPreferencesService.getPreferences();
         const resumes = localResumeService.getResumes();
 
         // Show onboarding only if profile is significantly incomplete
