@@ -943,7 +943,11 @@ export default function Dashboard() {
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
-                                    className={`h-6 px-2 text-xs hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/40 dark:hover:text-purple-300 transition-colors ${job.saved ? 'text-purple-600' : ''}`}
+                                    className={`h-6 px-2 text-xs transition-all duration-200 ${
+                                      job.saved 
+                                        ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50' 
+                                        : 'hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:text-purple-300'
+                                    }`}
                                     onClick={async (e) => {
                                       e.stopPropagation();
                                       const wasSaved = job.saved;
@@ -978,10 +982,12 @@ export default function Dashboard() {
                                             setRecommendedJobs(prev => 
                                               prev.map(j => j.id === job.id ? { ...j, saved: wasSaved } : j)
                                             );
+                                            return;
                                           }
                                         }
                                         // Update saved jobs stats after backend completes
-                                        setSavedJobsStats(savedJobsService.getJobsStats());
+                                        const newStats = savedJobsService.getJobsStats();
+                                        setSavedJobsStats(newStats);
                                       } catch (error) {
                                         // ROLLBACK on error
                                         console.error('Error toggling save:', error);
@@ -991,7 +997,7 @@ export default function Dashboard() {
                                       }
                                     }}
                                   >
-                                    <Bookmark className={`h-3 w-3 ${job.saved ? 'fill-current' : ''}`} />
+                                    <Bookmark className={`h-3 w-3 transition-all duration-200 ${job.saved ? 'fill-current scale-110' : 'scale-100'}`} />
                                   </Button>
                                   <Button 
                                     size="sm" 
