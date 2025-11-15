@@ -69,20 +69,33 @@ class UserPreferencesService {
 
       const { apiClient } = await import('./client');
       
-      await apiClient.put('/jobs/me/preferences', {
-        job_title: preferences.jobTitle,
-        experience_level: preferences.experienceLevel,
-        salary_min: preferences.salaryMin ? parseInt(preferences.salaryMin) : null,
-        salary_max: preferences.salaryMax ? parseInt(preferences.salaryMax) : null,
-        work_type: preferences.workType,
-        industries: preferences.industries ? preferences.industries.split(',').map(i => i.trim()) : [],
-        skills_sought: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
+      // Map frontend field names to backend field names
+      const backendPayload: any = {
         remote_ok: preferences.remotePreference,
-        willing_to_relocate: preferences.willingToRelocate,
-        location_pref: preferences.location,
-      });
+        location_pref: preferences.location || null,
+      };
+
+      // Add skills array (backend expects "skills" not "skills_sought")
+      if (preferences.skills) {
+        backendPayload.skills = preferences.skills.split(',').map(s => s.trim()).filter(s => s);
+      }
+
+      // Add target_titles array (backend expects "target_titles" not "job_title")
+      if (preferences.jobTitle) {
+        backendPayload.target_titles = [preferences.jobTitle.trim()];
+      }
+
+      // Add salary_min (backend uses this field)
+      if (preferences.salaryMin) {
+        backendPayload.salary_min = parseInt(preferences.salaryMin);
+      }
+
+      console.log('Syncing preferences to backend:', backendPayload);
+      
+      await apiClient.put('/jobs/me/preferences', backendPayload);
+      console.log('✅ Preferences synced successfully to backend');
     } catch (error) {
-      console.error('Failed to sync preferences to backend:', error);
+      console.error('❌ Failed to sync preferences to backend:', error);
       throw error;
     }
   }

@@ -183,7 +183,7 @@ export function SwipeableJobCard({
               <div className="flex flex-col items-end gap-2 flex-shrink-0">
                 <div className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900/50 px-2 py-1 rounded-full">
                   <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                  <span className="font-bold text-sm text-purple-600 dark:text-purple-400">{job.matchScore || 85}%</span>
+                  <span className="font-bold text-sm text-purple-600 dark:text-purple-400">{job.matchScore || 0}%</span>
                 </div>
                 <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-purple-300 dark:border-purple-700">
                   {job.type || 'Full-time'}
@@ -221,7 +221,7 @@ export function SwipeableJobCard({
                 </div>
                 <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border border-purple-200/50 dark:border-purple-800/50 rounded-xl">
                   <div className="font-semibold text-[10px] sm:text-xs">Match</div>
-                  <div className="text-purple-600 dark:text-purple-400 font-bold text-xs sm:text-sm">{job.matchScore || 85}%</div>
+                  <div className="text-purple-600 dark:text-purple-400 font-bold text-xs sm:text-sm">{job.matchScore || 0}%</div>
                 </div>
               </div>
             </div>

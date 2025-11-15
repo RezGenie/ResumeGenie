@@ -248,6 +248,7 @@ export default function Dashboard() {
             ...job,
             saved: savedJobsService.isJobSaved(job.id)
           }));
+          console.log('Dashboard: Loaded recommended jobs with saved status:', jobsWithSavedStatus.map(j => ({ id: j.id, title: j.title, saved: j.saved })));
           setRecommendedJobs(jobsWithSavedStatus.slice(0, 3));
         } else {
           // Fallback to showing saved jobs if no recommendations
@@ -990,7 +991,7 @@ export default function Dashboard() {
                                   </div>
                                 </div>
                                 <Badge variant="secondary" className="text-xs">
-                                  {job.matchScore}% match
+                                  {job.matchScore || 0}% match
                                 </Badge>
                               </div>
                               <div className="flex items-center justify-between pt-2">
@@ -1006,6 +1007,7 @@ export default function Dashboard() {
                                     }`}
                                     onClick={async (e) => {
                                       e.stopPropagation();
+                                      console.log('Dashboard: Bookmark clicked for job:', job.id, 'Current saved state:', job.saved);
                                       const wasSaved = job.saved;
                                       const jobIdStr = String(job.id);
                                       
@@ -1017,13 +1019,16 @@ export default function Dashboard() {
                                       try {
                                         if (wasSaved) {
                                           // Remove from saved jobs
+                                          console.log('Dashboard: Removing job from saved:', jobIdStr);
                                           await savedJobsService.removeSavedJob(jobIdStr);
                                           
                                           // Emit event for activity update
                                           window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId: jobIdStr } }));
                                         } else {
                                           // Save via backend API
+                                          console.log('Dashboard: Saving job via backend:', jobIdStr);
                                           const response = await jobService.swipeJob(jobIdStr, 'like');
+                                          console.log('Dashboard: Swipe response:', response);
                                           if (response.success && response.data.saved) {
                                             // Also save locally
                                             savedJobsService.saveJob({
@@ -1031,11 +1036,12 @@ export default function Dashboard() {
                                               title: job.title,
                                               company: job.company,
                                               location: job.location,
-                                              description: job.snippet,
-                                              salary: job.salaryText,
-                                              jobUrl: job.redirect_url,
+                                              description: job.snippet || '',
+                                              salary: job.salaryText || '',
+                                              jobUrl: job.redirect_url || '',
                                               skills: job.skills || []
                                             });
+                                            console.log('Dashboard: Job saved successfully');
                                             
                                             // Emit event for activity update
                                             window.dispatchEvent(new CustomEvent('jobSaved', { 
