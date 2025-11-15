@@ -38,16 +38,24 @@ export class APIClient {
       ...options,
     };
 
+    // Check if this is a guest endpoint - more comprehensive check
+    const isGuestEndpoint = endpoint.includes('/guest');
+
     // Add authentication token if available (client-side only)
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        config.headers = {
-          ...config.headers,
-          Authorization: `Bearer ${token}`,
-        };
-      } else {
-        // For guest users, add session ID header
+      // Only add auth token for non-guest endpoints
+      if (!isGuestEndpoint) {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          config.headers = {
+            ...config.headers,
+            Authorization: `Bearer ${token}`,
+          };
+        }
+      }
+      
+      // For guest endpoints or when no token, add session ID header
+      if (isGuestEndpoint || !localStorage.getItem('auth_token')) {
         const guestSessionId = this.getOrCreateGuestSessionId();
         config.headers = {
           ...config.headers,
@@ -61,11 +69,13 @@ export class APIClient {
       
       if (response.status === 401) {
         // Handle unauthorized - but only redirect if it's not a guest endpoint
-        const isGuestEndpoint = endpoint.includes('/guest') || endpoint.includes('/genie/guest');
         if (!isGuestEndpoint && typeof window !== 'undefined') {
+          console.warn('Unauthorized request to non-guest endpoint, redirecting to auth');
           localStorage.removeItem('auth_token');
           localStorage.removeItem('refresh_token');
           window.location.href = '/auth';
+        } else if (isGuestEndpoint) {
+          console.error('401 error on guest endpoint - this should not happen:', endpoint);
         }
         throw new Error('Unauthorized');
       }

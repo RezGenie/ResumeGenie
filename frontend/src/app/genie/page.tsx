@@ -460,71 +460,66 @@ export default function StudioPage() {
     setWishes([]);
   }, [user?.id, isAuthenticated]);
 
-  // Fetch historical wishes when user is authenticated, or load from backend for guests
+  // Fetch historical wishes when user is authenticated, or load from localStorage for guests
   useEffect(() => {
     const fetchWishHistory = async () => {
-      try {
-        const { apiClient } = await import("@/lib/api/client");
-        
-        // Fetch wishes from backend for both authenticated and guest users
-        const endpoint = isAuthenticated ? "/genie" : "/genie/guest";
-        const historicalWishes = await apiClient.get<WishDetailsResponse[]>(endpoint);
-
-        if (Array.isArray(historicalWishes)) {
-          // Convert historical wishes with full details included
-          const detailedWishes = historicalWishes.map((wish) => {
-            // Reconstruct title from company_name and position_title if available
-            const title = wish.company_name || wish.position_title
-              ? `${wish.company_name ? wish.company_name : ""}${wish.company_name && wish.position_title ? " - " : ""}${wish.position_title || ""}`
-              : "Resume & Job Match Analysis";
-            
-            return {
-              id: wish.id,
-              type: "resume_analysis" as const,
-              title: title,
-              description: "",
-              timestamp: new Date(wish.created_at),
-              status: wish.is_processed
-                ? "completed"
-                : wish.processing_status === "processing"
-                  ? "processing"
-                  : "pending",
-              results: wish.is_processed && wish.ai_response
-                ? {
-                  score: wish.overall_score || Math.round((wish.confidence_score || 0) * 100),
-                  insights: parseRecommendations(wish.recommendations),
-                  recommendations: parseRecommendations(wish.action_items),
-                }
-                : undefined,
-            } as Wish;
-          });
-          setWishes(detailedWishes);
+      // For authenticated users, fetch from backend
+      if (isAuthenticated) {
+        try {
+          const { apiClient } = await import("@/lib/api/client");
           
-          // Removed auto-population of analysisResults - results should only show after clicking "Grant My Wish"
-        }
-      } catch (err) {
-        console.warn("Failed to fetch wish history:", err);
-        
-        // Fallback to localStorage for guests only if backend fetch fails
-        if (!isAuthenticated) {
-          try {
-            const savedWishes = UserStorage.getItem('genie_wishes');
-            if (savedWishes) {
-              const parsedWishes = JSON.parse(savedWishes);
-              if (Array.isArray(parsedWishes)) {
-                // Convert timestamps back to Date objects
-                const wishesWithDates = parsedWishes.map(wish => ({
-                  ...wish,
-                  timestamp: new Date(wish.timestamp)
-                }));
-                setWishes(wishesWithDates);
-                
-                // Removed auto-population - results should only show after clicking "Grant My Wish"
-              }
-            }
-          } catch (error) {
-            console.warn('Failed to load wishes from localStorage:', error);
+          const historicalWishes = await apiClient.get<WishDetailsResponse[]>("/genie");
+
+          if (Array.isArray(historicalWishes)) {
+            // Convert historical wishes with full details included
+            const detailedWishes = historicalWishes.map((wish) => {
+              // Reconstruct title from company_name and position_title if available
+              const title = wish.company_name || wish.position_title
+                ? `${wish.company_name ? wish.company_name : ""}${wish.company_name && wish.position_title ? " - " : ""}${wish.position_title || ""}`
+                : "Resume & Job Match Analysis";
+              
+              return {
+                id: wish.id,
+                type: "resume_analysis" as const,
+                title: title,
+                description: "",
+                timestamp: new Date(wish.created_at),
+                status: wish.is_processed
+                  ? "completed"
+                  : wish.processing_status === "processing"
+                    ? "processing"
+                    : "pending",
+                results: wish.is_processed && wish.ai_response
+                  ? {
+                    score: wish.overall_score || Math.round((wish.confidence_score || 0) * 100),
+                    insights: parseRecommendations(wish.recommendations),
+                    recommendations: parseRecommendations(wish.action_items),
+                  }
+                  : undefined,
+              } as Wish;
+            });
+            setWishes(detailedWishes);
           }
+        } catch (err) {
+          console.warn("Failed to fetch wish history for authenticated user:", err);
+        }
+      } else {
+        // For guests, only use localStorage (no backend call)
+        try {
+          const savedWishes = UserStorage.getItem('genie_wishes');
+          if (savedWishes) {
+            const parsedWishes = JSON.parse(savedWishes);
+            if (Array.isArray(parsedWishes)) {
+              // Convert timestamps back to Date objects
+              const wishesWithDates = parsedWishes.map(wish => ({
+                ...wish,
+                timestamp: new Date(wish.timestamp)
+              }));
+              setWishes(wishesWithDates);
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to load wishes from localStorage:', error);
         }
       }
     };
@@ -1055,7 +1050,8 @@ export default function StudioPage() {
                 resumeId: resumeFile?.resumeData?.id,
                 jobDescription: jobPosting,
                 numQuestions: 10,
-              }
+              },
+          !isAuthenticated // Pass isGuest flag
         ).catch((error) => {
           console.error("Failed to generate interview questions:", error);
           return { questions: [] };
@@ -1140,7 +1136,17 @@ export default function StudioPage() {
       setIsAnalyzing(false);
 
       // Refresh usage count after successful wish
-      await refreshDailyUsage();
+      // For guests, refresh immediately without waiting for interview questions
+      // For authenticated users, this happens after questions complete
+      if (!isAuthenticated) {
+        await refreshDailyUsage();
+      } else {
+        // Wait for interview questions before refreshing for authenticated users
+        if (questionsPromise) {
+          await questionsPromise;
+        }
+        await refreshDailyUsage();
+      }
       
       // Keep job posting and context for reference - don't clear
       // User can manually clear if needed
@@ -1383,9 +1389,9 @@ export default function StudioPage() {
                             : `${dailyWishes}/${maxWishes}`}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                      <div className="w-full bg-purple-600/20 rounded-full h-3 overflow-hidden">
                         <motion.div
-                          className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full"
+                          className="h-full bg-purple-600 rounded-full"
                           initial={{ width: 0 }}
                           animate={{
                             width:
@@ -1927,7 +1933,7 @@ export default function StudioPage() {
                         : analysisResults?.resumeScore || "---"}
                     </motion.div>
                     <div className="text-sm text-muted-foreground">out of 100</div>
-                    <div className="relative h-2 bg-background/50 dark:bg-card rounded-full overflow-hidden border border-muted-foreground/20">
+                    <div className="relative h-2 bg-purple-600/20 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${analysisResults?.overallScore || analysisResults?.resumeScore || 0}%` }}
@@ -1972,7 +1978,7 @@ export default function StudioPage() {
                                   {score}
                                 </span>
                               </div>
-                              <div className="relative h-1.5 bg-background/50 dark:bg-card rounded-full overflow-hidden border border-muted-foreground/20">
+                              <div className="relative h-1.5 bg-purple-600/20 rounded-full overflow-hidden">
                                 <motion.div
                                   initial={{ width: 0 }}
                                   animate={{ width: `${score}%` }}
@@ -2021,7 +2027,7 @@ export default function StudioPage() {
                         : "---%"}
                     </Badge>
                   </div>
-                  <div className="relative h-2 bg-background/50 dark:bg-card rounded-full overflow-hidden border border-muted-foreground/20">
+                  <div className="relative h-2 bg-purple-600/20 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${analysisResults?.matchScore || 0}%` }}
