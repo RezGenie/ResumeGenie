@@ -33,6 +33,18 @@ import { DeleteResumeDialog } from '@/components/resumes/DeleteResumeDialog';
 import { toast } from 'sonner';
 import { userPreferencesService } from '@/lib/api/userPreferences';
 
+// Helper function to safely format dates
+const formatDate = (dateString: string | undefined): string => {
+  if (!dateString) return 'Unknown date';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Unknown date';
+    return date.toLocaleDateString();
+  } catch {
+    return 'Unknown date';
+  }
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -147,10 +159,10 @@ export default function ResumesPage() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDeleteResume = () => {
+  const confirmDeleteResume = async () => {
     if (!resumeToDelete) return;
     
-    const wasDeleted = localResumeService.deleteResume(resumeToDelete.id);
+    const wasDeleted = await localResumeService.deleteResume(resumeToDelete.id);
     
     if (wasDeleted) {
       toast.success("Resume deleted successfully", {
@@ -372,8 +384,8 @@ export default function ResumesPage() {
                             {/* Header Row - Icon, Title, Status, and Actions */}
                             <div className="flex items-start justify-between gap-4 mb-3">
                               <div className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedResume(resume)}>
-                                <div className="text-2xl flex-shrink-0">
-                                  {localResumeService.getFileTypeIcon(resume.fileType)}
+                                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <FileText className="h-5 w-5 text-purple-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <h3 className="text-lg sm:text-xl font-semibold text-foreground hover:text-purple-600 transition-colors flex items-center gap-2 break-words">
@@ -450,7 +462,7 @@ export default function ResumesPage() {
                                 {statusDisplay.icon}
                                 {statusDisplay.text}
                               </div>
-                              <span className="whitespace-nowrap ml-auto">{new Date(resume.uploadedAt).toLocaleDateString()}</span>
+                              <span className="whitespace-nowrap ml-auto">{formatDate(resume.uploadedAt)}</span>
                             </div>
 
                             {/* Status indicator for ready resumes */}
@@ -596,13 +608,13 @@ export default function ResumesPage() {
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <CardTitle className="flex items-center gap-3 text-2xl">
-                              <motion.span
-                                className="text-3xl"
-                                animate={{ rotate: [0, 10, -10, 0] }}
+                              <motion.div
+                                className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0"
+                                animate={{ rotate: [0, 5, -5, 0] }}
                                 transition={{ duration: 0.5, delay: 0.2 }}
                               >
-                                {localResumeService.getFileTypeIcon(selectedResume.fileType)}
-                              </motion.span>
+                                <FileText className="h-6 w-6 text-purple-600" />
+                              </motion.div>
                               <span className="">
                                 {selectedResume.name}
                               </span>
@@ -626,7 +638,7 @@ export default function ResumesPage() {
                               <span>•</span>
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {new Date(selectedResume.uploadedAt).toLocaleDateString()}
+                                {formatDate(selectedResume.uploadedAt)}
                               </span>
                             </p>
                           </div>
@@ -756,7 +768,7 @@ export default function ResumesPage() {
                               </div>
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Uploaded:</span>
-                                <span className="font-medium">{new Date(selectedResume.uploadedAt).toLocaleDateString()}</span>
+                                <span className="font-medium">{formatDate(selectedResume.uploadedAt)}</span>
                               </div>
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Status:</span>

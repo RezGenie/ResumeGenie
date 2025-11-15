@@ -182,8 +182,22 @@ class LocalResumeService {
   }
 
   // Delete resume
-  deleteResume(resumeId: string): boolean {
+  // Delete a resume (async to support backend deletion)
+  async deleteResume(resumeId: string): Promise<boolean> {
     try {
+      // Delete from backend for authenticated users
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken) {
+        try {
+          const { apiClient } = await import('./client');
+          await apiClient.delete(`/resumes/${resumeId}`);
+        } catch (error) {
+          console.error('Failed to delete resume from backend:', error);
+          // Continue to delete from localStorage even if backend fails
+        }
+      }
+
+      // Delete from localStorage
       const resumes = this.getResumes();
       const filteredResumes = resumes.filter(r => r.id !== resumeId);
       
@@ -265,9 +279,9 @@ class LocalResumeService {
           name: r.original_filename || r.filename || 'Resume',
           fileName: r.original_filename || r.filename || 'resume.pdf',
           fileSize: r.file_size || 0,
-          fileType: r.file_type || 'application/pdf',
-          uploadedAt: r.uploaded_at,
-          lastModified: r.updated_at || r.uploaded_at,
+          fileType: r.mime_type || 'application/pdf',
+          uploadedAt: r.created_at || new Date().toISOString(),
+          lastModified: r.updated_at || r.created_at || new Date().toISOString(),
           status: 'ready' as const,
           isPrimary: index === 0, // First resume is primary
           downloadUrl: r.download_url,

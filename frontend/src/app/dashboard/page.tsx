@@ -813,7 +813,7 @@ export default function Dashboard() {
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-medium text-sm break-words">{resume.fileName}</h4>
                                 <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                  Uploaded {new Date(resume.uploadedAt).toLocaleDateString()}
+                                  Uploaded {resume.uploadedAt ? new Date(resume.uploadedAt).toLocaleDateString() : 'Unknown date'}
                                 </p>
                                 {resume.analysisData && (
                                   <div className="flex items-center gap-2 mt-1">
