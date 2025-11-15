@@ -109,22 +109,36 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
       [direction === 'right' ? 'liked' : 'passed']: prev[direction === 'right' ? 'liked' : 'passed'] + 1
     }));
 
-    // If swiped right (liked), save the job
-    if (direction === 'right') {
-      const job = jobs.find(j => j.id === jobId);
-      if (job) {
-        savedJobsService.saveJob({
-          id: job.id,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          description: job.snippet,
-          salary: job.salaryText,
-          jobUrl: job.redirect_url,
-          skills: job.skills || []
-        });
-        console.log('Job saved:', job.title);
+    // Send swipe to backend (this will save the job if liked)
+    const action = direction === 'right' ? 'like' : 'pass';
+    try {
+      const response = await jobService.swipeJob(jobId, action);
+      
+      if (response.success) {
+        console.log(`Swipe ${action} recorded successfully:`, response.message);
+        
+        // If liked and saved, also save to localStorage for immediate access
+        if (action === 'like' && response.data.saved) {
+          const job = jobs.find(j => j.id === jobId);
+          if (job) {
+            savedJobsService.saveJob({
+              id: job.id,
+              title: job.title,
+              company: job.company,
+              location: job.location,
+              description: job.snippet,
+              salary: job.salaryText,
+              jobUrl: job.redirect_url,
+              skills: job.skills || []
+            });
+            console.log('Job saved locally:', job.title);
+          }
+        }
+      } else {
+        console.error('Failed to record swipe:', response.message);
       }
+    } catch (err) {
+      console.error('Error recording swipe:', err);
     }
 
     // Move to next card immediately
@@ -134,13 +148,6 @@ export function JobSwipeDeck({ onJobDetailsAction }: JobSwipeDeckProps) {
     const remainingCards = jobs.length - currentIndex - 1;
     if (remainingCards <= PREFETCH_THRESHOLD && hasMoreJobsRef.current) {
       prefetchJobs();
-    }
-
-    // TODO: Send swipe data to backend
-    try {
-      console.log('Swipe recorded:', direction, jobId);
-    } catch (err) {
-      console.error('Failed to record swipe:', err);
     }
     
     // Reset animation lock quickly

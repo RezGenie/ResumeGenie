@@ -232,20 +232,28 @@ export default function JobDiscoveryPage() {
       const isCurrentlySaved = savedJobsService.isJobSaved(jobId);
 
       if (isCurrentlySaved) {
-        // Remove from saved jobs
-        savedJobsService.removeSavedJob(jobId);
+        // Remove from saved jobs (both locally and backend)
+        await savedJobsService.removeSavedJob(jobId);
       } else {
-        // Add to saved jobs
-        savedJobsService.saveJob({
-          id: job.id,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          salary: job.salaryText,
-          description: job.snippet,
-          skills: job.skills || [],
-          jobUrl: job.redirect_url
-        });
+        // Save the job via backend swipe endpoint
+        const response = await jobService.swipeJob(jobId, 'like');
+        
+        if (response.success && response.data.saved) {
+          // Also save locally for immediate access
+          savedJobsService.saveJob({
+            id: job.id,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            salary: job.salaryText,
+            description: job.snippet,
+            skills: job.skills || [],
+            jobUrl: job.redirect_url
+          });
+        } else {
+          console.error('Failed to save job:', response.message);
+          return; // Don't update UI if backend save failed
+        }
       }
 
       // Update local state

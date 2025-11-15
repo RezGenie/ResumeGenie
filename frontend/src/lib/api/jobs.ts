@@ -255,6 +255,39 @@ export class JobService {
   }
 
   /**
+   * Record a swipe action (like or pass) on a job
+   */
+  async swipeJob(jobId: string, action: 'like' | 'pass', device?: string): Promise<APIResponse<{ saved?: boolean }>> {
+    try {
+      const response = await apiClient.post<{ 
+        message: string; 
+        job_id: number; 
+        action: string;
+        saved_job_id?: number;
+      }>('/jobs/swipe', {
+        job_id: parseInt(jobId),
+        action,
+        device: device || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop')
+      });
+
+      return {
+        success: true,
+        data: { 
+          saved: action === 'like' && !!response.data.saved_job_id 
+        },
+        message: response.data.message
+      };
+    } catch (error) {
+      console.error('Error recording swipe:', error);
+      return {
+        success: false,
+        data: { saved: false },
+        message: error instanceof Error ? error.message : 'Failed to record swipe'
+      };
+    }
+  }
+
+  /**
    * Save/unsave a job (future implementation)
    */
   async toggleSaveJob(jobId: string): Promise<APIResponse<{ saved: boolean }>> {

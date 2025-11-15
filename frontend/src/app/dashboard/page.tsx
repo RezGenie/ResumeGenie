@@ -29,6 +29,7 @@ import { userPreferencesService } from '@/lib/api/userPreferences';
 import { userProfileService } from '@/lib/api/userProfile';
 import { savedJobsService } from '@/lib/api/savedJobs';
 import { localResumeService } from '@/lib/api/localResumes';
+import { jobService } from '@/lib/api/jobs';
 import { ProfileOnboarding } from '@/components/onboarding/ProfileOnboarding';
 import { ProfileCard } from '@/components/ProfileCard';
 
@@ -943,21 +944,30 @@ export default function Dashboard() {
                                     size="sm" 
                                     variant="ghost" 
                                     className={`h-6 px-2 text-xs hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/40 dark:hover:text-purple-300 ${job.saved ? 'text-purple-600' : ''}`}
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                       e.stopPropagation();
                                       if (job.saved) {
-                                        savedJobsService.removeSavedJob(job.id);
+                                        // Remove from saved jobs
+                                        await savedJobsService.removeSavedJob(job.id);
                                       } else {
-                                        savedJobsService.saveJob({
-                                          id: job.id,
-                                          title: job.title,
-                                          company: job.company,
-                                          location: job.location,
-                                          description: job.snippet,
-                                          salary: job.salaryText,
-                                          jobUrl: job.redirect_url,
-                                          skills: job.skills || []
-                                        });
+                                        // Save via backend API
+                                        const response = await jobService.swipeJob(job.id, 'like');
+                                        if (response.success && response.data.saved) {
+                                          // Also save locally
+                                          savedJobsService.saveJob({
+                                            id: job.id,
+                                            title: job.title,
+                                            company: job.company,
+                                            location: job.location,
+                                            description: job.snippet,
+                                            salary: job.salaryText,
+                                            jobUrl: job.redirect_url,
+                                            skills: job.skills || []
+                                          });
+                                        } else {
+                                          console.error('Failed to save job:', response.message);
+                                          return;
+                                        }
                                       }
                                       // Update the job's saved status
                                       setRecommendedJobs(prev => 
