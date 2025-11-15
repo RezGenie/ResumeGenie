@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogIn, UserPlus, X, Loader2 } from "lucide-react";
+import { LogIn, UserPlus, X, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from 'sonner';
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ export default function AuthPage() {
   const [name, setName] = useState("");
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { login, register } = useAuth();
 
@@ -34,18 +35,24 @@ export default function AuthPage() {
     console.log('AuthPage: email:', email);
     console.log('AuthPage: Will call:', isLogin ? 'login' : 'register');
 
-    if (isLogin) {
-      console.log('AuthPage: Calling login function...');
-      await login(email, password);
-    } else {
-      console.log('AuthPage: Calling register function...');
-      await register(email, password);
+    try {
+      if (isLogin) {
+        console.log('AuthPage: Calling login function...');
+        await login(email, password);
+      } else {
+        console.log('AuthPage: Calling register function...');
+        await register(email, password);
+      }
+      console.log('AuthPage: Auth function completed successfully');
+    } catch (error) {
+      console.error('AuthPage: Auth error caught:', error);
+      // Error is already handled and toasted in login/register functions
+      // Just log it here for debugging
+    } finally {
+      // Always set loading to false, regardless of success/failure
+      // Success will redirect, failure will show toast
+      setIsLoading(false);
     }
-    console.log('AuthPage: Auth function completed');
-    
-    // Always set loading to false, regardless of success/failure
-    // Success will redirect, failure will show toast
-    setIsLoading(false);
   };
 
   const handleClose = () => {
@@ -148,11 +155,13 @@ export default function AuthPage() {
                           <Label htmlFor="name">Full Name</Label>
                           <Input
                             id="name"
+                            name="name"
                             type="text"
                             placeholder="Enter your full name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required={!isLogin}
+                            autoComplete="name"
                             className="h-11 bg-white dark:bg-input"
                           />
                         </motion.div>
@@ -167,11 +176,13 @@ export default function AuthPage() {
                       <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
+                        name="email"
                         type="email"
                         placeholder="Enter your email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        autoComplete="email"
                         className="h-11 bg-white dark:bg-input"
                       />
                     </motion.div>
@@ -182,15 +193,31 @@ export default function AuthPage() {
                       transition={{ duration: 0.3 }}
                     >
                       <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="h-11 bg-white dark:bg-input"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          autoComplete={isLogin ? "current-password" : "new-password"}
+                          className="h-11 bg-white dark:bg-input pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </motion.div>
                     
                     <motion.div

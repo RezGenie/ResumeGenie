@@ -92,21 +92,25 @@ export default function MyJobsPage() {
     return () => clearTimeout(timeoutId);
   }, [jobs, filters, searchTerm]);
 
-  const loadJobs = () => {
+  const loadJobs = async () => {
+    // First sync from backend to get latest saved jobs
+    await savedJobsService.syncSavedJobsFromBackend();
+    
+    // Then load from localStorage
     const savedJobs = savedJobsService.getSavedJobs();
     const jobStats = savedJobsService.getJobsStats();
     setJobs(savedJobs);
     setStats(jobStats);
   };
 
-  const handleStatusChange = (jobId: string, status: SavedJob['status']) => {
-    if (savedJobsService.updateJobStatus(jobId, status)) {
+  const handleStatusChange = async (jobId: string, status: SavedJob['status']) => {
+    if (await savedJobsService.updateJobStatus(jobId, status)) {
       loadJobs();
     }
   };
 
-  const handleRemoveJob = (jobId: string) => {
-    if (savedJobsService.removeSavedJob(jobId)) {
+  const handleRemoveJob = async (jobId: string) => {
+    if (await savedJobsService.removeSavedJob(jobId)) {
       loadJobs();
       if (selectedJob?.id === jobId) {
         setSelectedJob(null);

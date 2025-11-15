@@ -89,6 +89,9 @@ export default function JobDiscoveryPage() {
         setError(null);
         setIsSearching(true);
 
+        // Sync saved jobs from backend first
+        await savedJobsService.syncSavedJobsFromBackend();
+
         // Build filters object
         const filters = {
           search: searchTerm,

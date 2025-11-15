@@ -23,6 +23,35 @@ export interface SavedJobsFilters {
   skills?: string[];
 }
 
+// Backend API response types
+interface BackendJobResponse {
+  job_id: number;
+  provider: string;
+  provider_job_id: string;
+  title: string;
+  company: string;
+  location: string;
+  remote: boolean;
+  salary_min?: number;
+  salary_max?: number;
+  currency?: string;
+  snippet?: string;
+  tags: string[];
+  posted_at?: string;
+  redirect_url?: string;
+  score: number;
+  why: string[];
+  source: string;
+}
+
+interface BackendSavedJobResponse {
+  job_id: number;
+  status: string;
+  saved_at: string;
+  updated_at: string;
+  job: BackendJobResponse;
+}
+
 class SavedJobsService {
   private readonly STORAGE_KEY_PREFIX = 'savedJobs_';
 
@@ -44,6 +73,139 @@ class SavedJobsService {
     
     // Fallback to guest session
     return `${this.STORAGE_KEY_PREFIX}guest`;
+  }
+
+  // Sync saved jobs from backend
+  async syncSavedJobsFromBackend(): Promise<void> {
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
+        console.log('No auth token, skipping saved jobs sync');
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const response = await fetch(`${apiUrl}/jobs/me/saved-jobs?limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to sync saved jobs from backend:', response.status);
+        return;
+      }
+
+      const backendJobs: BackendSavedJobResponse[] = await response.json();
+      
+      // Convert backend format to local format
+      const localJobs: SavedJob[] = backendJobs.map(item => ({
+        id: item.job_id.toString(),
+        title: item.job.title,
+        company: item.job.company,
+        location: item.job.location,
+        salary: item.job.salary_min && item.job.salary_max 
+          ? `${item.job.currency || '$'}${item.job.salary_min.toLocaleString()} - ${item.job.currency || '$'}${item.job.salary_max.toLocaleString()}`
+          : undefined,
+        description: item.job.snippet || '',
+        skills: item.job.tags || [],
+        jobUrl: item.job.redirect_url,
+        savedAt: item.saved_at,
+        status: item.status as 'saved' | 'applied' | 'archived',
+        notes: undefined, // Notes not yet supported in backend
+      }));
+
+      // Save to localStorage
+      const storageKey = this.getUserStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(localJobs));
+      console.log(`Synced ${localJobs.length} saved jobs from backend`);
+    } catch (error) {
+      console.error('Error syncing saved jobs from backend:', error);
+    }
+  }
+
+  // Save a job to backend
+  async saveJobToBackend(jobId: string): Promise<boolean> {
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
+        console.log('No auth token, cannot save to backend');
+        return false;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      
+      // The backend saves jobs automatically when you swipe right/like
+      // So we just need to ensure it's marked as saved
+      // For now, we'll just rely on the swipe endpoint
+      console.log('Job saving to backend is handled by the swipe endpoint');
+      return true;
+    } catch (error) {
+      console.error('Error saving job to backend:', error);
+      return false;
+    }
+  }
+
+  // Update job status on backend
+  async updateJobStatusOnBackend(jobId: string, status: 'saved' | 'applied' | 'archived'): Promise<boolean> {
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
+        console.log('No auth token, cannot update status on backend');
+        return false;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const response = await fetch(`${apiUrl}/jobs/me/saved-jobs/${jobId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(status),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to update job status on backend:', response.status);
+        return false;
+      }
+
+      console.log(`Updated job ${jobId} status to ${status} on backend`);
+      return true;
+    } catch (error) {
+      console.error('Error updating job status on backend:', error);
+      return false;
+    }
+  }
+
+  // Remove a saved job from backend
+  async removeSavedJobFromBackend(jobId: string): Promise<boolean> {
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
+        console.log('No auth token, cannot remove from backend');
+        return false;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const response = await fetch(`${apiUrl}/jobs/me/saved-jobs/${jobId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to remove saved job from backend:', response.status);
+        return false;
+      }
+
+      console.log(`Removed job ${jobId} from backend`);
+      return true;
+    } catch (error) {
+      console.error('Error removing saved job from backend:', error);
+      return false;
+    }
   }
 
   // Get all saved jobs (user-scoped)
@@ -85,7 +247,7 @@ class SavedJobsService {
   }
 
   // Remove a saved job (user-scoped)
-  removeSavedJob(jobId: string): boolean {
+  async removeSavedJob(jobId: string): Promise<boolean> {
     try {
       const savedJobs = this.getSavedJobs();
       const filteredJobs = savedJobs.filter(job => job.id !== jobId);
@@ -93,6 +255,10 @@ class SavedJobsService {
       if (filteredJobs.length !== savedJobs.length) {
         const storageKey = this.getUserStorageKey();
         localStorage.setItem(storageKey, JSON.stringify(filteredJobs));
+        
+        // Also remove from backend
+        await this.removeSavedJobFromBackend(jobId);
+        
         return true;
       }
       return false;
@@ -103,7 +269,7 @@ class SavedJobsService {
   }
 
   // Update job status
-  updateJobStatus(jobId: string, status: SavedJob['status']): boolean {
+  async updateJobStatus(jobId: string, status: SavedJob['status']): Promise<boolean> {
     try {
       const savedJobs = this.getSavedJobs();
       const jobIndex = savedJobs.findIndex(job => job.id === jobId);
@@ -112,6 +278,10 @@ class SavedJobsService {
         savedJobs[jobIndex].status = status;
         const storageKey = this.getUserStorageKey();
         localStorage.setItem(storageKey, JSON.stringify(savedJobs));
+        
+        // Also update on backend
+        await this.updateJobStatusOnBackend(jobId, status);
+        
         return true;
       }
       return false;
