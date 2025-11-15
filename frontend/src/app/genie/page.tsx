@@ -2283,7 +2283,7 @@ export default function StudioPage() {
                   Interview Questions
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 p-2">
                 {!analysisResults ? (
                   <p className="text-sm text-muted-foreground text-center">
                     Run your analysis above to generate interview questions based on your resume and job description
@@ -2328,20 +2328,20 @@ export default function StudioPage() {
                   Sample Cover Letter
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0 p-3">
                 {!analysisResults ? (
-                  <p className="text-sm text-muted-foreground text-center pt-2">
+                  <p className="text-sm text-muted-foreground text-center">
                     Run your analysis above to generate a sample cover letter based on your resume and job description
                   </p>
                 ) : !coverLetter ? (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground mb-3">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
                       {generatingCoverLetter
                         ? "Generating cover letter..."
-                        : "Click to generate a sample cover letter based on your resume and job description"}
+                        : "Click to generate a cover letter based on your resume and job description"}
                     </p>
                     {generatingCoverLetter && (
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center mt-3">
                         <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
                       </div>
                     )}
