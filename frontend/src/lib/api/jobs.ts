@@ -273,9 +273,9 @@ export class JobService {
       return {
         success: true,
         data: { 
-          saved: action === 'like' && !!response.data.saved_job_id 
+          saved: action === 'like' && !!response.saved_job_id 
         },
-        message: response.data.message
+        message: response.message
       };
     } catch (error) {
       console.error('Error recording swipe:', error);
