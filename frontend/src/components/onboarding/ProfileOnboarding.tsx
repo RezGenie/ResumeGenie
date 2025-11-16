@@ -166,7 +166,7 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
     }
   }, []);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validation for step 3
     if (currentStep === 3) {
       if (!formData.jobTitle.trim()) {
@@ -179,8 +179,11 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
       }
 
       // Save preferences before moving to step 4
-      handleSavePreferences();
-      setCurrentStep(4);
+      const saved = await handleSavePreferences();
+      if (saved) {
+        setCurrentStep(4);
+      }
+      // If save failed, stay on step 3 so user can retry
     } else if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -195,34 +198,46 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
     }
   };
 
-  const handleSavePreferences = () => {
-    // Save personal information
-    userProfileService.saveProfile({
-      name: formData.name,
-      phone: formData.phone,
-      location: formData.location,
-      bio: formData.bio,
-    });
+  const handleSavePreferences = async (): Promise<boolean> => {
+    try {
+      // Save personal information
+      userProfileService.saveProfile({
+        name: formData.name,
+        phone: formData.phone,
+        location: formData.location,
+        bio: formData.bio,
+      });
 
-    // Save job preferences
-    userPreferencesService.savePreferences({
-      jobTitle: formData.jobTitle,
-      experienceLevel: formData.experienceLevel,
-      salaryMin: formData.salaryMin,
-      salaryMax: formData.salaryMax,
-      workType: formData.workType,
-      industries: formData.industries,
-      skills: formData.skills,
-      remotePreference: formData.remotePreference,
-      willingToRelocate: formData.willingToRelocate,
-      location: formData.location,
-    });
+      // Save job preferences and wait for backend sync
+      await userPreferencesService.savePreferences({
+        jobTitle: formData.jobTitle,
+        experienceLevel: formData.experienceLevel,
+        salaryMin: formData.salaryMin,
+        salaryMax: formData.salaryMax,
+        workType: formData.workType,
+        industries: formData.industries,
+        skills: formData.skills,
+        remotePreference: formData.remotePreference,
+        willingToRelocate: formData.willingToRelocate,
+        location: formData.location,
+      });
 
-    console.log('Profile and preferences saved:', formData);
+      console.log('✅ Profile and preferences saved successfully:', formData);
 
-    toast.success('Profile saved!', {
-      description: 'Your profile and preferences have been updated successfully'
-    });
+      toast.success('Profile saved!', {
+        description: 'Your preferences have been saved and synced successfully'
+      });
+
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to save preferences:', error);
+
+      toast.error('Failed to save preferences', {
+        description: 'There was an error saving your preferences. Please check your connection and try again.'
+      });
+
+      return false;
+    }
   };
 
   return (
