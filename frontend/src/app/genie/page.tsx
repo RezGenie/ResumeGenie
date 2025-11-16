@@ -1127,17 +1127,7 @@ export default function StudioPage() {
       setIsAnalyzing(false);
 
       // Refresh usage count after successful wish
-      // For guests, refresh immediately without waiting for interview questions
-      // For authenticated users, this happens after questions complete
-      if (!isAuthenticated) {
-        await refreshDailyUsage();
-      } else {
-        // Wait for interview questions before refreshing for authenticated users
-        if (questionsPromise) {
-          await questionsPromise;
-        }
-        await refreshDailyUsage();
-      }
+      await refreshDailyUsage();
       
       // Keep job posting and context for reference - don't clear
       // User can manually clear if needed
