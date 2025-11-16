@@ -637,7 +637,7 @@ export default function Dashboard() {
           </motion.div>
 
           {/* Profile Progress */}
-          {dashboardUser && dashboardUser.profileCompleteness < 80 && (
+          {dashboardUser && dashboardUser.profileCompleteness < 60 && (
             <motion.div variants={itemVariants}>
               <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
                 <CardContent className="p-6">
@@ -1162,13 +1162,18 @@ export default function Dashboard() {
               setShowOnboarding(false);
               // Refresh dashboard data without full reload
               const fetchData = async () => {
+                // Small delay to ensure localStorage is updated
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 const preferences = userPreferencesService.getPreferences();
                 const profileCompleteness = userPreferencesService.getProfileCompleteness();
-                
+
+                console.log('Profile onboarding completed. Completeness:', profileCompleteness, 'Preferences:', preferences);
+
                 // Refresh resume stats
                 const resumesStats = localResumeService.getResumeStats();
                 setResumeStats(resumesStats);
-                
+
                 // Refresh saved jobs stats
                 const jobsStats = savedJobsService.getJobsStats();
                 setSavedJobsStats(jobsStats);
@@ -1185,7 +1190,7 @@ export default function Dashboard() {
                     skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
                   });
                 }
-                
+
                 // Refresh activities to show new resume
                 await fetchRealDashboardData();
               };
