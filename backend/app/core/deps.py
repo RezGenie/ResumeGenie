@@ -133,8 +133,8 @@ async def get_or_create_guest_session(
             user_agent=request.headers.get("user-agent")
         )
         db.add(guest_session)
-        await db.commit()
-    
+        await db.flush()  # Use flush instead of commit - let FastAPI manage the transaction
+
     return session_id
 
 
@@ -168,9 +168,8 @@ async def check_guest_daily_limit(
             upload_count=0
         )
         db.add(daily_upload)
-        await db.commit()
+        await db.flush()  # Use flush instead of commit
         logger.info(f"Created new upload record for session {session_id[:8]}")
-        await db.refresh(daily_upload)  # Refresh to get the committed data
         return True, 0
     
     can_upload = daily_upload.upload_count < max_uploads
@@ -195,7 +194,7 @@ async def increment_guest_upload_count(
     
     if daily_upload:
         daily_upload.upload_count += 1
-        await db.commit()
+        await db.flush()  # Use flush instead of commit
 
 
 async def check_guest_daily_wish_limit(

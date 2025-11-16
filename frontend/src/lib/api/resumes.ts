@@ -13,6 +13,7 @@ export interface ResumeResponse {
   created_at: string;
   processed_at?: string;
   word_count?: number;
+  extracted_text?: string;  // Resume text for guest users
 }
 
 export interface UploadOptions {

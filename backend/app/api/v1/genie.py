@@ -1604,8 +1604,14 @@ async def generate_cover_letter_guest(
         session_id = await get_or_create_guest_session(request, db)
         logger.info(f"Cover letter generation requested by guest session: {session_id}")
 
+        # Log what was received in the request
+        logger.info(f"Guest cover letter request - has resume_text: {bool(cl_request.resume_text)}, "
+                   f"has job_description: {bool(cl_request.job_description)}, "
+                   f"company_name: {cl_request.company_name}, position_title: {cl_request.position_title}")
+
         # Check if resume_text is provided directly in the request
         if not cl_request.resume_text:
+            logger.warning(f"Guest cover letter request missing resume_text")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="resume_text is required for guest users. Please provide your resume text in the request."

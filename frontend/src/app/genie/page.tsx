@@ -859,6 +859,11 @@ export default function StudioPage() {
           setResumeFile(uploadedFile);
           setIsResumeUploading(false);
           setShowButtonHighlight(true);
+
+          // Store extracted text for guest users (for cover letter generation)
+          if (!isAuthenticated && response.extracted_text) {
+            setGuestResumeText(response.extracted_text);
+          }
         },
         onError: (error) => {
           console.error("Resume upload failed:", error);
@@ -1179,7 +1184,7 @@ export default function StudioPage() {
     setGeneratingCoverLetter(true);
 
     try {
-      const response = await (isAuthenticated 
+      const response = await (isAuthenticated
         ? coverLetterService.generateCoverLetter({
             job_description: jobPosting,
             company_name: companyName || undefined,
@@ -1189,6 +1194,7 @@ export default function StudioPage() {
             job_description: jobPosting,
             company_name: companyName || undefined,
             position_title: positionTitle || undefined,
+            resume_text: guestResumeText || undefined,  // Pass resume text for guests
           })
       );
 

@@ -38,7 +38,8 @@ class ResumeResponse(BaseModel):
     created_at: str
     processed_at: Optional[str]
     word_count: Optional[int]
-    
+    extracted_text: Optional[str] = None  # Include extracted text for guest users
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -220,7 +221,7 @@ async def upload_resume_guest(
         except Exception as e:
             logger.warning(f"Failed to queue embedding generation for guest resume {resume.id}: {e}")
         
-        # Create response with guest session ID
+        # Create response with guest session ID and extracted text
         response = ResumeResponse(
             id=str(resume.id),
             filename=resume.filename,
@@ -232,7 +233,8 @@ async def upload_resume_guest(
             processing_error=resume.processing_error,
             created_at=resume.created_at.isoformat(),
             processed_at=resume.processed_at.isoformat() if resume.processed_at else None,
-            word_count=len(resume.extracted_text.split()) if resume.extracted_text else None
+            word_count=len(resume.extracted_text.split()) if resume.extracted_text else None,
+            extracted_text=resume.extracted_text  # Include extracted text for cover letter generation
         )
         
         logger.info(f"Guest resume uploaded successfully: {resume.id}")
