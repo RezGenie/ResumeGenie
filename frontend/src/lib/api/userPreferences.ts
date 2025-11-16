@@ -36,18 +36,16 @@ class UserPreferencesService {
     return `${this.STORAGE_KEY_PREFIX}guest`;
   }
 
-  // Save user preferences to localStorage (user-scoped)
-  savePreferences(preferences: Partial<UserPreferences>): void {
+  // Save user preferences to localStorage (user-scoped) and sync to backend
+  async savePreferences(preferences: Partial<UserPreferences>): Promise<void> {
     try {
       const storageKey = this.getUserStorageKey();
       const existing = this.getPreferences();
       const updated = { ...existing, ...preferences };
       localStorage.setItem(storageKey, JSON.stringify(updated));
 
-      // Sync to backend for authenticated users
-      this.syncPreferencesToBackend(updated).catch(err => {
-        console.warn('Failed to sync preferences to backend:', err);
-      });
+      // Sync to backend for authenticated users - wait for completion
+      await this.syncPreferencesToBackend(updated);
 
       // Dispatch custom event to notify components about preference changes
       if (typeof window !== 'undefined') {
@@ -57,6 +55,7 @@ class UserPreferencesService {
       }
     } catch (error) {
       console.error('Failed to save user preferences:', error);
+      throw error; // Propagate error to caller
     }
   }
 
@@ -107,22 +106,31 @@ class UserPreferencesService {
       if (!authToken) return null;
 
       const { apiClient } = await import('./client');
-      
+
       const backendPrefs = await apiClient.get<any>('/jobs/me/preferences');
-      
+
+      console.log('📥 Loading preferences from backend:', backendPrefs);
+
       // Convert backend format to frontend format
+      // Backend returns: skills (array), target_titles (array), location_pref, remote_ok, salary_min
       const preferences: UserPreferences = {
-        jobTitle: backendPrefs.job_title || '',
-        experienceLevel: backendPrefs.experience_level || 'mid',
+        jobTitle: Array.isArray(backendPrefs.target_titles) && backendPrefs.target_titles.length > 0
+          ? backendPrefs.target_titles[0]
+          : '',
+        experienceLevel: 'mid', // Not stored in backend, keep default
         salaryMin: backendPrefs.salary_min ? backendPrefs.salary_min.toString() : '',
-        salaryMax: backendPrefs.salary_max ? backendPrefs.salary_max.toString() : '',
-        workType: backendPrefs.work_type || 'hybrid',
-        industries: Array.isArray(backendPrefs.industries) ? backendPrefs.industries.join(', ') : '',
-        skills: Array.isArray(backendPrefs.skills_sought) ? backendPrefs.skills_sought.join(', ') : '',
-        remotePreference: backendPrefs.remote_ok || false,
-        willingToRelocate: backendPrefs.willing_to_relocate || false,
+        salaryMax: '', // Not stored in backend yet
+        workType: 'hybrid', // Not stored in backend yet
+        industries: '', // Not stored in backend yet
+        skills: Array.isArray(backendPrefs.skills)
+          ? backendPrefs.skills.join(', ')
+          : '',
+        remotePreference: backendPrefs.remote_ok ?? true,
+        willingToRelocate: false, // Not stored in backend yet
         location: backendPrefs.location_pref || '',
       };
+
+      console.log('✅ Converted preferences:', preferences);
 
       // Save to localStorage for offline access
       const storageKey = this.getUserStorageKey();
@@ -130,7 +138,7 @@ class UserPreferencesService {
 
       return preferences;
     } catch (error) {
-      console.error('Failed to load preferences from backend:', error);
+      console.error('❌ Failed to load preferences from backend:', error);
       return null;
     }
   }
