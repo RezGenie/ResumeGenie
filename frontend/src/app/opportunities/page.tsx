@@ -424,7 +424,7 @@ export default function JobDiscoveryPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="w-full md:w-[180px] justify-between">
-                        {locationFilter === "all" ? "All Locations" :
+                        {locationFilter === "all" ? "Work Type" :
                           locationFilter === "remote" ? "Remote" :
                             locationFilter === "hybrid" ? "Hybrid" : "On-site"}
                         <ChevronDown className="h-4 w-4" />
@@ -432,7 +432,7 @@ export default function JobDiscoveryPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={() => setLocationFilter("all")}>
-                        All Locations
+                        All Work Types
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setLocationFilter("remote")}>
                         Remote
