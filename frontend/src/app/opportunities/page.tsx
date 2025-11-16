@@ -222,11 +222,13 @@ export default function JobDiscoveryPage() {
         (experienceFilter === "lead" && (job.title.toLowerCase().includes("lead") || job.title.toLowerCase().includes("principal") || job.title.toLowerCase().includes("staff")));
 
       const matchesEmploymentType = employmentTypeFilter === "all" ||
-        (employmentTypeFilter === "full-time" && (job.type.toLowerCase().includes("full") || job.type.toLowerCase().includes("full-time"))) ||
-        (employmentTypeFilter === "part-time" && (job.type.toLowerCase().includes("part") || job.type.toLowerCase().includes("part-time"))) ||
-        (employmentTypeFilter === "contract" && job.type.toLowerCase().includes("contract")) ||
-        (employmentTypeFilter === "internship" && job.type.toLowerCase().includes("intern")) ||
-        (employmentTypeFilter === "temporary" && job.type.toLowerCase().includes("temp"));
+        (job.type && (
+          (employmentTypeFilter === "full-time" && (job.type.toLowerCase().includes("full") || job.type.toLowerCase().includes("full-time"))) ||
+          (employmentTypeFilter === "part-time" && (job.type.toLowerCase().includes("part") || job.type.toLowerCase().includes("part-time"))) ||
+          (employmentTypeFilter === "contract" && job.type.toLowerCase().includes("contract")) ||
+          (employmentTypeFilter === "internship" && job.type.toLowerCase().includes("intern")) ||
+          (employmentTypeFilter === "temporary" && job.type.toLowerCase().includes("temp"))
+        ));
 
       const matchesDatePosted = datePostedFilter === "all" ||
         (datePostedFilter === "24h" && (new Date().getTime() - new Date(job.posted_at).getTime()) <= 24 * 60 * 60 * 1000) ||
