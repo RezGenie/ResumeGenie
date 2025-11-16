@@ -1590,40 +1590,46 @@ async def generate_cover_letter(
 async def generate_cover_letter_guest(
     request: Request,
     cl_request: CoverLetterRequest,
-    db: AsyncSession = Depends(get_db),
-    guest_session = Depends(get_or_create_guest_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Generate a professional cover letter for guest users.
-    
-    Requires resume_text to be provided directly (from most recent guest wish).
+
+    Uses the most recent uploaded resume for this guest session.
     """
     try:
-        logger.info(f"Cover letter generation requested by guest: {guest_session.guest_id}")
-        
-        # Get most recent guest wish with resume text
-        stmt = select(GenieWish).where(
-            GenieWish.guest_id == guest_session.guest_id
-        ).order_by(desc(GenieWish.created_at)).limit(1)
-        
+        # Get or create guest session
+        session_id = await get_or_create_guest_session(request, db)
+
+        logger.info(f"Cover letter generation requested by guest: {session_id[:8]}...")
+
+        # Get guest user for this session
+        guest_email = f"guest_{session_id[:8]}@temporary.com"
+        result = await db.execute(select(User).where(User.email == guest_email))
+        guest_user = result.scalar_one_or_none()
+
+        if not guest_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No resume found. Please upload a resume first."
+            )
+
+        # Get the most recent resume for this guest user
+        stmt = select(Resume).where(
+            Resume.user_id == guest_user.id
+        ).order_by(desc(Resume.created_at)).limit(1)
+
         result = await db.execute(stmt)
-        recent_wish = result.scalar_one_or_none()
-        
-        if not recent_wish:
+        resume = result.scalar_one_or_none()
+
+        if not resume or not resume.extracted_text:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No previous analysis found. Please run an analysis first."
+                detail="No resume found. Please upload a resume first."
             )
-        
-        # Extract resume text from context data
-        context_data = recent_wish.context_data or {}
-        resume_text = context_data.get("resume_text") if isinstance(context_data, dict) else None
-        
-        if not resume_text:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No resume text found from previous analysis."
-            )
+
+        resume_text = resume.extracted_text
+        logger.info(f"Using guest resume: {resume.id}, extracted_text length: {len(resume_text)}")
         
         # Generate cover letter
         cover_letter_data = await openai_service.generate_cover_letter(
