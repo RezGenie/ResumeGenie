@@ -31,7 +31,7 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p /app/uploads
 
-# Copy and make startup script executable
+# Copy startup script
 COPY start.sh .
 RUN chmod +x start.sh
 
@@ -42,5 +42,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application with migrations
-CMD ["./start.sh"]
+# Run the application with migrations - use bash explicitly to avoid permission issues
+CMD ["bash", "start.sh"]

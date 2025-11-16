@@ -14,7 +14,7 @@ import json
 
 from app.core.database import get_db
 from app.core.security import get_current_user, rate_limit, hash_password
-from app.core.deps import get_or_create_guest_session, check_guest_daily_wish_limit, increment_guest_wish_count
+from app.core.deps import get_or_create_guest_session, check_guest_daily_wish_limit, increment_guest_wish_count, generate_guest_session_id
 from app.models.user import User
 from app.models.genie_wish import GenieWish, DailyWishCount
 from app.models.resume import Resume
@@ -1506,13 +1506,15 @@ class CoverLetterRequest(BaseModel):
     job_description: str = Field(..., description="Job posting or description")
     company_name: Optional[str] = Field(None, description="Optional company name")
     position_title: Optional[str] = Field(None, description="Optional position title")
-    
+    resume_text: Optional[str] = Field(None, description="Resume text (required for guest users)")
+
     class Config:
         json_schema_extra = {
             "example": {
                 "job_description": "We are looking for a Senior Python Developer...",
                 "company_name": "TechCorp",
-                "position_title": "Senior Python Developer"
+                "position_title": "Senior Python Developer",
+                "resume_text": "John Doe\nSoftware Engineer with 5 years of experience..."
             }
         }
 
@@ -1591,43 +1593,29 @@ async def generate_cover_letter_guest(
     request: Request,
     cl_request: CoverLetterRequest,
     db: AsyncSession = Depends(get_db),
-    guest_session = Depends(get_or_create_guest_session)
 ):
     """
     Generate a professional cover letter for guest users.
     
-    Requires resume_text to be provided directly (from most recent guest wish).
+    Requires resume_text to be provided directly in the request.
     """
     try:
-        logger.info(f"Cover letter generation requested by guest: {guest_session.guest_id}")
-        
-        # Get most recent guest wish with resume text
-        stmt = select(GenieWish).where(
-            GenieWish.guest_id == guest_session.guest_id
-        ).order_by(desc(GenieWish.created_at)).limit(1)
-        
-        result = await db.execute(stmt)
-        recent_wish = result.scalar_one_or_none()
-        
-        if not recent_wish:
+        # Get guest session ID from request
+        session_id = await get_or_create_guest_session(request, db)
+        logger.info(f"Cover letter generation requested by guest session: {session_id}")
+
+        # Check if resume_text is provided directly in the request
+        if not cl_request.resume_text:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No previous analysis found. Please run an analysis first."
+                detail="resume_text is required for guest users. Please provide your resume text in the request."
             )
         
-        # Extract resume text from context data
-        context_data = recent_wish.context_data or {}
-        resume_text = context_data.get("resume_text") if isinstance(context_data, dict) else None
-        
-        if not resume_text:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No resume text found from previous analysis."
-            )
-        
+        logger.info(f"Guest: Using resume_text from request, length: {len(cl_request.resume_text)}")
+
         # Generate cover letter
         cover_letter_data = await openai_service.generate_cover_letter(
-            resume_text=resume_text,
+            resume_text=cl_request.resume_text,
             job_description=cl_request.job_description,
             company_name=cl_request.company_name,
             position_title=cl_request.position_title
@@ -1649,3 +1637,4 @@ async def generate_cover_letter_guest(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate cover letter"
         )
+

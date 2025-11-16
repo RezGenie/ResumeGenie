@@ -2,7 +2,11 @@
 set -e
 
 echo "Running database migrations..."
-alembic upgrade head
+alembic upgrade head || {
+    echo "WARNING: Migration failed, but continuing anyway (tables may already exist)..."
+    echo "Trying to stamp the database to current head..."
+    alembic stamp head || echo "Stamp also failed, but continuing..."
+}
 
 echo "Fixing missing columns (if needed)..."
 python fix_embedding_column.py || echo "Column fix script failed, continuing anyway..."

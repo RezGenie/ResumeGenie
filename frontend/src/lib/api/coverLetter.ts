@@ -4,6 +4,7 @@ export interface CoverLetterRequest {
   job_description: string;
   company_name?: string;
   position_title?: string;
+  resume_text?: string; // Required for guest users
 }
 
 export interface CoverLetterResponse {

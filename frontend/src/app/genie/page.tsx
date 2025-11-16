@@ -303,6 +303,7 @@ export default function StudioPage() {
   const [isCopied, setIsCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasLoadedPrimaryResume = useRef(false); // Track if we've already loaded primary resume
+  const [guestResumeText, setGuestResumeText] = useState<string | null>(null); // Store resume text for guest users
 
   // Helper function to parse recommendations if they come as JSON string
   const parseRecommendations = useCallback((data: any): string[] => {
@@ -1127,18 +1128,8 @@ export default function StudioPage() {
       setIsAnalyzing(false);
 
       // Refresh usage count after successful wish
-      // For guests, refresh immediately without waiting for interview questions
-      // For authenticated users, this happens after questions complete
-      if (!isAuthenticated) {
-        await refreshDailyUsage();
-      } else {
-        // Wait for interview questions before refreshing for authenticated users
-        if (questionsPromise) {
-          await questionsPromise;
-        }
-        await refreshDailyUsage();
-      }
-      
+      await refreshDailyUsage();
+
       // Keep job posting and context for reference - don't clear
       // User can manually clear if needed
     } catch (error) {
@@ -3127,3 +3118,4 @@ export default function StudioPage() {
     </div>
   );
 }
+
