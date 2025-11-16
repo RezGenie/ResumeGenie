@@ -18,7 +18,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  BookmarkCheck
+  BookmarkCheck,
+  Filter,
+  X,
+  ChevronUp
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +71,13 @@ export default function JobDiscoveryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [locationFilter, setLocationFilter] = useState("all");
   const [salaryFilter, setSalaryFilter] = useState("all");
+  const [geoLocationFilter, setGeoLocationFilter] = useState("");
+  const [experienceFilter, setExperienceFilter] = useState("all");
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState("all");
+  const [datePostedFilter, setDatePostedFilter] = useState("all");
+  const [minMatchScore, setMinMatchScore] = useState(0);
+  const [companySizeFilter, setCompanySizeFilter] = useState("all");
+  const [industryFilter, setIndustryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("match");
   const [jobs, setJobs] = useState<JobDisplay[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -84,6 +94,9 @@ export default function JobDiscoveryPage() {
   // Mobile swipe state
   const [selectedJob, setSelectedJob] = useState<JobDisplay | null>(null);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
+
+  // Filter UI state
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Fetch jobs on component mount and when filters change
   useEffect(() => {
@@ -199,7 +212,37 @@ export default function JobDiscoveryPage() {
         (locationFilter === "hybrid" && job.location.toLowerCase().includes("hybrid")) ||
         (locationFilter === "onsite" && !job.remote && !job.location.toLowerCase().includes("remote") && !job.location.toLowerCase().includes("hybrid"));
 
-      return matchesSearch && matchesLocation;
+      const matchesGeoLocation = geoLocationFilter === "" ||
+        job.location.toLowerCase().includes(geoLocationFilter.toLowerCase());
+
+      const matchesExperience = experienceFilter === "all" ||
+        (experienceFilter === "entry" && (job.title.toLowerCase().includes("entry") || job.title.toLowerCase().includes("junior"))) ||
+        (experienceFilter === "mid" && (job.title.toLowerCase().includes("mid") || (!job.title.toLowerCase().includes("senior") && !job.title.toLowerCase().includes("junior") && !job.title.toLowerCase().includes("entry")))) ||
+        (experienceFilter === "senior" && (job.title.toLowerCase().includes("senior") || job.title.toLowerCase().includes("sr."))) ||
+        (experienceFilter === "lead" && (job.title.toLowerCase().includes("lead") || job.title.toLowerCase().includes("principal") || job.title.toLowerCase().includes("staff")));
+
+      const matchesEmploymentType = employmentTypeFilter === "all" ||
+        (employmentTypeFilter === "full-time" && (job.type.toLowerCase().includes("full") || job.type.toLowerCase().includes("full-time"))) ||
+        (employmentTypeFilter === "part-time" && (job.type.toLowerCase().includes("part") || job.type.toLowerCase().includes("part-time"))) ||
+        (employmentTypeFilter === "contract" && job.type.toLowerCase().includes("contract")) ||
+        (employmentTypeFilter === "internship" && job.type.toLowerCase().includes("intern")) ||
+        (employmentTypeFilter === "temporary" && job.type.toLowerCase().includes("temp"));
+
+      const matchesDatePosted = datePostedFilter === "all" ||
+        (datePostedFilter === "24h" && (new Date().getTime() - new Date(job.posted_at).getTime()) <= 24 * 60 * 60 * 1000) ||
+        (datePostedFilter === "week" && (new Date().getTime() - new Date(job.posted_at).getTime()) <= 7 * 24 * 60 * 60 * 1000) ||
+        (datePostedFilter === "month" && (new Date().getTime() - new Date(job.posted_at).getTime()) <= 30 * 24 * 60 * 60 * 1000);
+
+      const matchesMinScore = (job.matchScore || 0) >= minMatchScore;
+
+      // Note: Company size and industry filters would require additional data from the backend
+      // For now, these are placeholders that always return true
+      const matchesCompanySize = companySizeFilter === "all";
+      const matchesIndustry = industryFilter === "all";
+
+      return matchesSearch && matchesLocation && matchesGeoLocation &&
+             matchesExperience && matchesEmploymentType && matchesDatePosted &&
+             matchesMinScore && matchesCompanySize && matchesIndustry;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -224,7 +267,9 @@ export default function JobDiscoveryPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, locationFilter, salaryFilter, sortBy]);
+  }, [searchTerm, locationFilter, salaryFilter, geoLocationFilter, experienceFilter,
+      employmentTypeFilter, datePostedFilter, minMatchScore, companySizeFilter,
+      industryFilter, sortBy]);
 
   // Handle job save/unsave with optimistic updates and user feedback
   const handleToggleSaveJob = async (jobId: string) => {
@@ -404,77 +449,470 @@ export default function JobDiscoveryPage() {
             </motion.div>
 
             {/* Search and Filters */}
-            <motion.div variants={itemVariants} className="max-w-4xl mx-auto">
-              <Card className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 border-purple-200/50 dark:border-purple-700/50 shadow-lg">
-                <div className="flex flex-col md:flex-row gap-4 p-6">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5" />
-                      {isSearching && jobs.length > 0 && (
-                        <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5 animate-spin" />
-                      )}
-                      <Input
-                        placeholder="Search jobs by title, skills, or company..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-12 pr-12 bg-white/80 dark:bg-gray-800/80 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-sm focus:shadow-md placeholder:text-purple-400 dark:placeholder:text-purple-500 h-12 text-base"
-                      />
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full md:w-[180px] justify-between">
-                        {locationFilter === "all" ? "All Locations" :
-                          locationFilter === "remote" ? "Remote" :
-                            locationFilter === "hybrid" ? "Hybrid" : "On-site"}
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => setLocationFilter("all")}>
-                        All Locations
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setLocationFilter("remote")}>
-                        Remote
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setLocationFilter("hybrid")}>
-                        Hybrid
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setLocationFilter("onsite")}>
-                        On-site
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full md:w-[180px] justify-between">
-                        {salaryFilter === "all" ? "Any Salary" :
-                          salaryFilter === "0-50k" ? "Under $50k" :
-                            salaryFilter === "50k-100k" ? "$50k - $100k" :
-                              salaryFilter === "100k-150k" ? "$100k - $150k" : "$150k+"}
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => setSalaryFilter("all")}>
-                        Any Salary
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSalaryFilter("0-50k")}>
-                        Under $50k
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSalaryFilter("50k-100k")}>
-                        $50k - $100k
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSalaryFilter("100k-150k")}>
-                        $100k - $150k
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSalaryFilter("150k+")}>
-                        $150k+
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            <motion.div variants={itemVariants} className="max-w-6xl mx-auto space-y-4">
+              {/* Main Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5 z-10" />
+                {isSearching && jobs.length > 0 && (
+                  <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 text-purple-500 dark:text-purple-400 h-5 w-5 animate-spin z-10" />
+                )}
+                <Input
+                  placeholder="Search by job title, skills, or company name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 pr-12 h-14 text-lg bg-white dark:bg-gray-900 border-2 border-purple-200 dark:border-purple-700 hover:border-purple-400 focus:border-purple-500 dark:hover:border-purple-500 dark:focus:border-purple-400 transition-all duration-200 shadow-md focus:shadow-lg placeholder:text-muted-foreground rounded-xl"
+                />
+              </div>
+
+              {/* Primary Filters & Advanced Toggle */}
+              <div className="flex flex-wrap gap-3 items-center">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-10 border-2 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      {locationFilter === "all" ? "Work Type" :
+                        locationFilter === "remote" ? "Remote" :
+                          locationFilter === "hybrid" ? "Hybrid" : "On-site"}
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setLocationFilter("all")}>
+                      All Work Types
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocationFilter("remote")}>
+                      Remote
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocationFilter("hybrid")}>
+                      Hybrid
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocationFilter("onsite")}>
+                      On-site
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-10 border-2 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      {salaryFilter === "all" ? "Salary" :
+                        salaryFilter === "0-50k" ? "$0-50k" :
+                          salaryFilter === "50k-100k" ? "$50k-100k" :
+                            salaryFilter === "100k-150k" ? "$100k-150k" : "$150k+"}
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setSalaryFilter("all")}>
+                      Any Salary
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSalaryFilter("0-50k")}>
+                      Under $50k
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSalaryFilter("50k-100k")}>
+                      $50k - $100k
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSalaryFilter("100k-150k")}>
+                      $100k - $150k
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSalaryFilter("150k+")}>
+                      $150k+
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Button
+                  variant={showAdvancedFilters ? "default" : "outline"}
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="h-10 border-2 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  More Filters
+                  {showAdvancedFilters ?
+                    <ChevronUp className="h-4 w-4 ml-2" /> :
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  }
+                </Button>
+
+                <div className="flex-1" />
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setLocationFilter("all");
+                    setSalaryFilter("all");
+                    setGeoLocationFilter("");
+                    setExperienceFilter("all");
+                    setEmploymentTypeFilter("all");
+                    setDatePostedFilter("all");
+                    setMinMatchScore(0);
+                    setCompanySizeFilter("all");
+                    setIndustryFilter("all");
+                  }}
+                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
+              </div>
+
+              {/* Active Filter Pills */}
+              {(geoLocationFilter || experienceFilter !== "all" || employmentTypeFilter !== "all" ||
+                datePostedFilter !== "all" || minMatchScore > 0 || companySizeFilter !== "all" ||
+                industryFilter !== "all") && (
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-sm text-muted-foreground">Active Filters:</span>
+
+                  {geoLocationFilter && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      <MapPin className="h-3 w-3" />
+                      {geoLocationFilter}
+                      <button
+                        onClick={() => setGeoLocationFilter("")}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {experienceFilter !== "all" && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      {experienceFilter === "entry" ? "Entry Level" :
+                        experienceFilter === "mid" ? "Mid Level" :
+                          experienceFilter === "senior" ? "Senior" : "Lead/Principal"}
+                      <button
+                        onClick={() => setExperienceFilter("all")}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {employmentTypeFilter !== "all" && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      {employmentTypeFilter === "full-time" ? "Full-time" :
+                        employmentTypeFilter === "part-time" ? "Part-time" :
+                          employmentTypeFilter === "contract" ? "Contract" :
+                            employmentTypeFilter === "internship" ? "Internship" : "Temporary"}
+                      <button
+                        onClick={() => setEmploymentTypeFilter("all")}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {datePostedFilter !== "all" && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      <Clock className="h-3 w-3" />
+                      {datePostedFilter === "24h" ? "Last 24h" :
+                        datePostedFilter === "week" ? "Last Week" : "Last Month"}
+                      <button
+                        onClick={() => setDatePostedFilter("all")}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {minMatchScore > 0 && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      <Target className="h-3 w-3" />
+                      {minMatchScore}%+ Match
+                      <button
+                        onClick={() => setMinMatchScore(0)}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {companySizeFilter !== "all" && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      <Building2 className="h-3 w-3" />
+                      {companySizeFilter === "startup" ? "Startup" :
+                        companySizeFilter === "small" ? "Small" :
+                          companySizeFilter === "medium" ? "Medium" : "Large"}
+                      <button
+                        onClick={() => setCompanySizeFilter("all")}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {industryFilter !== "all" && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      {industryFilter === "tech" ? "Technology" :
+                        industryFilter === "finance" ? "Finance" :
+                          industryFilter === "healthcare" ? "Healthcare" : "Other"}
+                      <button
+                        onClick={() => setIndustryFilter("all")}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
                 </div>
-              </Card>
+              )}
+
+              {/* Advanced Filters - Collapsible */}
+              <AnimatePresence>
+                {showAdvancedFilters && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
+                  >
+                    <Card className="border-2 border-purple-100 dark:border-purple-900/50 bg-gradient-to-br from-purple-50/50 via-white to-pink-50/50 dark:from-purple-950/20 dark:via-gray-900 dark:to-pink-950/20">
+                      <div className="p-6 space-y-4">
+                        {/* Row 1: Location & Experience */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Location
+                            </label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                              <Input
+                                placeholder="e.g., San Francisco, CA"
+                                value={geoLocationFilter}
+                                onChange={(e) => setGeoLocationFilter(e.target.value)}
+                                className="pl-10"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Experience Level
+                            </label>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between">
+                                  {experienceFilter === "all" ? "All Levels" :
+                                    experienceFilter === "entry" ? "Entry Level" :
+                                      experienceFilter === "mid" ? "Mid Level" :
+                                        experienceFilter === "senior" ? "Senior" : "Lead/Principal"}
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-full">
+                                <DropdownMenuItem onClick={() => setExperienceFilter("all")}>
+                                  All Levels
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setExperienceFilter("entry")}>
+                                  Entry Level
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setExperienceFilter("mid")}>
+                                  Mid Level
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setExperienceFilter("senior")}>
+                                  Senior
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setExperienceFilter("lead")}>
+                                  Lead/Principal
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Employment Type
+                            </label>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between">
+                                  {employmentTypeFilter === "all" ? "All Types" :
+                                    employmentTypeFilter === "full-time" ? "Full-time" :
+                                      employmentTypeFilter === "part-time" ? "Part-time" :
+                                        employmentTypeFilter === "contract" ? "Contract" :
+                                          employmentTypeFilter === "internship" ? "Internship" : "Temporary"}
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-full">
+                                <DropdownMenuItem onClick={() => setEmploymentTypeFilter("all")}>
+                                  All Types
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEmploymentTypeFilter("full-time")}>
+                                  Full-time
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEmploymentTypeFilter("part-time")}>
+                                  Part-time
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEmploymentTypeFilter("contract")}>
+                                  Contract
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEmploymentTypeFilter("internship")}>
+                                  Internship
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setEmploymentTypeFilter("temporary")}>
+                                  Temporary
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+
+                        {/* Row 2: Date, Match Score, Company Size */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Date Posted
+                            </label>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between">
+                                  {datePostedFilter === "all" ? "Any Time" :
+                                    datePostedFilter === "24h" ? "Last 24h" :
+                                      datePostedFilter === "week" ? "Last Week" : "Last Month"}
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-full">
+                                <DropdownMenuItem onClick={() => setDatePostedFilter("all")}>
+                                  Any Time
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setDatePostedFilter("24h")}>
+                                  Last 24 Hours
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setDatePostedFilter("week")}>
+                                  Last Week
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setDatePostedFilter("month")}>
+                                  Last Month
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Match Score
+                            </label>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between">
+                                  {minMatchScore === 0 ? "Any Match" : `${minMatchScore}%+ Match`}
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-full">
+                                <DropdownMenuItem onClick={() => setMinMatchScore(0)}>
+                                  Any Match
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setMinMatchScore(50)}>
+                                  50%+ Match
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setMinMatchScore(70)}>
+                                  70%+ Match
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setMinMatchScore(80)}>
+                                  80%+ Match
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setMinMatchScore(90)}>
+                                  90%+ Match
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Company Size
+                            </label>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between">
+                                  {companySizeFilter === "all" ? "All Sizes" :
+                                    companySizeFilter === "startup" ? "Startup" :
+                                      companySizeFilter === "small" ? "Small" :
+                                        companySizeFilter === "medium" ? "Medium" : "Large"}
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-full">
+                                <DropdownMenuItem onClick={() => setCompanySizeFilter("all")}>
+                                  All Sizes
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setCompanySizeFilter("startup")}>
+                                  Startup (1-50)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setCompanySizeFilter("small")}>
+                                  Small (51-200)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setCompanySizeFilter("medium")}>
+                                  Medium (201-1000)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setCompanySizeFilter("large")}>
+                                  Large (1000+)
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+
+                        {/* Row 3: Industry */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Industry
+                            </label>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between">
+                                  {industryFilter === "all" ? "All Industries" :
+                                    industryFilter === "tech" ? "Technology" :
+                                      industryFilter === "finance" ? "Finance" :
+                                        industryFilter === "healthcare" ? "Healthcare" : "Other"}
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-full">
+                                <DropdownMenuItem onClick={() => setIndustryFilter("all")}>
+                                  All Industries
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIndustryFilter("tech")}>
+                                  Technology
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIndustryFilter("finance")}>
+                                  Finance
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIndustryFilter("healthcare")}>
+                                  Healthcare
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIndustryFilter("other")}>
+                                  Other
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
             {/* Job Results */}
@@ -529,6 +967,13 @@ export default function JobDiscoveryPage() {
                         setSearchTerm("");
                         setLocationFilter("all");
                         setSalaryFilter("all");
+                        setGeoLocationFilter("");
+                        setExperienceFilter("all");
+                        setEmploymentTypeFilter("all");
+                        setDatePostedFilter("all");
+                        setMinMatchScore(0);
+                        setCompanySizeFilter("all");
+                        setIndustryFilter("all");
                       }}
                     >
                       🧹 Clear All Filters
