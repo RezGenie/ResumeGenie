@@ -47,8 +47,8 @@ export function MobileNav() {
         zIndex: 50,
       }}
     >
-      <div className="bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg">
-        <div className="flex items-center justify-around px-2 py-3 safe-area-bottom">
+      <div className="bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg overflow-hidden" style={{ maxHeight: '80px' }}>
+        <div className="flex items-center justify-around px-2 py-3">
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)

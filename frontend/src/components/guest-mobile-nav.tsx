@@ -33,9 +33,16 @@ export function GuestMobileNav() {
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-      className="lg:hidden fixed bottom-4 left-4 right-4 z-50"
+      className="lg:hidden fixed left-4 right-4 z-50 will-change-transform"
+      style={{
+        WebkitTouchCallout: 'none',
+        position: 'fixed',
+        bottom: '1rem',
+        left: '1rem',
+        right: '1rem',
+      } as React.CSSProperties}
     >
-      <div className="bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg">
+      <div className="bg-gradient-to-br from-purple-50/60 to-blue-50/60 dark:from-purple-950/30 dark:to-blue-950/30 backdrop-blur-xl border border-purple-200/30 dark:border-purple-800/30 rounded-2xl shadow-lg overflow-hidden" style={{ maxHeight: '80px' }}>
         <div className="flex items-center justify-around px-2 py-3">
           {navItems.map((item) => {
             const Icon = item.icon
