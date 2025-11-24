@@ -119,10 +119,14 @@
   
   html {
     scroll-behavior: smooth;
+    /* Prevent overscroll bounce to fix bottom jitter */
+    overscroll-behavior-y: none;
   }
   
   body {
     @apply bg-background text-foreground antialiased;
+    /* Also prevent overscroll on body */
+    overscroll-behavior-y: none;
   }
 }
 

@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
-import { 
-  Sparkles, 
-  BookOpen, 
+import { useTheme } from "next-themes"
+import {
+  Sparkles,
+  BookOpen,
   DollarSign,
-  LogIn
+  LogIn,
+  Sun,
+  Moon
 } from "lucide-react"
 import { motion } from "framer-motion"
 
@@ -20,20 +22,7 @@ const navItems = [
 
 export function GuestMobileNav() {
   const pathname = usePathname()
-  const [viewportHeight, setViewportHeight] = useState(0)
-
-  useEffect(() => {
-    // Set initial viewport height
-    setViewportHeight(window.innerHeight)
-
-    // Track viewport changes (browser chrome hide/show)
-    const handleResize = () => {
-      setViewportHeight(window.innerHeight)
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  const { setTheme, theme } = useTheme()
 
   const isActive = (href: string) => {
     return pathname === href || pathname.startsWith(href + '/')
@@ -58,25 +47,33 @@ export function GuestMobileNav() {
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
-            
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer select-none ${
-                  active
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 ${active
                     ? 'text-purple-600 dark:text-purple-400 scale-105'
                     : 'text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400'
-                }`}
-                style={{
-                  WebkitUserCallout: 'none',
-                } as React.CSSProperties}
+                  }`}
               >
                 <Icon className={`h-5 w-5 ${active ? 'scale-110' : ''} transition-transform`} />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </Link>
             )
           })}
+
+          {/* Theme Toggle */}
+          <button
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400"
+          >
+            <div className="relative h-5 w-5">
+              <Sun className="absolute h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </div>
+            <span className="text-[10px] font-medium">Theme</span>
+          </button>
         </div>
       </div>
     </motion.nav>

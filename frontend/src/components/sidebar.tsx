@@ -4,12 +4,12 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  LayoutDashboard, 
-  Sparkles, 
-  Briefcase, 
-  FileText, 
-  User, 
+import {
+  LayoutDashboard,
+  Sparkles,
+  Briefcase,
+  FileText,
+  User,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -41,7 +41,6 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
-  // Initialize from localStorage immediately
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedState = localStorage.getItem('sidebarCollapsed')
@@ -50,6 +49,7 @@ export function Sidebar() {
     return false
   })
   const [userAvatar, setUserAvatar] = useState('')
+  const [userName, setUserName] = useState('')
 
   const isActive = (href: string) => {
     // Exact match for dashboard
@@ -71,17 +71,19 @@ export function Sidebar() {
   // Emit initial state for layout wrapper on mount
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { collapsed: isCollapsed } }))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Update avatar when profile changes
+  // Update avatar and name when profile changes
   useEffect(() => {
     const profile = userProfileService.getProfile()
     setUserAvatar(profile.avatar || '')
+    setUserName(profile.name || '')
 
     const handleProfileUpdate = () => {
       const profile = userProfileService.getProfile()
       setUserAvatar(profile.avatar || '')
+      setUserName(profile.name || '')
     }
 
     window.addEventListener('userProfileUpdated', handleProfileUpdate)
@@ -95,11 +97,11 @@ export function Sidebar() {
   return (
     <motion.aside
       initial={{ opacity: 0 }}
-      animate={{ 
+      animate={{
         opacity: 1,
         width: isCollapsed ? '6rem' : '16rem'
       }}
-      transition={{ 
+      transition={{
         opacity: { duration: 0.3, ease: "easeOut" },
         width: { duration: 0.3, ease: [0.4, 0, 0.2, 1] }
       }}
@@ -147,19 +149,17 @@ export function Sidebar() {
         {/* User Info */}
         <div className={`mb-6 pb-6 border-b border-purple-200/30 dark:border-purple-800/30 ${isCollapsed ? 'flex flex-col items-center gap-3' : ''}`}>
           <div className="flex items-center gap-3">
-            <Link 
+            <Link
               href="/profile"
-              className={`flex items-center gap-3 flex-1 min-w-0 px-3 py-2 rounded-lg transition-colors ${
-                isActive('/profile')
-                  ? 'bg-purple-100 dark:bg-purple-900/20'
-                  : 'hover:bg-purple-100 dark:hover:bg-purple-900/20'
-              }`}
+              className={`flex items-center gap-3 flex-1 min-w-0 px-3 py-2 rounded-lg transition-colors ${isActive('/profile')
+                ? 'bg-purple-100 dark:bg-purple-900/20'
+                : 'hover:bg-purple-100 dark:hover:bg-purple-900/20'
+                }`}
             >
-              <Avatar className={`h-10 w-10 bg-primary/10 flex-shrink-0 ring transition-all ${
-                isActive('/profile')
-                  ? 'ring-purple-400 dark:ring-purple-500'
-                  : 'ring-transparent hover:ring-purple-300 dark:hover:ring-purple-600'
-              }`}>
+              <Avatar className={`h-10 w-10 bg-primary/10 flex-shrink-0 ring transition-all ${isActive('/profile')
+                ? 'ring-purple-400 dark:ring-purple-500'
+                : 'ring-transparent hover:ring-purple-300 dark:hover:ring-purple-600'
+                }`}>
                 {userAvatar ? (
                   <AvatarImage src={userAvatar} alt="User avatar" className="object-cover" />
                 ) : null}
@@ -174,12 +174,11 @@ export function Sidebar() {
                   transition={{ duration: 0.2, delay: 0.15 }}
                   className="flex-1 min-w-0"
                 >
-                  <p className={`text-sm font-medium truncate transition-colors ${
-                    isActive('/profile')
-                      ? 'text-purple-600 dark:text-purple-400'
-                      : 'hover:text-purple-600 dark:hover:text-purple-400'
-                  }`}>
-                    {user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : 'User'}
+                  <p className={`text-sm font-medium truncate transition-colors ${isActive('/profile')
+                    ? 'text-purple-600 dark:text-purple-400'
+                    : 'hover:text-purple-600 dark:hover:text-purple-400'
+                    }`}>
+                    {userName || (user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : 'User')}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                 </motion.div>
@@ -200,11 +199,10 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors overflow-hidden ${
-                    active
-                      ? 'text-purple-600 dark:text-purple-400 font-medium'
-                      : 'text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/20'
-                  } ${isCollapsed ? 'justify-center' : ''}`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors overflow-hidden ${active
+                    ? 'text-purple-600 dark:text-purple-400 font-medium'
+                    : 'text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/20'
+                    } ${isCollapsed ? 'justify-center' : ''}`}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
                   {!isCollapsed && (
@@ -242,9 +240,8 @@ export function Sidebar() {
                 <Button
                   variant="ghost"
                   onClick={handleLogout}
-                  className={`w-full justify-start text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors ${
-                    isCollapsed ? 'justify-center px-2' : ''
-                  }`}
+                  className={`w-full justify-start text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors ${isCollapsed ? 'justify-center px-2' : ''
+                    }`}
                 >
                   <LogOut className="h-5 w-5 flex-shrink-0" />
                   {!isCollapsed && (
