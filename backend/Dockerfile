@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     libmagic1 \
     file \
-  && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -31,9 +31,8 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p /app/uploads
 
-# Copy and make startup script executable
-COPY start.sh .
-RUN chmod +x start.sh
+# Copy startup script
+COPY run.py .
 
 # Expose port
 EXPOSE 8000
@@ -43,4 +42,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application with migrations
-CMD ["./start.sh"]
+CMD ["python", "run.py"]

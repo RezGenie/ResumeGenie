@@ -16,7 +16,7 @@ services:
       - postgres_data:/var/lib/postgresql/data/pgdata
       - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d rezgenie"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d rezgenie" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -33,7 +33,7 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes --requirepass redis123
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -54,7 +54,7 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -67,6 +67,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: rezgenie_backend
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie
       - REDIS_URL=redis://:redis123@redis:6379/0
@@ -77,11 +79,6 @@ services:
       - OPENAI_MODEL=gpt-4o-mini
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-change-in-production}
       - ENVIRONMENT=development
-      - ADZUNA_APP_ID=${ADZUNA_APP_ID}
-      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
-      - ADZUNA_BASE_URL=${ADZUNA_BASE_URL}
-      - ADZUNA_RATE_LIMIT=${ADZUNA_RATE_LIMIT}
-      - ADZUNA_MAX_PAGES=${ADZUNA_MAX_PAGES}
     ports:
       - "8000:8000"
     volumes:
@@ -104,6 +101,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: rezgenie_celery_worker
+    env_file:
+      - ./backend/.env
     command: celery -A app.celery.celery_app worker --loglevel=info --concurrency=2
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie
@@ -114,11 +113,6 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin123
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ADZUNA_APP_ID=${ADZUNA_APP_ID}
-      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
-      - ADZUNA_BASE_URL=${ADZUNA_BASE_URL}
-      - ADZUNA_RATE_LIMIT=${ADZUNA_RATE_LIMIT}
-      - ADZUNA_MAX_PAGES=${ADZUNA_MAX_PAGES}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app
@@ -137,6 +131,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: rezgenie_celery_beat
+    env_file:
+      - ./backend/.env
     command: celery -A app.celery.celery_app beat --loglevel=info
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/rezgenie
@@ -147,11 +143,6 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin123
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ADZUNA_APP_ID=${ADZUNA_APP_ID}
-      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
-      - ADZUNA_BASE_URL=${ADZUNA_BASE_URL}
-      - ADZUNA_RATE_LIMIT=${ADZUNA_RATE_LIMIT}
-      - ADZUNA_MAX_PAGES=${ADZUNA_MAX_PAGES}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app
@@ -248,6 +239,7 @@ volumes:
   redis_data:
   minio_data:
   uploaded_files:
+
 
 networks:
   rezgenie-network:

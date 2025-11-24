@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { MobileHeader } from "@/components/mobile-header"
 import { MobileNav } from "@/components/mobile-nav"
+import { GuestMobileNav } from "@/components/guest-mobile-nav"
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
@@ -24,25 +25,28 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       setSidebarCollapsed(collapsed)
       localStorage.setItem('sidebarCollapsed', String(collapsed))
     }
-    
+
     window.addEventListener('sidebarToggle', handleSidebarToggle as EventListener)
     return () => window.removeEventListener('sidebarToggle', handleSidebarToggle as EventListener)
   }, [])
 
   // Sidebar width (16rem = 256px) or collapsed (6rem = 96px) + left margin (left-4 = 16px) + small gap (8px)
-  // Mobile/Tablet: pt-20 for header card, pb-24 for bottom nav card (both guests and authenticated users)
-  const leftPadding = user 
-    ? `pt-20 lg:pt-0 pb-24 lg:pb-0 ${sidebarCollapsed ? "lg:pl-28" : "lg:pl-72"}`
+  // Mobile/Tablet: pb-24 for bottom nav card (no top padding since header is hidden)
+  // Guests: pt-20 for top header, pb-24 for bottom nav
+  const leftPadding = user
+    ? `pb-24 lg:pt-0 lg:pb-0 ${sidebarCollapsed ? "lg:pl-28" : "lg:pl-72"}`
     : "pt-20 pb-24 lg:pt-20 lg:pb-0"
 
   return (
     <>
-      {user && (
+      {user ? (
         <>
           <Sidebar />
           <MobileHeader />
           <MobileNav />
         </>
+      ) : (
+        <GuestMobileNav />
       )}
       <div className={`${leftPadding} transition-all duration-300 ease-in-out`}>
         {children}

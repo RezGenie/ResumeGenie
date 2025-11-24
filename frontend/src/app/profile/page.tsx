@@ -45,6 +45,7 @@ import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
 import { SubscriptionManagementDialog } from "@/components/profile/SubscriptionManagementDialog";
 import { EnhancedSelect } from "@/components/profile/EnhancedSelect";
 import { AvatarSelector } from "@/components/profile/AvatarSelector";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Form validation schema
 const profileSchema = z.object({
@@ -206,7 +207,7 @@ export default function ProfilePage() {
               >
                 <Avatar className="h-24 w-24 bg-primary/10 transition-all duration-200 group-hover:ring-2 group-hover:ring-purple-500 group-hover:scale-105">
                   {selectedAvatar ? (
-                    <AvatarImage 
+                    <AvatarImage
                       src={selectedAvatar}
                       alt="User avatar"
                       className="object-cover"
@@ -526,6 +527,29 @@ export default function ProfilePage() {
                           </Label>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Preferences */}
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preferences</CardTitle>
+                  <CardDescription>Customize your app experience</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-700 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div>
+                          <h3 className="font-medium">Theme</h3>
+                          <p className="text-sm text-muted-foreground">Toggle between light and dark mode</p>
+                        </div>
+                      </div>
+                      <ThemeToggle />
                     </div>
                   </div>
                 </CardContent>
