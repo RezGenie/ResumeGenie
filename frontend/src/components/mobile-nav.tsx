@@ -4,18 +4,16 @@ import { usePathname, useRouter } from "next/navigation"
 import { 
   LayoutDashboard, 
   Sparkles, 
+  BookOpen,
   Briefcase, 
-  Bookmark,
-  FileText,
   User
 } from "lucide-react"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/genie", label: "Genie", icon: Sparkles },
+  { href: "/guides", label: "Guides", icon: BookOpen },
   { href: "/opportunities", label: "Jobs", icon: Briefcase },
-  { href: "/dashboard/my-jobs", label: "Saved", icon: Bookmark },
-  { href: "/dashboard/resumes", label: "Resumes", icon: FileText },
   { href: "/profile", label: "Profile", icon: User },
 ]
 
