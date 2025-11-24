@@ -92,7 +92,7 @@ export function Header() {
                         : 'text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400'
                         }`}
                     >
-                      Demo
+                      Genie
                     </Link>
                     <Link
                       href="/guides"

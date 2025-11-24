@@ -14,7 +14,7 @@ export default function Home() {
       <Header />
       
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16 md:py-24 max-w-7xl">
+      <section className="container mx-auto px-4 py-8 md:py-16 lg:py-24 max-w-7xl">
         <div className="text-center space-y-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

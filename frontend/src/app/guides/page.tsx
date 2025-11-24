@@ -42,7 +42,7 @@ export default function Guides() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-20 max-w-6xl">
+      <main className="container mx-auto px-4 pt-4 pb-8 md:py-12 lg:py-20 max-w-6xl">
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

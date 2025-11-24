@@ -14,7 +14,7 @@ export default function GetMoreInterviews() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-20 max-w-4xl">
+      <main className="container mx-auto px-4 pt-4 pb-8 md:py-12 lg:py-20 max-w-4xl">
         {/* Navigation */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
