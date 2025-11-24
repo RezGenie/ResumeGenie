@@ -1303,7 +1303,7 @@ export default function StudioPage() {
 
 
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 pt-4 pb-8 md:py-8 max-w-6xl">
         {/* Header */}
         <motion.div
           initial="hidden"

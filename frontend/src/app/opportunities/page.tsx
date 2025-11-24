@@ -359,7 +359,7 @@ export default function JobDiscoveryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="container mx-auto px-4 pt-4 pb-8 md:py-8 max-w-7xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center space-y-4">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
@@ -375,7 +375,7 @@ export default function JobDiscoveryPage() {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <main className="container mx-auto px-4 pt-4 pb-8 md:py-8 max-w-6xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center space-y-4">
               <div className="text-6xl">🧞‍♂️💨</div>
@@ -432,7 +432,7 @@ export default function JobDiscoveryPage() {
         )}
 
         {/* Desktop: Traditional view with filters and grid */}
-        <main className="hidden lg:block container mx-auto px-4 py-8 max-w-6xl">
+        <main className="hidden lg:block container mx-auto px-4 pt-4 pb-8 md:py-8 max-w-6xl">
           <motion.div
             variants={containerVariants}
             initial="hidden"

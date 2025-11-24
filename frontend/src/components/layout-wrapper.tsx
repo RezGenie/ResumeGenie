@@ -32,10 +32,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   // Sidebar width (16rem = 256px) or collapsed (6rem = 96px) + left margin (left-4 = 16px) + small gap (8px)
   // Mobile/Tablet: pb-24 for bottom nav card (no top padding since header is hidden)
-  // Guests: pt-20 for top header, pb-24 for bottom nav
+  // Guests: no top padding on mobile (header is in bottom nav), pt-20 on desktop for top header, pb-24 for bottom nav
   const leftPadding = user
     ? `pb-24 lg:pt-0 lg:pb-0 ${sidebarCollapsed ? "lg:pl-28" : "lg:pl-72"}`
-    : "pt-20 pb-24 lg:pt-20 lg:pb-0"
+    : "pb-24 lg:pt-20 lg:pb-0"
 
   return (
     <>

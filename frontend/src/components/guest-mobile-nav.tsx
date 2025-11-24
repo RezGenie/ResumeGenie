@@ -14,7 +14,7 @@ import {
 import { motion } from "framer-motion"
 
 const navItems = [
-  { href: "/genie", label: "Demo", icon: Sparkles },
+  { href: "/genie", label: "Genie", icon: Sparkles },
   { href: "/guides", label: "Guides", icon: BookOpen },
   { href: "/pricing", label: "Pricing", icon: DollarSign },
   { href: "/auth", label: "Login", icon: LogIn },
