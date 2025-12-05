@@ -31,13 +31,56 @@ class AdzunaProvider:
         self.country = settings.adzuna_country
         self.openai_service = OpenAIService()
         
-        # Seed queries for Canadian tech jobs
+        # Diverse seed queries across different industries and experience levels
+        # Making RezGenie inclusive for all users regardless of field or experience
         self.seed_queries = [
-            "software engineer",
-            "full stack developer", 
-            "frontend developer",
+            # Tech & IT (keeping some, not all)
+            "software developer",
             "data analyst",
-            "product designer"
+            
+            # Healthcare & Medical
+            "registered nurse",
+            "medical assistant",
+            "healthcare administrator",
+            
+            # Education & Teaching
+            "teacher",
+            "education coordinator",
+            "tutor",
+            
+            # Trades & Skilled Labor
+            "electrician",
+            "plumber",
+            "construction worker",
+            "mechanic",
+            
+            # Hospitality & Service
+            "restaurant manager",
+            "chef",
+            "customer service representative",
+            "hotel staff",
+            
+            # Creative & Design
+            "graphic designer",
+            "marketing coordinator",
+            "content writer",
+            
+            # Retail & Sales
+            "sales associate",
+            "retail manager",
+            "store supervisor",
+            
+            # Finance & Business
+            "accountant",
+            "financial analyst",
+            "administrative assistant",
+            "office manager",
+            
+            # Entry-level & General
+            "receptionist",
+            "warehouse worker",
+            "delivery driver",
+            "general laborer",
         ]
 
     async def fetch_jobs(

@@ -1303,7 +1303,7 @@ async def get_user_preferences(
             preferences = UserPreferences(
                 user_id=current_user.id,
                 skills=[],
-                target_titles=["Software Engineer", "Developer"],
+                target_titles=[],
                 location_pref="",
                 remote_ok=True,
                 salary_min=None,
@@ -1386,6 +1386,7 @@ async def update_user_preferences(
             "preferences": {
                 "skills": preferences.skills or [],
                 "target_titles": preferences.target_titles or [],
+                "industries": preferences.industries or [],
                 "location_pref": preferences.location_pref,
                 "remote_ok": preferences.remote_ok,
                 "salary_min": preferences.salary_min,

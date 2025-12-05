@@ -25,7 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { toast } from "sonner";
-import { DashboardUser, DashboardStats, JobDisplay } from "@/lib/api";
+import { DashboardUser, DashboardStats, JobDisplay, User as UserType } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { userPreferencesService } from '@/lib/api/userPreferences';
 import { userProfileService } from '@/lib/api/userProfile';
@@ -34,6 +34,7 @@ import { localResumeService } from '@/lib/api/localResumes';
 import { jobService } from '@/lib/api/jobs';
 import { ProfileOnboarding } from '@/components/onboarding/ProfileOnboarding';
 import { ProfileCard } from '@/components/ProfileCard';
+import { capitalizeName } from '@/lib/utils';
 
 // API response interfaces
 interface WishApiResponse {
@@ -241,7 +242,7 @@ export default function Dashboard() {
       try {
         const { jobService } = await import('@/lib/api');
         const jobsResponse = await jobService.getJobs({}, 0, 6);
-        
+
         if (jobsResponse.success && jobsResponse.data.length > 0) {
           // Mark saved jobs
           const jobsWithSavedStatus = jobsResponse.data.map(job => ({
@@ -339,10 +340,8 @@ export default function Dashboard() {
     const handleProfileUpdate = () => {
       console.log('Profile updated, refreshing dashboard user...');
       if (authUser) {
-        const profile = userProfileService.getProfile();
-        const displayName = profile.name ||
-          (authUser.email.split('@')[0].charAt(0).toUpperCase() +
-            authUser.email.split('@')[0].slice(1));
+        // Use name from backend user object, fallback to email prefix
+        const displayName = (authUser as UserType).name || authUser.email.split('@')[0];
 
         const preferences = userPreferencesService.getPreferences();
         const profileCompleteness = userPreferencesService.getProfileCompleteness();
@@ -353,9 +352,6 @@ export default function Dashboard() {
           profileCompleteness,
           title: preferences.jobTitle || 'Job Seeker',
           location: preferences.location || 'Getting Started',
-          bio: preferences.skills ?
-            `Looking for ${preferences.jobTitle || 'new opportunities'} • ${preferences.experienceLevel} level` :
-            'Welcome to RezGenie! Complete your profile to get better job matches.',
           skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
         } : null);
       }
@@ -366,7 +362,7 @@ export default function Dashboard() {
       // Refresh resume stats
       const resumesStats = localResumeService.getResumeStats();
       setResumeStats(resumesStats);
-      
+
       // Refresh activities
       fetchRealDashboardData();
     };
@@ -375,17 +371,17 @@ export default function Dashboard() {
       console.log('Job saved event received, updating dashboard...');
       const customEvent = event as CustomEvent;
       const jobData = customEvent.detail?.job;
-      
+
       // Update saved jobs stats
       const jobsStats = savedJobsService.getJobsStats();
       setSavedJobsStats(jobsStats);
-      
+
       // Update recommended jobs to reflect saved state
       if (jobData) {
-        setRecommendedJobs(prev => 
+        setRecommendedJobs(prev =>
           prev.map(job => job.id === jobData.id ? { ...job, saved: true } : job)
         );
-        
+
         // Add to recent activity
         const newActivity: RecentActivity = {
           id: `job-saved-${jobData.id}-${Date.now()}`,
@@ -394,7 +390,7 @@ export default function Dashboard() {
           description: `${jobData.title} at ${jobData.company} - ${jobData.matchScore || 0}% match`,
           timestamp: new Date().toISOString()
         };
-        
+
         setActivities(prev => [newActivity, ...prev].slice(0, 5));
       }
     };
@@ -403,19 +399,19 @@ export default function Dashboard() {
       console.log('Job unsaved event received, updating dashboard...');
       const customEvent = event as CustomEvent;
       const jobId = customEvent.detail?.jobId;
-      
+
       // Update saved jobs stats
       const jobsStats = savedJobsService.getJobsStats();
       setSavedJobsStats(jobsStats);
-      
+
       // Update recommended jobs to reflect unsaved state
       if (jobId) {
-        setRecommendedJobs(prev => 
+        setRecommendedJobs(prev =>
           prev.map(job => job.id === jobId ? { ...job, saved: false } : job)
         );
-        
+
         // Remove from activities if present
-        setActivities(prev => prev.filter(activity => 
+        setActivities(prev => prev.filter(activity =>
           !activity.id.includes(`job-saved-${jobId}`)
         ));
       }
@@ -463,11 +459,8 @@ export default function Dashboard() {
           month: 'long'
         });
 
-        // Get saved profile or create display name from email
-        const profile = userProfileService.getProfile();
-        const displayName = profile.name ||
-          (authUser.email.split('@')[0].charAt(0).toUpperCase() +
-            authUser.email.split('@')[0].slice(1));
+        // Use name from backend user object, fallback to email prefix
+        const displayName = (authUser as UserType).name || authUser.email.split('@')[0];
 
         // Load preferences from backend first, fallback to localStorage
         let preferences = userPreferencesService.getPreferences();
@@ -502,14 +495,11 @@ export default function Dashboard() {
         setDashboardUser({
           ...authUser,
           name: displayName,
-          profilePicture: profile.avatar,
+          profilePicture: undefined, // TODO: Add avatar support to backend
           memberSince,
-          profileCompleteness, // Use real profile completeness
+          profileCompleteness,
           title: preferences.jobTitle || 'Job Seeker',
           location: preferences.location || 'Getting Started',
-          bio: preferences.skills ?
-            `Looking for ${preferences.jobTitle || 'new opportunities'} • ${preferences.experienceLevel} level` :
-            'Welcome to RezGenie! Complete your profile to get better job matches.',
           skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
           experience: [],
           education: []
@@ -615,7 +605,7 @@ export default function Dashboard() {
                 onClick={() => router.push('/profile')}
               >
                 {dashboardUser?.profilePicture ? (
-                  <AvatarImage 
+                  <AvatarImage
                     src={dashboardUser.profilePicture}
                     alt="User avatar"
                     className="object-cover"
@@ -954,8 +944,8 @@ export default function Dashboard() {
                           <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
                             Browse thousands of jobs tailored to your skills and experience
                           </p>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             className="mt-4 mx-auto"
                             onClick={() => router.push('/opportunities')}
                           >
@@ -966,8 +956,8 @@ export default function Dashboard() {
                       ) : (
                         <div className="space-y-4 flex-1 overflow-y-auto">
                           {recommendedJobs.map((job) => (
-                            <div 
-                              key={job.id} 
+                            <div
+                              key={job.id}
                               className="border border-purple-200 rounded-lg p-4 bg-purple-50/50 hover:bg-purple-100 hover:shadow-md hover:border-purple-300 dark:bg-transparent dark:border-border dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all cursor-pointer"
                               onClick={() => {
                                 // Navigate to job details or open job URL
@@ -997,31 +987,30 @@ export default function Dashboard() {
                               <div className="flex items-center justify-between pt-2">
                                 <span className="text-xs text-muted-foreground">{new Date(job.posted_at).toLocaleDateString()}</span>
                                 <div className="flex items-center gap-2">
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    className={`h-6 px-2 text-xs transition-all duration-200 ${
-                                      job.saved 
-                                        ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50' 
-                                        : 'hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:text-purple-300'
-                                    }`}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className={`h-6 px-2 text-xs transition-all duration-200 ${job.saved
+                                      ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50'
+                                      : 'hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:text-purple-300'
+                                      }`}
                                     onClick={async (e) => {
                                       e.stopPropagation();
                                       console.log('Dashboard: Bookmark clicked for job:', job.id, 'Current saved state:', job.saved);
                                       const wasSaved = job.saved;
                                       const jobIdStr = String(job.id);
-                                      
+
                                       // OPTIMISTIC UPDATE: Update UI immediately
-                                      setRecommendedJobs(prev => 
+                                      setRecommendedJobs(prev =>
                                         prev.map(j => j.id === job.id ? { ...j, saved: !j.saved } : j)
                                       );
-                                      
+
                                       try {
                                         if (wasSaved) {
                                           // Remove from saved jobs
                                           console.log('Dashboard: Removing job from saved:', jobIdStr);
                                           await savedJobsService.removeSavedJob(jobIdStr);
-                                          
+
                                           // Emit event for activity update
                                           window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId: jobIdStr } }));
                                         } else {
@@ -1042,22 +1031,22 @@ export default function Dashboard() {
                                               skills: job.skills || []
                                             });
                                             console.log('Dashboard: Job saved successfully');
-                                            
+
                                             // Emit event for activity update
-                                            window.dispatchEvent(new CustomEvent('jobSaved', { 
-                                              detail: { 
+                                            window.dispatchEvent(new CustomEvent('jobSaved', {
+                                              detail: {
                                                 job: {
                                                   id: jobIdStr,
                                                   title: job.title,
                                                   company: job.company,
                                                   matchScore: job.matchScore
-                                                } 
-                                              } 
+                                                }
+                                              }
                                             }));
                                           } else {
                                             // ROLLBACK on failure
                                             console.error('Failed to save job:', response.message);
-                                            setRecommendedJobs(prev => 
+                                            setRecommendedJobs(prev =>
                                               prev.map(j => j.id === job.id ? { ...j, saved: wasSaved } : j)
                                             );
                                             return;
@@ -1069,7 +1058,7 @@ export default function Dashboard() {
                                       } catch (error) {
                                         // ROLLBACK on error
                                         console.error('Error toggling save:', error);
-                                        setRecommendedJobs(prev => 
+                                        setRecommendedJobs(prev =>
                                           prev.map(j => j.id === job.id ? { ...j, saved: wasSaved } : j)
                                         );
                                       }
@@ -1081,8 +1070,8 @@ export default function Dashboard() {
                                       <Bookmark className="h-3 w-3 transition-all duration-200 scale-100" />
                                     )}
                                   </Button>
-                                  <Button 
-                                    size="sm" 
+                                  <Button
+                                    size="sm"
                                     className="h-6 px-2 text-xs bg-purple-600 hover:bg-purple-700 text-white"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1164,11 +1153,11 @@ export default function Dashboard() {
               const fetchData = async () => {
                 const preferences = userPreferencesService.getPreferences();
                 const profileCompleteness = userPreferencesService.getProfileCompleteness();
-                
+
                 // Refresh resume stats
                 const resumesStats = localResumeService.getResumeStats();
                 setResumeStats(resumesStats);
-                
+
                 // Refresh saved jobs stats
                 const jobsStats = savedJobsService.getJobsStats();
                 setSavedJobsStats(jobsStats);
@@ -1179,13 +1168,10 @@ export default function Dashboard() {
                     profileCompleteness,
                     title: preferences.jobTitle || 'Job Seeker',
                     location: preferences.location || 'Getting Started',
-                    bio: preferences.skills ?
-                      `Looking for ${preferences.jobTitle || 'new opportunities'} • ${preferences.experienceLevel} level` :
-                      'Welcome to RezGenie! Complete your profile to get better job matches.',
                     skills: preferences.skills ? preferences.skills.split(',').map(s => s.trim()) : [],
                   });
                 }
-                
+
                 // Refresh activities to show new resume
                 await fetchRealDashboardData();
               };

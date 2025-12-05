@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 interface User {
   id: string;
   email: string;
+  name?: string;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;
@@ -18,7 +19,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
 }
@@ -41,6 +42,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('refresh_token');
     document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=strict';
+    
+    // Clear user-specific data (preferences and profile)
+    // This prevents old data from persisting when logging in with a different account
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('user_preferences_') || key.startsWith('user_profile_'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log('Cleared user preferences and profile data');
   }, []);
 
   // Define refreshToken first
@@ -246,16 +259,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string) => {
+  const register = async (email: string, password: string, name?: string) => {
     try {
       console.log('Register: Starting registration process...');
       console.log('Register: Email:', email);
+      console.log('Register: Name:', name);
       
       const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/register`;
       console.log('Register: API URL:', apiUrl);
       
-      const requestBody = { email, password };
-      console.log('Register: Request body:', { email, password: '***' });
+      const requestBody = { email, password, name };
+      console.log('Register: Request body:', { email, password: '***', name });
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -361,9 +375,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Register: Setting user data:', data.user);
       setUser(data.user);
       
-      // Show success message
+      // Show success message with user's name
+      const displayName = data.user.name 
+        ? data.user.name.split(' ')[0] 
+        : data.user.email.split('@')[0];
       toast.success("Account created successfully!", {
-        description: `Welcome to RezGenie, ${data.user.email}!`
+        description: `Welcome to RezGenie, ${displayName}!`
       });
       
       // Redirect to dashboard

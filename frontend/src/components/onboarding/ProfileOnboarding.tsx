@@ -29,6 +29,7 @@ import { resumeService } from '@/lib/api/resumes';
 import { userPreferencesService } from '@/lib/api/userPreferences';
 import { userProfileService } from '@/lib/api/userProfile';
 import { useAuth } from '@/contexts/AuthContext';
+import { capitalizeName } from '@/lib/utils';
 
 interface OnboardingStep {
   id: number;
@@ -87,10 +88,9 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
   // Form data - pre-populate with existing preferences
   const [formData, setFormData] = useState({
     // Profile info
-    name: user?.email?.split('@')[0] || '',
+    name: user?.name || user?.email?.split('@')[0] || '',
     location: existingPrefs.location || '',
     phone: '',
-    bio: '',
 
     // Job preferences - load from existing
     jobTitle: existingPrefs.jobTitle || '',
@@ -205,7 +205,6 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
         name: formData.name,
         phone: formData.phone,
         location: formData.location,
-        bio: formData.bio,
       });
 
       // Save job preferences and wait for backend sync
@@ -489,17 +488,6 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                           value={user?.email || ''}
                           disabled
                           className="bg-muted"
-                        />
-                      </div>
-
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="bio">Professional Summary</Label>
-                        <Textarea
-                          id="bio"
-                          value={formData.bio}
-                          onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                          placeholder="A brief summary of your professional background and career goals..."
-                          rows={3}
                         />
                       </div>
                     </div>

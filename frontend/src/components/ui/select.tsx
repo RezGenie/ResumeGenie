@@ -23,19 +23,19 @@ interface SelectProps {
 const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const [open, setOpen] = React.useState(false)
   const [selectedLabel, setSelectedLabel] = React.useState<string>("")
-  
+
   // Update selectedLabel when value changes or on mount
   React.useEffect(() => {
     if (!value) {
       setSelectedLabel("")
       return
     }
-    
+
     // Extract label from SelectItem children that match the current value
     const findLabel = (node: React.ReactNode): string | null => {
       if (React.isValidElement(node)) {
         const props = node.props as { value?: string; children?: React.ReactNode }
-        
+
         // Check if this is a SelectItem with matching value
         if (props.value === value) {
           const getTextContent = (child: React.ReactNode): string => {
@@ -66,13 +66,13 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
       }
       return null
     }
-    
+
     const label = findLabel(children)
     if (label) {
       setSelectedLabel(label)
     }
   }, [value, children])
-  
+
   return (
     <SelectContext.Provider value={{ value, onValueChange, open, setOpen, selectedLabel, setSelectedLabel }}>
       <div className="relative">{children}</div>
@@ -85,14 +85,14 @@ const SelectTrigger = React.forwardRef<
   React.ButtonHTMLAttributes<HTMLButtonElement>
 >(({ className, children, ...props }, ref) => {
   const context = React.useContext(SelectContext)
-  
+
   return (
     <button
       ref={ref}
       type="button"
       className={cn(
         "flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        "bg-white dark:bg-[#2d1b3d] border-gray-300 dark:border-gray-600 text-foreground",
+        "bg-white dark:bg-input border-gray-300 dark:border-gray-600 text-foreground",
         className
       )}
       onClick={() => context?.setOpen(!context.open)}
@@ -111,7 +111,7 @@ const SelectValue = React.forwardRef<
 >(({ className, placeholder, ...props }, ref) => {
   const context = React.useContext(SelectContext)
   const displayText = context?.selectedLabel || placeholder
-  
+
   return (
     <span
       ref={ref}
@@ -133,9 +133,9 @@ const SelectContent = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
   const context = React.useContext(SelectContext)
-  
+
   if (!context?.open) return null
-  
+
   return (
     <div
       ref={ref}
@@ -162,7 +162,7 @@ const SelectItem = React.forwardRef<
   SelectItemProps
 >(({ className, children, value, ...props }, ref) => {
   const context = React.useContext(SelectContext)
-  
+
   // Extract text content from children for label
   const getTextContent = (node: React.ReactNode): string => {
     if (typeof node === 'string') return node
@@ -178,7 +178,7 @@ const SelectItem = React.forwardRef<
     }
     return ''
   }
-  
+
   return (
     <div
       ref={ref}

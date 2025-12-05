@@ -452,10 +452,13 @@ async def delete_resume(
     This action cannot be undone.
     """
     try:
+        logger.info(f"Delete resume request: {resume_id} by user: {current_user.email}")
+        
         # Get resume
         resume = await db.get(Resume, resume_id)
         
         if not resume:
+            logger.warning(f"Resume not found: {resume_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Resume not found"
@@ -463,32 +466,54 @@ async def delete_resume(
         
         # Check ownership
         if resume.user_id != current_user.id:
+            logger.warning(f"Access denied for resume {resume_id} by user {current_user.email}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
             )
         
-        # Delete file from storage
+        # Delete file from storage (non-blocking - continue even if file not found)
+        file_deleted = False
         try:
+            logger.info(f"Attempting to delete file from storage: {resume.file_path}")
             await file_service.delete_file_from_storage(resume.file_path)
+            file_deleted = True
+            logger.info(f"File deleted from storage: {resume.file_path}")
+        except FileNotFoundError as e:
+            logger.warning(f"File not found in storage (already deleted?): {resume.file_path} - {e}")
+            file_deleted = True  # Consider it success if file doesn't exist
         except Exception as e:
-            logger.warning(f"Failed to delete file from storage: {e}")
+            logger.error(f"Failed to delete file from storage: {resume.file_path} - {e}", exc_info=True)
+            # Continue with database deletion even if file deletion fails
         
-        # Delete resume record
-        await db.delete(resume)
-        await db.commit()
+        # Delete resume record from database
+        try:
+            await db.delete(resume)
+            await db.commit()
+            logger.info(f"Resume record deleted from database: {resume_id}")
+        except Exception as e:
+            logger.error(f"Failed to delete resume from database: {e}", exc_info=True)
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete resume record: {str(e)}"
+            )
         
-        logger.info(f"Resume deleted: {resume_id} by user: {current_user.email}")
+        logger.info(f"Resume deleted successfully: {resume_id} by user: {current_user.email}")
         
-        return {"message": "Resume deleted successfully"}
+        return {
+            "message": "Resume deleted successfully",
+            "file_deleted": file_deleted
+        }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Delete resume error: {e}")
+        logger.error(f"Delete resume error for {resume_id}: {e}", exc_info=True)
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete resume"
+            detail=f"Failed to delete resume: {str(e)}"
         )
 
 

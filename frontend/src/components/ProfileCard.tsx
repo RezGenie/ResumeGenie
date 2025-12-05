@@ -34,7 +34,9 @@ export function ProfileCard() {
 
   if (!user) return null;
 
-  const displayName = profile?.name || user.email.split('@')[0] || 'User';
+  const displayName = user.name 
+    ? user.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+    : user.email.split('@')[0] || 'User';
   const initials = displayName.charAt(0).toUpperCase();
 
   return (

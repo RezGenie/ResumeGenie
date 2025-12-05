@@ -8,7 +8,6 @@ export interface UserProfile {
   name: string;
   phone?: string;
   location?: string;
-  bio?: string;
   profilePicture?: string;
   avatar?: string; // Currently: base64 string or preset avatar path | Future: Cloud storage URL
 }
@@ -29,7 +28,7 @@ class UserProfileService {
         console.warn('Failed to decode auth token:', error);
       }
     }
-    
+
     return `${this.STORAGE_KEY_PREFIX}guest`;
   }
 

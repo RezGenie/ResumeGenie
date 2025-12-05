@@ -15,14 +15,26 @@ export class JobService {
     limit: number = 20
   ): Promise<APIResponse<JobDisplay[]>> {
     try {
+      // IMPORTANT: Load preferences from backend first to ensure we have latest data
+      try {
+        await userPreferencesService.loadPreferencesFromBackend();
+      } catch (error) {
+        console.warn('Could not load preferences from backend:', error);
+      }
+
       // Use personalized recommendations if user has completed profile and no search/filters
       const hasProfile = userPreferencesService.hasCompletedProfile();
       const hasFilters = filters.search || (filters.location && filters.location !== 'all');
-      
+
+      console.log('🔍 Job Service - hasProfile:', hasProfile, 'hasFilters:', hasFilters);
+
       if (hasProfile && !hasFilters) {
+        console.log('✅ Using personalized recommendations endpoint');
         return await this.getRecommendedJobs(limit);
       }
-      
+
+      console.log('⚠️ Using discovery feed (not personalized)');
+
       // Otherwise use discovery feed with filters
       const params = new URLSearchParams({
         skip: skip.toString(),
@@ -39,7 +51,7 @@ export class JobService {
       }
 
       let endpoint = '/jobs/discovery';
-      
+
       // Use search endpoint if search term provided
       if (filters.search && filters.search.trim()) {
         endpoint = '/jobs/discovery/search';
@@ -47,35 +59,37 @@ export class JobService {
       }
 
       const jobs = await apiClient.get<Job[]>(`${endpoint}?${params}`);
-      
+
       // Transform to JobDisplay format for UI
       let jobsDisplay: JobDisplay[] = jobs.map(this.transformJobToDisplay);
-      
+
       // Apply smart filtering based on user preferences
       if (hasProfile) {
         const originalCount = jobsDisplay.length;
-        
+
         // Filter jobs based on user preferences
         jobsDisplay = userPreferencesService.filterJobs(jobsDisplay);
-        
+
+        console.log(`📊 Filtered ${originalCount} jobs to ${jobsDisplay.length} relevant jobs`);
+
         // Sort by preference match score (highest first)
         jobsDisplay = jobsDisplay.sort((a, b) => {
           const scoreA = userPreferencesService.scoreJob(a);
           const scoreB = userPreferencesService.scoreJob(b);
           return scoreB - scoreA;
         });
-        
+
         // Update match scores based on preferences
         jobsDisplay = jobsDisplay.map(job => ({
           ...job,
           matchScore: Math.round(userPreferencesService.scoreJob(job))
         }));
       }
-      
+
       return {
         success: true,
         data: jobsDisplay,
-        message: hasProfile 
+        message: hasProfile
           ? `Found ${jobsDisplay.length} personalized job matches`
           : `Found ${jobsDisplay.length} jobs`
       };
@@ -133,9 +147,9 @@ export class JobService {
    */
   private static formatSalary(min?: number, max?: number, currency = 'USD'): string {
     if (!min && !max) return 'Salary not specified';
-    
+
     const symbol = currency === 'USD' ? '$' : currency;
-    
+
     if (min && max) {
       return `${symbol}${min.toLocaleString()} - ${symbol}${max.toLocaleString()}`;
     } else if (min) {
@@ -143,7 +157,7 @@ export class JobService {
     } else if (max) {
       return `Up to ${symbol}${max.toLocaleString()}`;
     }
-    
+
     return 'Salary not specified';
   }
 
@@ -164,7 +178,7 @@ export class JobService {
           };
         }
       }
-      
+
       return {
         success: false,
         data: {} as JobDisplay,
@@ -187,16 +201,16 @@ export class JobService {
       const params = new URLSearchParams({
         limit: limit.toString(),
       });
-      
+
       // Use the personalized recommendations endpoint
       const response = await apiClient.get<any>(`/jobs/recommendations?${params}`);
-      
+
       // Check if response is an array
       if (!Array.isArray(response)) {
         console.warn('Recommendations response is not an array, falling back to discovery feed');
         throw new Error('Invalid recommendations response format');
       }
-      
+
       // Transform recommendations to JobDisplay format
       const jobsDisplay: JobDisplay[] = response.map(rec => ({
         id: rec.job_id.toString(),
@@ -221,7 +235,7 @@ export class JobService {
         saved: false,
         matchScore: Math.round(rec.score * 100), // Convert 0-1 score to percentage
       }));
-      
+
       return {
         success: true,
         data: jobsDisplay,
@@ -237,7 +251,7 @@ export class JobService {
         });
         const jobs = await apiClient.get<Job[]>(`/jobs/discovery?${params}`);
         const jobsDisplay = jobs.map(this.transformJobToDisplay);
-        
+
         return {
           success: true,
           data: jobsDisplay,
@@ -259,9 +273,9 @@ export class JobService {
    */
   async swipeJob(jobId: string, action: 'like' | 'pass', device?: string): Promise<APIResponse<{ saved?: boolean }>> {
     try {
-      const response = await apiClient.post<{ 
-        message: string; 
-        job_id: number; 
+      const response = await apiClient.post<{
+        message: string;
+        job_id: number;
         action: string;
         saved?: boolean;
         saved_job_id?: number;
@@ -275,7 +289,7 @@ export class JobService {
 
       return {
         success: true,
-        data: { 
+        data: {
           saved: response.saved || false
         },
         message: response.message
@@ -345,7 +359,7 @@ export class JobService {
           message: 'Redirected to job application'
         };
       }
-      
+
       return {
         success: false,
         data: { applied: false },

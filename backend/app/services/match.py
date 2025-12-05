@@ -522,7 +522,7 @@ class MatchingService:
         preferences = UserPreferences(
             user_id=user_id,
             skills=[],
-            target_titles=["Software Engineer", "Developer"],
+            target_titles=[],
             location_pref="",
             remote_ok=True,
             salary_min=None,

@@ -40,8 +40,14 @@ export default function AuthPage() {
         console.log('AuthPage: Calling login function...');
         await login(email, password);
       } else {
-        console.log('AuthPage: Calling register function...');
-        await register(email, password);
+        // Capitalize name before sending to backend
+        const capitalizedName = name
+          .trim()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        console.log('AuthPage: Calling register function with name:', capitalizedName);
+        await register(email, password, capitalizedName);
       }
       console.log('AuthPage: Auth function completed successfully');
     } catch (error) {

@@ -71,6 +71,15 @@ async def _async_process_resume_embeddings(task, resume_id: str) -> Dict[str, An
             
             await db.commit()
             
+            # Auto-create user preferences from resume for job matching
+            task.update_state(state="PROCESSING", meta={"stage": "creating_preferences"})
+            try:
+                await _create_user_preferences_from_resume(resume, db)
+                logger.info(f"Created user preferences from resume {resume_id}")
+            except Exception as pref_error:
+                # Don't fail the whole task if preference creation fails
+                logger.warning(f"Failed to create preferences from resume {resume_id}: {pref_error}")
+            
             result = {
                 "resume_id": resume_id,
                 "status": "completed",
@@ -95,6 +104,109 @@ async def _async_process_resume_embeddings(task, resume_id: str) -> Dict[str, An
             
             logger.error(f"Resume embeddings processing failed for {resume_id}: {e}")
             raise
+
+
+async def _create_user_preferences_from_resume(resume: Resume, db: AsyncSession) -> None:
+    """
+    Auto-create or update user preferences from resume content.
+    Extracts skills, job titles, and other preferences using AI.
+    """
+    from sqlalchemy import select
+    from app.models.user_preferences import UserPreferences
+    import json
+    import re
+    
+    # Check if user already has preferences
+    result = await db.execute(
+        select(UserPreferences).where(UserPreferences.user_id == resume.user_id)
+    )
+    existing_prefs = result.scalar_one_or_none()
+    
+    # Use AI to extract skills and job titles from resume
+    extraction_prompt = f"""Analyze this resume and extract:
+1. Technical skills and tools (list up to 15 most important)
+2. Job titles/roles the person has held or is qualified for (list up to 5)
+3. Preferred location (if mentioned, otherwise return null)
+
+Resume text:
+{resume.extracted_text[:3000]}
+
+Return ONLY a JSON object with this exact format:
+{{
+    "skills": ["skill1", "skill2", ...],
+    "target_titles": ["title1", "title2", ...],
+    "location": "location or null"
+}}"""
+    
+    try:
+        # Call OpenAI to extract preferences
+        response = await openai_service.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a resume analyzer. Return only valid JSON."},
+                {"role": "user", "content": extraction_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=500
+        )
+        
+        extracted_text = response.choices[0].message.content.strip()
+        
+        # Remove markdown code blocks if present
+        extracted_text = re.sub(r'```json\s*|\s*```', '', extracted_text)
+        
+        # Parse JSON response
+        extracted_data = json.loads(extracted_text)
+        
+        skills = extracted_data.get("skills", [])[:15]  # Limit to 15 skills
+        target_titles = extracted_data.get("target_titles", [])[:5]  # Limit to 5 titles
+        location = extracted_data.get("location")
+        
+        if existing_prefs:
+            # Update existing preferences (merge skills, don't overwrite)
+            existing_skills = set(existing_prefs.skills or [])
+            new_skills = list(existing_skills.union(set(skills)))[:20]  # Max 20 skills
+            
+            existing_prefs.skills = new_skills
+            
+            # Only update titles if none exist
+            if not existing_prefs.target_titles:
+                existing_prefs.target_titles = target_titles
+                
+            # Update location only if not set
+            if not existing_prefs.location_pref and location and location.lower() != "null":
+                existing_prefs.location_pref = location
+                
+            logger.info(f"Updated preferences for user {resume.user_id}")
+        else:
+            # Create new preferences
+            new_prefs = UserPreferences(
+                user_id=resume.user_id,
+                skills=skills,
+                target_titles=target_titles,
+                location_pref=location if location and location.lower() != "null" else None,
+                remote_ok=True  # Default to remote-friendly
+            )
+            db.add(new_prefs)
+            logger.info(f"Created new preferences for user {resume.user_id}")
+        
+        await db.commit()
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse AI response for preference extraction: {e}")
+        # Fallback: create basic preferences with no extracted data
+        if not existing_prefs:
+            new_prefs = UserPreferences(
+                user_id=resume.user_id,
+                skills=[],
+                target_titles=[],
+                remote_ok=True
+            )
+            db.add(new_prefs)
+            await db.commit()
+    except Exception as e:
+        logger.error(f"Error creating user preferences from resume: {e}")
+        raise
 
 
 @celery_app.task(bind=True, name="resume_processing.reprocess_resume")

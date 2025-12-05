@@ -43,6 +43,7 @@ export interface JobStats {
 export interface User {
   id: string;
   email: string;
+  name?: string;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;
@@ -59,7 +60,6 @@ export interface DashboardUser extends User {
   company?: string;
   location?: string;
   phone?: string;
-  bio?: string;
   skills?: string[];
   experience?: unknown[];
   education?: unknown[];

@@ -98,6 +98,21 @@ export default function JobDiscoveryPage() {
   // Filter UI state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  // Load user preferences from backend on mount (one-time)
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const { userPreferencesService } = await import('@/lib/api/userPreferences');
+        await userPreferencesService.loadPreferencesFromBackend();
+        console.log('✅ Loaded user preferences from backend');
+      } catch (error) {
+        console.warn('Could not load preferences from backend:', error);
+      }
+    };
+
+    loadPreferences();
+  }, []); // Run once on mount
+
   // Fetch jobs on component mount and when filters change
   useEffect(() => {
     const fetchJobs = async () => {
@@ -243,8 +258,8 @@ export default function JobDiscoveryPage() {
       const matchesIndustry = industryFilter === "all";
 
       return matchesSearch && matchesLocation && matchesGeoLocation &&
-             matchesExperience && matchesEmploymentType && matchesDatePosted &&
-             matchesMinScore && matchesCompanySize && matchesIndustry;
+        matchesExperience && matchesEmploymentType && matchesDatePosted &&
+        matchesMinScore && matchesCompanySize && matchesIndustry;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -270,8 +285,8 @@ export default function JobDiscoveryPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, locationFilter, salaryFilter, geoLocationFilter, experienceFilter,
-      employmentTypeFilter, datePostedFilter, minMatchScore, companySizeFilter,
-      industryFilter, sortBy]);
+    employmentTypeFilter, datePostedFilter, minMatchScore, companySizeFilter,
+    industryFilter, sortBy]);
 
   // Handle job save/unsave with optimistic updates and user feedback
   const handleToggleSaveJob = async (jobId: string) => {
@@ -302,13 +317,13 @@ export default function JobDiscoveryPage() {
         if (wasCurrentlySaved) {
           // Remove from saved jobs (both locally and backend)
           await savedJobsService.removeSavedJob(jobId);
-          
+
           // Emit event for dashboard update
           window.dispatchEvent(new CustomEvent('jobUnsaved', { detail: { jobId } }));
         } else {
           // Save the job via backend swipe endpoint
           const response = await jobService.swipeJob(jobId, 'like');
-          
+
           if (response.success && response.data.saved) {
             // Also save locally for immediate access
             savedJobsService.saveJob({
@@ -321,17 +336,17 @@ export default function JobDiscoveryPage() {
               skills: job.skills || [],
               jobUrl: job.redirect_url
             });
-            
+
             // Emit event for dashboard update
-            window.dispatchEvent(new CustomEvent('jobSaved', { 
-              detail: { 
+            window.dispatchEvent(new CustomEvent('jobSaved', {
+              detail: {
                 job: {
                   id: job.id,
                   title: job.title,
                   company: job.company,
                   matchScore: job.matchScore
-                } 
-              } 
+                }
+              }
             }));
           } else {
             // ROLLBACK on failure
@@ -571,108 +586,108 @@ export default function JobDiscoveryPage() {
               {(geoLocationFilter || experienceFilter !== "all" || employmentTypeFilter !== "all" ||
                 datePostedFilter !== "all" || minMatchScore > 0 || companySizeFilter !== "all" ||
                 industryFilter !== "all") && (
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className="text-sm text-muted-foreground">Active Filters:</span>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-sm text-muted-foreground">Active Filters:</span>
 
-                  {geoLocationFilter && (
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      <MapPin className="h-3 w-3" />
-                      {geoLocationFilter}
-                      <button
-                        onClick={() => setGeoLocationFilter("")}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
+                    {geoLocationFilter && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        <MapPin className="h-3 w-3" />
+                        {geoLocationFilter}
+                        <button
+                          onClick={() => setGeoLocationFilter("")}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
 
-                  {experienceFilter !== "all" && (
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      {experienceFilter === "entry" ? "Entry Level" :
-                        experienceFilter === "mid" ? "Mid Level" :
-                          experienceFilter === "senior" ? "Senior" : "Lead/Principal"}
-                      <button
-                        onClick={() => setExperienceFilter("all")}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
+                    {experienceFilter !== "all" && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        {experienceFilter === "entry" ? "Entry Level" :
+                          experienceFilter === "mid" ? "Mid Level" :
+                            experienceFilter === "senior" ? "Senior" : "Lead/Principal"}
+                        <button
+                          onClick={() => setExperienceFilter("all")}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
 
-                  {employmentTypeFilter !== "all" && (
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      {employmentTypeFilter === "full-time" ? "Full-time" :
-                        employmentTypeFilter === "part-time" ? "Part-time" :
-                          employmentTypeFilter === "contract" ? "Contract" :
-                            employmentTypeFilter === "internship" ? "Internship" : "Temporary"}
-                      <button
-                        onClick={() => setEmploymentTypeFilter("all")}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
+                    {employmentTypeFilter !== "all" && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        {employmentTypeFilter === "full-time" ? "Full-time" :
+                          employmentTypeFilter === "part-time" ? "Part-time" :
+                            employmentTypeFilter === "contract" ? "Contract" :
+                              employmentTypeFilter === "internship" ? "Internship" : "Temporary"}
+                        <button
+                          onClick={() => setEmploymentTypeFilter("all")}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
 
-                  {datePostedFilter !== "all" && (
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      <Clock className="h-3 w-3" />
-                      {datePostedFilter === "24h" ? "Last 24h" :
-                        datePostedFilter === "week" ? "Last Week" : "Last Month"}
-                      <button
-                        onClick={() => setDatePostedFilter("all")}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
+                    {datePostedFilter !== "all" && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        <Clock className="h-3 w-3" />
+                        {datePostedFilter === "24h" ? "Last 24h" :
+                          datePostedFilter === "week" ? "Last Week" : "Last Month"}
+                        <button
+                          onClick={() => setDatePostedFilter("all")}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
 
-                  {minMatchScore > 0 && (
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      <Target className="h-3 w-3" />
-                      {minMatchScore}%+ Match
-                      <button
-                        onClick={() => setMinMatchScore(0)}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
+                    {minMatchScore > 0 && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        <Target className="h-3 w-3" />
+                        {minMatchScore}%+ Match
+                        <button
+                          onClick={() => setMinMatchScore(0)}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
 
-                  {companySizeFilter !== "all" && (
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      <Building2 className="h-3 w-3" />
-                      {companySizeFilter === "startup" ? "Startup" :
-                        companySizeFilter === "small" ? "Small" :
-                          companySizeFilter === "medium" ? "Medium" : "Large"}
-                      <button
-                        onClick={() => setCompanySizeFilter("all")}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
+                    {companySizeFilter !== "all" && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        <Building2 className="h-3 w-3" />
+                        {companySizeFilter === "startup" ? "Startup" :
+                          companySizeFilter === "small" ? "Small" :
+                            companySizeFilter === "medium" ? "Medium" : "Large"}
+                        <button
+                          onClick={() => setCompanySizeFilter("all")}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
 
-                  {industryFilter !== "all" && (
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      {industryFilter === "tech" ? "Technology" :
-                        industryFilter === "finance" ? "Finance" :
-                          industryFilter === "healthcare" ? "Healthcare" : "Other"}
-                      <button
-                        onClick={() => setIndustryFilter("all")}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                </div>
-              )}
+                    {industryFilter !== "all" && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        {industryFilter === "tech" ? "Technology" :
+                          industryFilter === "finance" ? "Finance" :
+                            industryFilter === "healthcare" ? "Healthcare" : "Other"}
+                        <button
+                          onClick={() => setIndustryFilter("all")}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )}
+                  </div>
+                )}
 
               {/* Advanced Filters - Collapsible */}
               <AnimatePresence>
@@ -989,191 +1004,191 @@ export default function JobDiscoveryPage() {
                 <>
                   {/* Desktop: Grid View */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {paginatedJobs.map((job) => (
-                        <motion.div
-                          key={`job-${job.id}-${job.saved ? 'saved' : 'unsaved'}`}
-                          variants={itemVariants}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                          whileHover={{ y: -4, scale: 1.01 }}
-                          className="group"
+                    {paginatedJobs.map((job) => (
+                      <motion.div
+                        key={`job-${job.id}-${job.saved ? 'saved' : 'unsaved'}`}
+                        variants={itemVariants}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        whileHover={{ y: -4, scale: 1.01 }}
+                        className="group"
+                      >
+                        <Card
+                          className="h-full hover:shadow-lg hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer"
+                          onClick={() => {
+                            setSelectedJob(job);
+                            setIsJobModalOpen(true);
+                          }}
                         >
-                          <Card 
-                            className="h-full hover:shadow-lg hover:border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30 dark:hover:border-purple-600 transition-all duration-200 cursor-pointer"
-                            onClick={() => {
-                              setSelectedJob(job);
-                              setIsJobModalOpen(true);
-                            }}
-                          >
-                            <CardHeader>
-                              <div className="flex items-start justify-between">
-                                <div className="space-y-1 flex-1">
-                                  <CardTitle className="text-lg group-hover:text-purple-600 transition-colors">
-                                    {job.title}
-                                  </CardTitle>
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Building2 className="h-4 w-4" />
-                                    {job.company}
-                                  </div>
-                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                    <div className="flex items-center gap-1">
-                                      <MapPin className="h-4 w-4" />
-                                      {job.location}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <DollarSign className="h-4 w-4" />
-                                      {job.salaryText || 'Salary not specified'}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-right space-y-2">
-                                  <div className="flex items-center gap-1">
-                                    <Target className="h-4 w-4 text-purple-600" />
-                                    <span className="font-bold text-purple-600">{job.matchScore || 0}%</span>
-                                  </div>
-                                  <Badge variant="outline" className="text-xs">
-                                    {job.type}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {job.snippet || 'No description available'}
-                              </p>
-
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <Star className="h-4 w-4 text-amber-500" />
-                                  <span className="text-sm font-medium">Required Skills</span>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {(job.skills || []).slice(0, 4).map((skill: string, skillIndex: number) => (
-                                    <Badge key={skillIndex} variant="secondary" className="text-xs">
-                                      {skill}
-                                    </Badge>
-                                  ))}
-                                  {(job.skills || []).length > 4 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{(job.skills || []).length - 4} more
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center justify-between pt-4 border-t">
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1 flex-1">
+                                <CardTitle className="text-lg group-hover:text-purple-600 transition-colors">
+                                  {job.title}
+                                </CardTitle>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Clock className="h-4 w-4" />
-                                  {new Date(job.posted_at).toLocaleDateString()}
+                                  <Building2 className="h-4 w-4" />
+                                  {job.company}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleSaveJob(job.id);
-                                    }}
-                                    className={job.saved
-                                      ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"
-                                      : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"}
-                                  >
-                                    {job.saved ? (
-                                      <>
-                                        <BookmarkCheck className="w-4 h-4 mr-1 fill-current" />
-                                        Saved
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Bookmark className="w-4 h-4 mr-1" />
-                                        Save
-                                      </>
-                                    )}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="whitespace-nowrap gap-1 bg-purple-600 hover:bg-purple-700"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      window.open(job.redirect_url, '_blank');
-                                    }}
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                    Apply Now
-                                  </Button>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="h-4 w-4" />
+                                    {job.location}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <DollarSign className="h-4 w-4" />
+                                    {job.salaryText || 'Salary not specified'}
+                                  </div>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      ))}
-                    </div>
+                              <div className="text-right space-y-2">
+                                <div className="flex items-center gap-1">
+                                  <Target className="h-4 w-4 text-purple-600" />
+                                  <span className="font-bold text-purple-600">{job.matchScore || 0}%</span>
+                                </div>
+                                <Badge variant="outline" className="text-xs">
+                                  {job.type}
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {job.snippet || 'No description available'}
+                            </p>
 
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 mt-8">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                          disabled={currentPage === 1}
-                          className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 disabled:opacity-50"
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-1" />
-                          Previous
-                        </Button>
-                        
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                            // Show first page, last page, current page, and pages around current
-                            if (
-                              page === 1 ||
-                              page === totalPages ||
-                              (page >= currentPage - 1 && page <= currentPage + 1)
-                            ) {
-                              return (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Star className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                <span className="text-sm font-medium">Required Skills</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {(job.skills || []).slice(0, 4).map((skill: string, skillIndex: number) => (
+                                  <Badge key={skillIndex} variant="secondary" className="text-xs">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                                {(job.skills || []).length > 4 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{(job.skills || []).length - 4} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-4 border-t">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-4 w-4" />
+                                {new Date(job.posted_at).toLocaleDateString()}
+                              </div>
+                              <div className="flex items-center gap-2">
                                 <Button
-                                  key={page}
-                                  variant={currentPage === page ? "default" : "outline"}
                                   size="sm"
-                                  onClick={() => setCurrentPage(page)}
-                                  className={currentPage === page 
-                                    ? "bg-purple-600 hover:bg-purple-700 min-w-[40px]" 
-                                    : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 min-w-[40px]"
-                                  }
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleSaveJob(job.id);
+                                  }}
+                                  className={job.saved
+                                    ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"
+                                    : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700"}
                                 >
-                                  {page}
+                                  {job.saved ? (
+                                    <>
+                                      <BookmarkCheck className="w-4 h-4 mr-1 fill-current" />
+                                      Saved
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Bookmark className="w-4 h-4 mr-1" />
+                                      Save
+                                    </>
+                                  )}
                                 </Button>
-                              );
-                            } else if (
-                              page === currentPage - 2 ||
-                              page === currentPage + 2
-                            ) {
-                              return <span key={page} className="px-2 text-muted-foreground">...</span>;
-                            }
-                            return null;
-                          })}
-                        </div>
+                                <Button
+                                  size="sm"
+                                  className="whitespace-nowrap gap-1 bg-purple-600 hover:bg-purple-700"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(job.redirect_url, '_blank');
+                                  }}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  Apply Now
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                          disabled={currentPage === totalPages}
-                          className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 disabled:opacity-50"
-                        >
-                          Next
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 disabled:opacity-50"
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Previous
+                      </Button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                          // Show first page, last page, current page, and pages around current
+                          if (
+                            page === 1 ||
+                            page === totalPages ||
+                            (page >= currentPage - 1 && page <= currentPage + 1)
+                          ) {
+                            return (
+                              <Button
+                                key={page}
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className={currentPage === page
+                                  ? "bg-purple-600 hover:bg-purple-700 min-w-[40px]"
+                                  : "border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 min-w-[40px]"
+                                }
+                              >
+                                {page}
+                              </Button>
+                            );
+                          } else if (
+                            page === currentPage - 2 ||
+                            page === currentPage + 2
+                          ) {
+                            return <span key={page} className="px-2 text-muted-foreground">...</span>;
+                          }
+                          return null;
+                        })}
                       </div>
-                    )}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-400 disabled:opacity-50"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
             </motion.div>
           </motion.div>
         </main>
-        
+
         {/* Footer - hidden on mobile for Tinder-style experience */}
         <div className="hidden lg:block">
           <Footer />

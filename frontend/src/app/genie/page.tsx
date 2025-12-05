@@ -365,11 +365,11 @@ export default function StudioPage() {
     };
   }, []);
 
-  // Helper function to get consistent highlight classes
+  // Helper function to get consistent professional highlight classes (ring glow + lift)
   const getHighlightClass = (isHighlighted: boolean, isFading: boolean = false) => {
     if (!isHighlighted) return "";
-    if (isFading) return "animate-pulse-border-fadeout border-2";
-    return "animate-pulse-border border-2 border-purple-500/50";
+    if (isFading) return "animate-ring-glow-fadeout";
+    return "animate-ring-glow";
   };
 
   // Derived state to check if daily limit is reached
@@ -2186,7 +2186,10 @@ export default function StudioPage() {
             </Card>
 
             {/* Skill Gaps Card */}
-            <Card className="relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 md:col-span-2 lg:col-span-1">
+            <Card className={`relative hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300 md:col-span-2 lg:col-span-1 ${showOutputHighlight && analysisResults
+              ? getHighlightClass(true, outputHighlightFading)
+              : ""
+              }`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Target className="h-5 w-5 text-purple-600" />

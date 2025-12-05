@@ -32,12 +32,14 @@ router = APIRouter()
 class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    name: str | None = Field(None, max_length=255, description="User's full name")
     
     class Config:
         json_schema_extra = {
             "example": {
                 "email": "user@example.com",
-                "password": "SecurePassword123!"
+                "password": "SecurePassword123!",
+                "name": "John Doe"
             }
         }
 
@@ -45,6 +47,7 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
+    name: str | None = None
     is_active: bool
     is_verified: bool
     created_at: str
@@ -106,8 +109,17 @@ async def register(
         
         # Create new user
         hashed_password = hash_password(user_data.password)
+        
+        # Capitalize name properly if provided
+        capitalized_name = None
+        if user_data.name:
+            capitalized_name = ' '.join(
+                word.capitalize() for word in user_data.name.strip().split()
+            )
+        
         new_user = User(
             email=user_data.email,
+            name=capitalized_name,
             hashed_password=hashed_password,
             is_active=True,
             is_verified=False  # Could implement email verification
@@ -124,6 +136,7 @@ async def register(
         user_response = UserResponse(
             id=str(new_user.id),
             email=new_user.email,
+            name=new_user.name,
             is_active=new_user.is_active,
             is_verified=new_user.is_verified,
             created_at=new_user.created_at.isoformat()
@@ -178,6 +191,7 @@ async def login(
         user_response = UserResponse(
             id=str(user.id),
             email=user.email,
+            name=user.name,
             is_active=user.is_active,
             is_verified=user.is_verified,
             created_at=user.created_at.isoformat()
@@ -287,6 +301,7 @@ async def get_current_user_info(
     return UserResponse(
         id=str(current_user.id),
         email=current_user.email,
+        name=current_user.name,
         is_active=current_user.is_active,
         is_verified=current_user.is_verified,
         created_at=current_user.created_at.isoformat()

@@ -53,7 +53,6 @@ const profileSchema = z.object({
   avatar: z.string().optional(),
   phone: z.string().optional(),
   location: z.string().optional(),
-  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
   jobTitle: z.string().optional(),
   experienceLevel: z.enum(['entry', 'mid', 'senior', 'lead']),
   salaryMin: z.string().optional(),
@@ -102,7 +101,6 @@ export default function ProfilePage() {
       avatar: '',
       phone: '',
       location: '',
-      bio: '',
       jobTitle: '',
       experienceLevel: 'mid',
       salaryMin: '',
@@ -120,8 +118,10 @@ export default function ProfilePage() {
       const preferences = userPreferencesService.getPreferences();
       const profile = userProfileService.getProfile();
 
-      // Use saved profile name, or fallback to email-derived name
-      const userName = profile.name || user.email.split('@')[0] || '';
+      // Use name from backend user object and capitalize it
+      const userName = user.name 
+        ? user.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+        : user.email.split('@')[0] || '';
       setDisplayName(userName);
       setSelectedAvatar(profile.avatar || '');
 
@@ -130,7 +130,6 @@ export default function ProfilePage() {
         avatar: profile.avatar || '',
         phone: profile.phone || '',
         location: profile.location || preferences.location || '',
-        bio: profile.bio || '',
         jobTitle: preferences.jobTitle || '',
         experienceLevel: preferences.experienceLevel || 'mid',
         salaryMin: preferences.salaryMin || '',
@@ -145,13 +144,18 @@ export default function ProfilePage() {
   }, [user, form]);
 
   const onSubmit = (data: ProfileFormData) => {
-    // Save personal information
+    // Save personal information with properly capitalized name
+    const capitalizedName = data.name
+      .trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+    
     userProfileService.saveProfile({
-      name: data.name,
+      name: capitalizedName,
       avatar: data.avatar || '',
       phone: data.phone || '',
       location: data.location || '',
-      bio: data.bio || '',
     });
 
     // Save job preferences
@@ -168,7 +172,7 @@ export default function ProfilePage() {
       location: data.location || '',
     });
 
-    setDisplayName(data.name);
+    setDisplayName(capitalizedName);
     setIsEditing(false);
 
     toast.success('Profile saved successfully!', {
@@ -324,27 +328,6 @@ export default function ProfilePage() {
                         />
                       ) : (
                         <p className="py-2 px-3 bg-muted rounded-md">{form.watch("location") || 'Not set'}</p>
-                      )}
-                    </div>
-
-                    <div className="md:col-span-2 space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
-                      {isEditing ? (
-                        <>
-                          <textarea
-                            id="bio"
-                            {...form.register("bio")}
-                            placeholder="Tell us about yourself..."
-                            className="w-full min-h-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-input text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600"
-                          />
-                          {form.formState.errors.bio && (
-                            <p className="text-sm text-red-500">{form.formState.errors.bio.message}</p>
-                          )}
-                        </>
-                      ) : (
-                        <p className="py-2 px-3 bg-muted rounded-md min-h-[100px]">
-                          {form.watch("bio") || 'No bio added yet'}
-                        </p>
                       )}
                     </div>
                   </div>

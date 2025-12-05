@@ -129,7 +129,7 @@ export function InterviewQuestionsCards({
                   {currentIndex + 1} / {questions.length}
                 </div>
               </div>
-              
+
               <CardHeader className="pb-2 pt-0">
                 <div className="text-sm text-muted-foreground leading-tight text-gray-700 dark:text-gray-300">
                   {currentQuestion.question}
@@ -182,9 +182,9 @@ export function InterviewQuestionsCards({
           size="icon"
           onClick={handlePrev}
           disabled={questions.length <= 1}
-          className="hover:bg-purple-100 dark:hover:bg-purple-900/30"
+          className="group/prev hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 transition-colors group-hover/prev:text-purple-600 dark:group-hover/prev:text-purple-400" />
         </Button>
 
         <div className="flex gap-1">
@@ -192,11 +192,10 @@ export function InterviewQuestionsCards({
             <div
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              className={`h-2 rounded-full transition-all cursor-pointer ${
-                idx === currentIndex
-                  ? "bg-purple-600 w-6"
-                  : "bg-purple-200 dark:bg-purple-800 w-2 hover:bg-purple-400"
-              }`}
+              className={`h-2 rounded-full transition-all cursor-pointer ${idx === currentIndex
+                ? "bg-purple-600 w-6"
+                : "bg-purple-200 dark:bg-purple-800 w-2 hover:bg-purple-400"
+                }`}
             />
           ))}
         </div>
@@ -206,9 +205,9 @@ export function InterviewQuestionsCards({
           size="icon"
           onClick={handleNext}
           disabled={questions.length <= 1}
-          className="hover:bg-purple-100 dark:hover:bg-purple-900/30"
+          className="group/next hover:border-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/30 hover:shadow-lg dark:hover:border-purple-600 transition-all duration-300"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 transition-colors group-hover/next:text-purple-600 dark:group-hover/next:text-purple-400" />
         </Button>
       </div>
     </div>

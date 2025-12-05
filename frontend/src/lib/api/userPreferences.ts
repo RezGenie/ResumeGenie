@@ -31,7 +31,7 @@ class UserPreferencesService {
         console.warn('Failed to decode auth token:', error);
       }
     }
-    
+
     // Fallback to guest session
     return `${this.STORAGE_KEY_PREFIX}guest`;
   }
@@ -67,7 +67,7 @@ class UserPreferencesService {
       if (!authToken) return;
 
       const { apiClient } = await import('./client');
-      
+
       // Map frontend field names to backend field names
       const backendPayload: any = {
         remote_ok: preferences.remotePreference,
@@ -84,13 +84,18 @@ class UserPreferencesService {
         backendPayload.target_titles = [preferences.jobTitle.trim()];
       }
 
+      // Add industries array
+      if (preferences.industries) {
+        backendPayload.industries = preferences.industries.split(',').map(s => s.trim()).filter(s => s);
+      }
+
       // Add salary_min (backend uses this field)
       if (preferences.salaryMin) {
         backendPayload.salary_min = parseInt(preferences.salaryMin);
       }
 
       console.log('Syncing preferences to backend:', backendPayload);
-      
+
       await apiClient.put('/jobs/me/preferences', backendPayload);
       console.log('✅ Preferences synced successfully to backend');
     } catch (error) {
@@ -112,16 +117,18 @@ class UserPreferencesService {
       console.log('📥 Loading preferences from backend:', backendPrefs);
 
       // Convert backend format to frontend format
-      // Backend returns: skills (array), target_titles (array), location_pref, remote_ok, salary_min
+      // Backend returns: skills (array), target_titles (array), industries (array), location_pref, remote_ok, salary_min
       const preferences: UserPreferences = {
         jobTitle: Array.isArray(backendPrefs.target_titles) && backendPrefs.target_titles.length > 0
           ? backendPrefs.target_titles[0]
           : '',
-        experienceLevel: 'mid', // Not stored in backend, keep default
+        experienceLevel: 'entry', // Not stored in backend, use entry as default
         salaryMin: backendPrefs.salary_min ? backendPrefs.salary_min.toString() : '',
         salaryMax: '', // Not stored in backend yet
-        workType: 'hybrid', // Not stored in backend yet
-        industries: '', // Not stored in backend yet
+        workType: 'flexible', // Not stored in backend yet
+        industries: Array.isArray(backendPrefs.industries)
+          ? backendPrefs.industries.join(', ')
+          : '',
         skills: Array.isArray(backendPrefs.skills)
           ? backendPrefs.skills.join(', ')
           : '',
@@ -132,9 +139,11 @@ class UserPreferencesService {
 
       console.log('✅ Converted preferences:', preferences);
 
-      // Save to localStorage for offline access
-      const storageKey = this.getUserStorageKey();
-      localStorage.setItem(storageKey, JSON.stringify(preferences));
+      // Only save to localStorage if we have actual data from backend
+      if (backendPrefs && Object.keys(backendPrefs).length > 0) {
+        const storageKey = this.getUserStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify(preferences));
+      }
 
       return preferences;
     } catch (error) {
@@ -155,13 +164,13 @@ class UserPreferencesService {
       console.error('Failed to load user preferences:', error);
     }
 
-    // Return default preferences
+    // Return empty preferences - no defaults
     return {
       jobTitle: '',
-      experienceLevel: 'mid',
+      experienceLevel: 'entry',
       salaryMin: '',
       salaryMax: '',
-      workType: 'hybrid',
+      workType: 'flexible',
       industries: '',
       skills: '',
       remotePreference: true,
@@ -180,7 +189,7 @@ class UserPreferencesService {
   // Calculate profile completion percentage
   getProfileCompleteness(): number {
     const prefs = this.getPreferences();
-    
+
     // Check if user has at least one resume
     let hasResume = false;
     try {
@@ -190,14 +199,14 @@ class UserPreferencesService {
     } catch (error) {
       console.warn('Could not check resume status:', error);
     }
-    
+
+    // Core fields required for profile completion
+    // Industries is optional since it can't be auto-extracted from resumes
     const fields = [
       prefs.jobTitle,
       prefs.skills,
-      prefs.salaryMin || prefs.salaryMax,
-      prefs.industries,
       prefs.location,
-      hasResume, // Add resume as a required field
+      hasResume, // Resume is required
     ];
 
     const completed = fields.filter(field => field && (typeof field === 'boolean' ? field : field.trim() !== '')).length;

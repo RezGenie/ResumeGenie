@@ -19,6 +19,7 @@ class UserPreferences(Base):
     # Job search preferences
     skills = Column(JSONB, default=list)  # ["Python", "React", "AWS"]
     target_titles = Column(JSONB, default=list)  # ["Software Engineer", "Full Stack Developer"]
+    industries = Column(JSONB, default=list)  # ["Technology", "Healthcare", "Finance"]
     
     # Location preferences
     location_pref = Column(String(255))  # "Toronto, ON" or "Remote" 

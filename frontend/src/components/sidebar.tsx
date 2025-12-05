@@ -74,21 +74,29 @@ export function Sidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Update avatar and name when profile changes
+  // Update avatar and name when user changes
   useEffect(() => {
-    const profile = userProfileService.getProfile()
-    setUserAvatar(profile.avatar || '')
-    setUserName(profile.name || '')
-
-    const handleProfileUpdate = () => {
+    if (user) {
       const profile = userProfileService.getProfile()
       setUserAvatar(profile.avatar || '')
-      setUserName(profile.name || '')
+      // Use name from backend user object, not localStorage
+      setUserName(user.name || '')
+    }
+  }, [user?.id, user?.name])
+
+  // Listen for profile updates
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      if (user) {
+        const profile = userProfileService.getProfile()
+        setUserAvatar(profile.avatar || '')
+        setUserName(user.name || '')
+      }
     }
 
     window.addEventListener('userProfileUpdated', handleProfileUpdate)
     return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate)
-  }, [])
+  }, [user])
 
   const handleLogout = async () => {
     await logout()
@@ -127,9 +135,9 @@ export function Sidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleSidebar}
-                className="h-6 w-6 rounded-full border border-purple-200 dark:border-purple-800 bg-background hover:bg-purple-100 dark:hover:bg-purple-900/40 shadow-sm flex-shrink-0"
+                className="h-6 w-6 rounded-full border border-purple-200 dark:border-purple-800 bg-background hover:border-purple-600 dark:hover:border-purple-600 hover:shadow-lg transition-all flex-shrink-0 group"
               >
-                <ChevronLeft className="h-3 w-3" />
+                <ChevronLeft className="h-3 w-3 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
               </Button>
             </div>
           ) : (
@@ -138,9 +146,9 @@ export function Sidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleSidebar}
-                className="h-6 w-6 rounded-full border border-purple-200 dark:border-purple-800 bg-background hover:bg-purple-100 dark:hover:bg-purple-900/40 shadow-sm"
+                className="h-6 w-6 rounded-full border border-purple-200 dark:border-purple-800 bg-background hover:border-purple-600 dark:hover:border-purple-600 hover:shadow-lg transition-all group"
               >
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-3 w-3 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
               </Button>
             </div>
           )}
@@ -151,9 +159,10 @@ export function Sidebar() {
           <div className="flex items-center gap-3">
             <Link
               href="/profile"
-              className={`flex items-center gap-3 flex-1 min-w-0 px-3 py-2 rounded-lg transition-colors ${isActive('/profile')
-                ? 'bg-purple-100 dark:bg-purple-900/20'
-                : 'hover:bg-purple-100 dark:hover:bg-purple-900/20'
+              className={`flex items-center gap-3 flex-1 min-w-0 px-3 py-2 rounded-lg transition-colors ${
+                isActive('/profile') && !isCollapsed
+                  ? 'bg-purple-100 dark:bg-purple-900/20'
+                  : 'hover:bg-purple-100 dark:hover:bg-purple-900/20'
                 }`}
             >
               <Avatar className={`h-10 w-10 bg-primary/10 flex-shrink-0 ring transition-all ${isActive('/profile')
@@ -178,7 +187,7 @@ export function Sidebar() {
                     ? 'text-purple-600 dark:text-purple-400'
                     : 'hover:text-purple-600 dark:hover:text-purple-400'
                     }`}>
-                    {userName || (user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : 'User')}
+                    {user?.name ? user.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : (user?.email ? user.email.split('@')[0] : 'User')}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                 </motion.div>

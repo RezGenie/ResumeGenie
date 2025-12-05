@@ -45,13 +45,16 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #F8F6FB; /* Light purple background */
+  --background: #F8F6FB;
+  /* Light purple background */
   --foreground: oklch(0.129 0.042 264.695);
-  --card: #EDE7F6; /* Light purple card background */
+  --card: #EDE7F6;
+  /* Light purple card background */
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: #EDE7F6;
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: #7B2CBF; /* Primary purple */
+  --primary: #7B2CBF;
+  /* Primary purple */
   --primary-foreground: oklch(0.984 0.003 247.858);
   --secondary: #EDE7F6;
   --secondary-foreground: oklch(0.208 0.042 265.755);
@@ -79,13 +82,16 @@
 }
 
 .dark {
-  --background: #1a0d24; /* Dark purple background */
+  --background: #1a0d24;
+  /* Dark purple background */
   --foreground: oklch(0.984 0.003 247.858);
-  --card: #2d1b3d; /* Dark purple card background */
+  --card: #2d1b3d;
+  /* Dark purple card background */
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: #2d1b3d;
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: #9D4EDD; /* Lighter purple for dark mode */
+  --primary: #9D4EDD;
+  /* Lighter purple for dark mode */
   --primary-foreground: oklch(0.984 0.003 247.858);
   --secondary: #2d1b3d;
   --secondary-foreground: oklch(0.984 0.003 247.858);
@@ -116,13 +122,13 @@
   * {
     @apply border-border outline-ring/50;
   }
-  
+
   html {
     scroll-behavior: smooth;
     /* Prevent overscroll bounce to fix bottom jitter */
     overscroll-behavior-y: none;
   }
-  
+
   body {
     @apply bg-background text-foreground antialiased;
     /* Also prevent overscroll on body */
@@ -190,64 +196,91 @@
   transition: background 0.3s ease;
 }
 
-/* Moving border animation for result cards */
-@keyframes border-pulse {
-  0%, 100% {
-    border-color: rgb(168 85 247 / 0.5); /* purple-500/50 */
-    box-shadow: 0 0 0 0 rgb(168 85 247 / 0.4);
-  }
-  50% {
-    border-color: rgb(168 85 247 / 0.8); /* purple-500/80 */
-    box-shadow: 0 0 0 4px rgb(168 85 247 / 0.1);
-  }
-}
+/* Professional ring glow + lift animations for card highlights */
+/* Inspired by Vercel, Linear, and Railway for premium feel */
 
-@keyframes border-fadeout {
-  0% {
-    border-color: rgb(168 85 247 / 0.5);
-    box-shadow: 0 0 0 4px rgb(168 85 247 / 0.1);
-  }
+/* Main highlight: Subtle ring glow with breathing effect */
+@keyframes ring-glow {
+
+  0%,
   100% {
-    border-color: rgb(168 85 247 / 0.1);
-    box-shadow: 0 0 0 0 rgb(168 85 247 / 0);
+    box-shadow:
+      0 0 0 0 rgb(168 85 247 / 0),
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
-}
 
-@keyframes border-flow {
-  0% {
-    border-image-source: linear-gradient(0deg, #a855f7, #d946ef, #a855f7);
-  }
-  25% {
-    border-image-source: linear-gradient(90deg, #a855f7, #d946ef, #a855f7);
-  }
   50% {
-    border-image-source: linear-gradient(180deg, #a855f7, #d946ef, #a855f7);
-  }
-  75% {
-    border-image-source: linear-gradient(270deg, #a855f7, #d946ef, #a855f7);
-  }
-  100% {
-    border-image-source: linear-gradient(360deg, #a855f7, #d946ef, #a855f7);
+    box-shadow:
+      0 0 0 4px rgb(168 85 247 / 0.3),
+      0 10px 15px -3px rgb(168 85 247 / 0.35),
+      0 4px 6px -4px rgb(168 85 247 / 0.2);
   }
 }
 
-/* Smooth highlight animation class - consistent for all cards */
+/* Dark mode variant with enhanced glow */
+.dark .animate-ring-glow {
+  animation: ring-glow-dark 3s ease-in-out infinite;
+}
+
+@keyframes ring-glow-dark {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgb(168 85 247 / 0),
+      0 4px 6px -1px rgb(0 0 0 / 0.3),
+      0 2px 4px -2px rgb(0 0 0 / 0.3);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 4px rgb(168 85 247 / 0.35),
+      0 10px 15px -3px rgb(168 85 247 / 0.4),
+      0 4px 6px -4px rgb(168 85 247 / 0.25);
+  }
+}
+
+/* Smooth fade-out for ring glow */
+@keyframes ring-glow-fadeout {
+  0% {
+    box-shadow:
+      0 0 0 4px rgb(168 85 247 / 0.3),
+      0 10px 15px -3px rgb(168 85 247 / 0.35),
+      0 4px 6px -4px rgb(168 85 247 / 0.2);
+    transform: scale(1.01);
+  }
+
+  100% {
+    box-shadow:
+      0 0 0 0 rgb(168 85 247 / 0),
+      0 1px 3px 0 rgb(0 0 0 / 0.1),
+      0 1px 2px -1px rgb(0 0 0 / 0.1);
+    transform: scale(1);
+  }
+}
+
+/* Professional highlight class - ring glow + subtle lift (no border) */
+.animate-ring-glow {
+  animation: ring-glow 3s ease-in-out infinite;
+  transform: scale(1.01);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fade-out class for smooth exit */
+.animate-ring-glow-fadeout {
+  animation: ring-glow-fadeout 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+/* Legacy support - map old classes to new ones */
 .animate-pulse-border {
-  animation: border-pulse 2s ease-in-out infinite;
-  transition: all 0.3s ease-in-out;
-  border-width: 2px;
+  animation: ring-glow 3s ease-in-out infinite;
+  transform: scale(1.01);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Smooth fade-out class for when highlighting ends */
 .animate-pulse-border-fadeout {
-  animation: border-fadeout 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-  border-width: 2px;
-  transition: none; /* Let the animation handle the transition */
-}
-
-.animate-flow-border {
-  animation: border-flow 3s linear infinite;
-  border-image: linear-gradient(45deg, #a855f7, #d946ef, #a855f7) 1;
+  animation: ring-glow-fadeout 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
 }
 
 /* Mobile safe area utilities */
