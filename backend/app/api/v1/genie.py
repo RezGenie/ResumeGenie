@@ -194,6 +194,7 @@ Focus on making action_items a clean list of specific skill names that would imp
                 ],
                 temperature=0.7,
                 max_tokens=1200,
+                json_mode=True,  # Force JSON output to prevent conversational responses
             )
             
         except Exception as openai_error:
@@ -983,6 +984,7 @@ Focus on making action_items a clean list of specific skill names that would imp
                 ],
                 temperature=0.7,
                 max_tokens=1200,
+                json_mode=True,  # Force JSON output to prevent conversational responses
             )
             
             logger.info(f"Guest: OpenAI API call successful, response length: {len(ai_raw)}")

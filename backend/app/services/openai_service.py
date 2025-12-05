@@ -302,6 +302,7 @@ class OpenAIService:
         model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 1200,
+        json_mode: bool = False,
     ) -> str:
         """
         Get a chat completion from OpenAI and return the response text.
@@ -311,6 +312,7 @@ class OpenAIService:
             model: OpenAI chat model name; defaults to settings.openai_model
             temperature: Sampling temperature
             max_tokens: Max tokens in the response
+            json_mode: If True, forces the model to return valid JSON output
 
         Returns:
             The assistant message content as a string
@@ -321,16 +323,24 @@ class OpenAIService:
         for attempt in range(self.max_retries):
             try:
                 await self._rate_limit_check("chat")
-                response = await self.client.chat.completions.create(
-                    model=chosen_model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
+                
+                # Build API call parameters
+                api_params = {
+                    "model": chosen_model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                }
+                
+                # Add JSON mode if requested (forces valid JSON output)
+                if json_mode:
+                    api_params["response_format"] = {"type": "json_object"}
+                
+                response = await self.client.chat.completions.create(**api_params)
                 processing_time = time.time() - start_time
                 text = response.choices[0].message.content or ""
                 logger.info(
-                    f"Chat completion generated using {chosen_model}: tokens={getattr(response.usage, 'total_tokens', 'n/a')}, time={processing_time:.2f}s"
+                    f"Chat completion generated using {chosen_model}: tokens={getattr(response.usage, 'total_tokens', 'n/a')}, time={processing_time:.2f}s, json_mode={json_mode}"
                 )
                 return text
             except openai.RateLimitError as e:
@@ -723,7 +733,8 @@ Be specific and actionable. Scores: 90+=excellent, 75-89=good, 60-74=needs work,
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,  # Lower temperature for more consistent JSON
-                max_tokens=1000
+                max_tokens=1000,
+                json_mode=True  # Force JSON output
             )
             
             logger.info(f"OpenAI response received: {response_text[:200]}...")

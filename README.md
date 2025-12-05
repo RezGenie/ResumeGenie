@@ -185,40 +185,107 @@ Modern, responsive web application with comprehensive UI/UX:
 <details>
 <summary><b>💻 Desktop Views</b> (Click to expand)</summary>
 
-| Landing Page | AI Genie Interface |
-|--------------|-------------------|
-| ![Desktop Landing](docs/images/desktop-landing.png) | ![Desktop Genie](docs/images/desktop-genie.png) |
+<div align="center">
 
-| Dashboard | Opportunities |
-|-----------|--------------|
-| ![Desktop Dashboard](docs/images/desktop-dashboard.png) | ![Desktop Opportunities](docs/images/desktop-opportunities.png) |
+<table>
+<tr>
+<td width="50%" align="center" style="padding: 4px;">
+<b>🏠 Landing Page</b><br/>
+<img src="docs/images/desktop-landing.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="50%" align="center" style="padding: 4px;">
+<b>🧞‍♂️ AI Genie Interface</b><br/>
+<img src="docs/images/desktop-genie.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" style="padding: 4px;">
+<b>📊 Dashboard</b><br/>
+<img src="docs/images/desktop-dashboard.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="50%" align="center" style="padding: 4px;">
+<b>🎯 Opportunities</b><br/>
+<img src="docs/images/desktop-opportunities.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" style="padding: 4px;">
+<b>📚 Career Guides</b><br/>
+<img src="docs/images/desktop-guides.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="50%" align="center" style="padding: 4px;">
+<b>💼 Job Listings</b><br/>
+<img src="docs/images/desktop-jobs.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center" style="padding: 4px;">
+<b>⚙️ Profile Settings</b><br/>
+<img src="docs/images/desktop-profile.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="50%" align="center" style="padding: 4px;">
+<b>📄 Resume Upload</b><br/>
+<img src="docs/images/desktop-resume.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+</tr>
+</table>
 
-| Guides | Jobs |
-|--------|------|
-| ![Desktop Guides](docs/images/desktop-guides.png) | ![Desktop Jobs](docs/images/desktop-jobs.png) |
-
-| Profile Settings | Resume Upload |
-|------------------|---------------|
-| ![Desktop Profile](docs/images/desktop-profile.png) | ![Desktop Resume](docs/images/desktop-resume.png) |
+</div>
 
 </details>
 
 <details>
 <summary><b>📱 Mobile Views</b> (Click to expand)</summary>
 
-| Landing | Genie | Dashboard |
-|---------|-------|-----------|
-| ![Mobile Landing](docs/images/mobile-landing.png) | ![Mobile Genie](docs/images/mobile-genie.png) | ![Mobile Dashboard](docs/images/mobile-dashboard.png) |
+<div align="center">
 
-| Opportunities | Jobs | Resumes |
-|---------------|------|---------|
-| ![Mobile Opportunities](docs/images/mobile-opportunities.png) | ![Mobile Jobs](docs/images/mobile-jobs.png) | ![Mobile Resumes](docs/images/mobile-resumes.png) |
+<table>
+<tr>
+<td width="33%" align="center" style="padding: 4px;">
+<b>🏠 Landing</b><br/>
+<img src="docs/images/mobile-landing.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="33%" align="center" style="padding: 4px;">
+<b>🧞‍♂️ Genie</b><br/>
+<img src="docs/images/mobile-genie.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="33%" align="center" style="padding: 4px;">
+<b>📊 Dashboard</b><br/>
+<img src="docs/images/mobile-dashboard.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+</tr>
+<tr>
+<td width="33%" align="center" style="padding: 4px;">
+<b>🎯 Opportunities</b><br/>
+<img src="docs/images/mobile-opportunities.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="33%" align="center" style="padding: 4px;">
+<b>💼 Jobs</b><br/>
+<img src="docs/images/mobile-jobs.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="33%" align="center" style="padding: 4px;">
+<b>📄 Resumes</b><br/>
+<img src="docs/images/mobile-resumes.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+</tr>
+<tr>
+<td width="33%" align="center" style="padding: 4px;">
+<b>📚 Guides</b><br/>
+<img src="docs/images/mobile-guides.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="33%" align="center" style="padding: 4px;">
+<b>⚙️ Profile</b><br/>
+<img src="docs/images/mobile-profile.png" width="100%" height="250" style="object-fit: contain;"/>
+</td>
+<td width="33%">
+</td>
+</tr>
+</table>
 
-| Guides | Profile |
-|--------|---------|
-| ![Mobile Guides](docs/images/mobile-guides.png) | ![Mobile Profile](docs/images/mobile-profile.png) |
+</div>
 
 </details>
+
 
 ## 📄 License
 

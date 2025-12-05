@@ -1362,7 +1362,7 @@ export default function StudioPage() {
                     <div>
                       <div
                         data-recommendations-section
-                        className={`bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
+                        className={`bg-card rounded-md p-4 text-left ${analysisResults?.insights?.length ? 'min-h-48' : ''} max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
                           ? getHighlightClass(true, outputHighlightFading)
                           : ""
                           }`}
@@ -1404,22 +1404,11 @@ export default function StudioPage() {
                                 </li>
                               )
                             )
-                            : [
-                              "The cosmic forces are still aligning your personalized insights ✨",
-                              "Your genie is crafting magical recommendations just for you 🔮",
-                              "The stars haven't revealed your perfect guidance yet - try again! 🌟",
-                              "Your wishes deserve divine attention - let me divine deeper insights! 💫",
-                            ].map((mock, idx) => (
-                              <li
-                                key={idx}
-                                className="flex items-start gap-2"
-                              >
-                                <span className="text-muted-foreground mt-1">
-                                  •
-                                </span>
-                                <span className="text-muted-foreground">{mock}</span>
+                            : (
+                              <li className="py-2 text-sm text-muted-foreground list-none">
+                                Your genie awaits! Upload resume and add job description to unlock personalized insights
                               </li>
-                            ))}
+                            )}
                         </ul>
                       </div>
                     </div>
@@ -1604,7 +1593,7 @@ export default function StudioPage() {
                         {/* Expanded recommendations panel */}
                         <div
                           data-recommendations-section
-                          className={`mt-3 bg-card rounded-md p-4 text-left min-h-48 max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
+                          className={`mt-3 bg-card rounded-md p-4 text-left ${analysisResults?.insights?.length ? 'min-h-48' : ''} max-h-80 md:max-h-96 overflow-auto border border-muted-foreground/10 ${showOutputHighlight && analysisResults?.insights?.length
                             ? getHighlightClass(true, outputHighlightFading)
                             : ""
                             }`}
@@ -1640,22 +1629,11 @@ export default function StudioPage() {
                                   </li>
                                 )
                               )
-                              : [
-                                "The cosmic forces are still aligning your personalized insights ✨",
-                                "Your genie is crafting magical recommendations just for you 🔮",
-                                "The stars haven't revealed your perfect guidance yet - try again! 🌟",
-                                "Your wishes deserve divine attention - let me divine deeper insights! 💫",
-                              ].map((mock, idx) => (
-                                <li
-                                  key={idx}
-                                  className="flex items-start gap-2"
-                                >
-                                  <span className="text-muted-foreground mt-1">
-                                    •
-                                  </span>
-                                  <span>{mock}</span>
+                              : (
+                                <li className="py-2 text-sm text-muted-foreground list-none">
+                                  Your genie awaits! Upload resume and add job description to unlock personalized insights
                                 </li>
-                              ))}
+                              )}
                           </ul>
                         </div>
                       </motion.div>
@@ -2659,19 +2637,11 @@ export default function StudioPage() {
                             <div className="text-gray-700 dark:text-gray-300">{rec}</div>
                           </div>
                         ))
-                        : [
-                          "The cosmic forces are still aligning your personalized insights ✨",
-                          "Your genie is crafting magical recommendations just for you 🔮",
-                          "The stars haven't revealed your perfect guidance yet - try again! 🌟",
-                          "Your wishes deserve divine attention - let me divine deeper insights! 💫",
-                        ].map((mock, idx) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <span className="text-muted-foreground mt-1">
-                              •
-                            </span>
-                            <div className="text-muted-foreground">{mock}</div>
+                        : (
+                          <div className="py-4 text-sm text-muted-foreground">
+                            Your genie awaits! Upload resume and add job description to unlock personalized insights
                           </div>
-                        ))}
+                        )}
                     </div>
                   </div>
                 </motion.div>
@@ -2744,15 +2714,8 @@ export default function StudioPage() {
                         </div>
                       ) : (
                         <div className="border border-muted-foreground/25 rounded-lg p-4 bg-background/50 backdrop-blur-sm dark:bg-card flex items-center justify-center">
-                          <div className="space-y-3 text-center py-8">
-                            {[
-                              "The cosmic forces are still aligning your personalized insights ✨",
-                              "Your genie is crafting magical recommendations just for you 🔮",
-                              "The stars haven't revealed your perfect guidance yet - try again! 🌟",
-                              "Your wishes deserve divine attention - let me divine deeper insights! 💫",
-                            ].map((mock, idx) => (
-                              <div key={idx} className="text-sm text-muted-foreground">{mock}</div>
-                            ))}
+                          <div className="text-center py-8 text-sm text-muted-foreground">
+                            Your genie awaits! Upload resume and add job description to unlock personalized insights ✨
                           </div>
                         </div>
                       )}
