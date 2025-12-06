@@ -18,8 +18,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add industries column to user_preferences table
-    op.add_column('user_preferences', sa.Column('industries', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
+    # Add industries column to user_preferences table if it doesn't exist
+    from sqlalchemy import inspect
+    from sqlalchemy.engine import reflection
+    
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('user_preferences')]
+    
+    if 'industries' not in columns:
+        op.add_column('user_preferences', sa.Column('industries', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
 
 
 def downgrade() -> None:
