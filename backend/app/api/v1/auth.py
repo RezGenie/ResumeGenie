@@ -371,19 +371,28 @@ async def delete_account(
     """
     try:
         user_email = current_user.email
+        user_id = current_user.id
         
-        # Delete the user account
+        logger.info(f"Starting account deletion for user: {user_email} (ID: {user_id})")
+        
+        # Refresh the user object to ensure all relationships are loaded
+        await db.refresh(current_user, attribute_names=[
+            'resumes', 'job_comparisons', 'genie_wishes', 'daily_wish_counts',
+            'preferences', 'job_swipes', 'saved_jobs', 'subscription'
+        ])
+        
+        # Delete the user account - cascade will handle all related records
         await db.delete(current_user)
         await db.commit()
         
-        logger.info(f"User account deleted: {user_email}")
+        logger.info(f"✅ User account deleted successfully: {user_email}")
         
         return {"message": "Account deleted successfully"}
         
     except Exception as e:
-        logger.error(f"Account deletion error: {e}")
+        logger.error(f"❌ Account deletion error for user {current_user.email}: {str(e)}", exc_info=True)
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Account deletion failed"
+            detail=f"Account deletion failed: {str(e)}"
         )

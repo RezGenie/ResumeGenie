@@ -147,7 +147,10 @@ class AuthService {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/delete-account`, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+    console.log('🔍 Deleting account via:', `${apiUrl}/auth/delete-account`);
+
+    const response = await fetch(`${apiUrl}/auth/delete-account`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -156,11 +159,14 @@ class AuthService {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Account deletion failed');
+      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      console.error('❌ Delete account failed:', response.status, errorData);
+      throw new Error(errorData.detail || `Account deletion failed (${response.status})`);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('✅ Account deleted successfully');
+    return result;
   }
 
   // Token management utilities

@@ -179,11 +179,39 @@ class UserPreferencesService {
     };
   }
 
-  // Check if user has completed their profile (lenient check)
+  // Check if user has completed their profile (strict check for core requirements)
   hasCompletedProfile(): boolean {
     const prefs = this.getPreferences();
-    // Only require at least ONE preference field to be filled
-    return !!(prefs.jobTitle || prefs.skills || prefs.salaryMin || prefs.salaryMax || prefs.workType !== 'hybrid');
+    
+    // Check if user has at least one resume
+    let hasResume = false;
+    try {
+      const { localResumeService } = require('@/lib/api/localResumes');
+      const resumes = localResumeService.getResumes();
+      hasResume = resumes.length > 0;
+    } catch (error) {
+      console.warn('Could not check resume status:', error);
+    }
+
+    // Check if user has profile info
+    let hasProfileInfo = false;
+    try {
+      const { userProfileService } = require('@/lib/api/userProfile');
+      const profile = userProfileService.getProfile();
+      hasProfileInfo = !!(profile.name && profile.location);
+    } catch (error) {
+      console.warn('Could not check profile status:', error);
+    }
+
+    // All core fields must be filled
+    return !!(
+      hasResume &&
+      hasProfileInfo &&
+      prefs.jobTitle?.trim() &&
+      prefs.skills?.trim() &&
+      prefs.experienceLevel &&
+      prefs.workType
+    );
   }
 
   // Calculate profile completion percentage
@@ -200,16 +228,31 @@ class UserPreferencesService {
       console.warn('Could not check resume status:', error);
     }
 
-    // Core fields required for profile completion
-    // Industries is optional since it can't be auto-extracted from resumes
+    // Check if user has profile info
+    let hasProfileInfo = false;
+    try {
+      const { userProfileService } = require('@/lib/api/userProfile');
+      const profile = userProfileService.getProfile();
+      hasProfileInfo = !!(profile.name && profile.location);
+    } catch (error) {
+      console.warn('Could not check profile status:', error);
+    }
+
+    // Core fields required for profile completion (all required)
     const fields = [
-      prefs.jobTitle,
-      prefs.skills,
-      prefs.location,
-      hasResume, // Resume is required
+      hasResume,              // Step 1: Resume uploaded
+      hasProfileInfo,         // Step 2: Name and location filled
+      prefs.jobTitle,         // Step 3: Job title filled
+      prefs.skills,           // Step 3: Skills filled
+      prefs.experienceLevel,  // Step 3: Experience level selected
+      prefs.workType,         // Step 3: Work type selected
     ];
 
-    const completed = fields.filter(field => field && (typeof field === 'boolean' ? field : field.trim() !== '')).length;
+    const completed = fields.filter(field => {
+      if (typeof field === 'boolean') return field;
+      return field && field.trim() !== '';
+    }).length;
+
     return Math.round((completed / fields.length) * 100);
   }
 

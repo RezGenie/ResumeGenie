@@ -101,7 +101,7 @@ export default function NotFound() {
               href="/pricing"
               className="group p-6 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-green-500/10 text-green-500 mb-4 mx-auto group-hover:scale-110 transition-transform">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-purple-500/10 text-purple-500 mb-4 mx-auto group-hover:scale-110 transition-transform">
                 <CreditCard className="h-6 w-6" />
               </div>
               <h3 className="font-semibold mb-2">Pricing Plans</h3>
@@ -114,7 +114,7 @@ export default function NotFound() {
               href="/guides"
               className="group p-6 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-500/10 text-blue-500 mb-4 mx-auto group-hover:scale-110 transition-transform">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-purple-500/10 text-purple-500 mb-4 mx-auto group-hover:scale-110 transition-transform">
                 <BookOpen className="h-6 w-6" />
               </div>
               <h3 className="font-semibold mb-2">Career Guides</h3>

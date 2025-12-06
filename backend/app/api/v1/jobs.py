@@ -860,6 +860,7 @@ class UserPreferencesRequest(BaseModel):
     """User preferences update request"""
     skills: Optional[List[str]] = None
     target_titles: Optional[List[str]] = None
+    industries: Optional[List[str]] = None
     location_pref: Optional[str] = None
     remote_ok: Optional[bool] = None
     salary_min: Optional[float] = None
@@ -871,6 +872,7 @@ class UserPreferencesRequest(BaseModel):
             "example": {
                 "skills": ["Python", "React", "PostgreSQL"],
                 "target_titles": ["Software Engineer", "Full Stack Developer"],
+                "industries": ["Technology", "Healthcare"],
                 "location_pref": "Toronto, ON",
                 "remote_ok": True,
                 "salary_min": 80000.0,
@@ -1346,6 +1348,7 @@ async def update_user_preferences(
     
     - **skills**: List of skills/technologies
     - **target_titles**: List of target job titles
+    - **industries**: List of preferred industries
     - **location_pref**: Preferred location
     - **remote_ok**: Whether remote work is acceptable
     - **salary_min**: Minimum acceptable salary
@@ -1357,6 +1360,9 @@ async def update_user_preferences(
     try:
         from app.models.user_preferences import UserPreferences
         
+        logger.info(f"Updating preferences for user: {current_user.email}")
+        logger.debug(f"Preferences data: {preferences_update.dict(exclude_unset=True)}")
+        
         # Get existing preferences
         result = await db.execute(
             select(UserPreferences).where(UserPreferences.user_id == current_user.id)
@@ -1365,7 +1371,7 @@ async def update_user_preferences(
         preferences = result.scalar_one_or_none()
         
         if not preferences:
-            # Create new preferences
+            logger.info(f"Creating new preferences for user: {current_user.email}")
             preferences = UserPreferences(user_id=current_user.id)
             db.add(preferences)
         
@@ -1379,7 +1385,7 @@ async def update_user_preferences(
         await db.commit()
         await db.refresh(preferences)
         
-        logger.info(f"Updated preferences for user: {current_user.email}")
+        logger.info(f"✅ Updated preferences successfully for user: {current_user.email}")
         
         return {
             "message": "Preferences updated successfully",
@@ -1397,8 +1403,9 @@ async def update_user_preferences(
         }
         
     except Exception as e:
-        logger.error(f"Error updating user preferences: {e}")
+        logger.error(f"❌ Error updating preferences for {current_user.email}: {str(e)}", exc_info=True)
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update user preferences"
+            detail=f"Failed to update user preferences: {str(e)}"
         )

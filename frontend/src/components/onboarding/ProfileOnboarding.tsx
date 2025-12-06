@@ -167,14 +167,66 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
   }, []);
 
   const handleNext = async () => {
-    // Validation for step 3
-    if (currentStep === 3) {
-      if (!formData.jobTitle.trim()) {
-        toast.error('Please enter your desired job title');
+    // Step 1: Resume upload validation
+    if (currentStep === 1) {
+      if (!uploadedResume) {
+        toast.error('Please upload your resume', {
+          description: 'Your resume helps us match you with the right opportunities'
+        });
         return;
       }
+      setCurrentStep(2);
+      return;
+    }
+
+    // Step 2: Profile information validation
+    if (currentStep === 2) {
+      const errors: string[] = [];
+      
+      if (!formData.name.trim()) {
+        errors.push('Full name is required');
+      }
+      
+      if (!formData.location.trim()) {
+        errors.push('Location is required');
+      }
+
+      if (errors.length > 0) {
+        toast.error('Please complete your profile', {
+          description: errors.join('. ')
+        });
+        return;
+      }
+
+      setCurrentStep(3);
+      return;
+    }
+
+    // Step 3: Job preferences validation
+    if (currentStep === 3) {
+      const errors: string[] = [];
+      
+      if (!formData.jobTitle.trim()) {
+        errors.push('Job title is required');
+      }
+      
       if (!formData.skills.trim()) {
-        toast.error('Please enter at least one skill');
+        errors.push('At least one skill is required');
+      }
+
+      // Validate salary range if both are provided
+      if (formData.salaryMin && formData.salaryMax) {
+        const min = parseInt(formData.salaryMin);
+        const max = parseInt(formData.salaryMax);
+        if (min > max) {
+          errors.push('Minimum salary cannot be greater than maximum salary');
+        }
+      }
+
+      if (errors.length > 0) {
+        toast.error('Please complete your job preferences', {
+          description: errors.join('. ')
+        });
         return;
       }
 
@@ -184,10 +236,11 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
         setCurrentStep(4);
       }
       // If save failed, stay on step 3 so user can retry
-    } else if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Final step - just close
+      return;
+    }
+
+    // Step 4: Final step - complete onboarding
+    if (currentStep === 4) {
       onComplete();
     }
   };
@@ -350,7 +403,7 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
             </div>
 
             {/* Content */}
-            <CardContent className="p-8 flex-1 overflow-y-auto min-h-0">
+            <CardContent className="px-6 pt-4 pb-6 flex-1 overflow-y-auto min-h-0">
               <AnimatePresence mode="wait">
                 {/* Step 1: Upload Resume */}
                 {currentStep === 1 && (
@@ -414,19 +467,25 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+                        className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg"
                       >
-                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <CheckCircle className="w-5 h-5 text-purple-600" />
                         <div className="flex-1">
-                          <p className="font-medium text-green-900 dark:text-green-100">
+                          <p className="font-medium text-purple-900 dark:text-purple-100">
                             {uploadedResume.original_filename}
                           </p>
-                          <p className="text-sm text-green-700 dark:text-green-300">
+                          <p className="text-sm text-purple-700 dark:text-purple-300">
                             Successfully uploaded
                           </p>
                         </div>
                       </motion.div>
                     )}
+
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Your resume helps us understand your experience and match you with relevant opportunities
+                      </p>
+                    </div>
                   </motion.div>
                 )}
 
@@ -437,7 +496,7 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="space-y-6"
+                    className="space-y-4"
                   >
                     <div className="text-center space-y-2">
                       <h3 className="text-2xl font-bold">Review Your Information</h3>
@@ -448,17 +507,22 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="name">
+                          Full Name <span className="text-purple-500">*</span>
+                        </Label>
                         <Input
                           id="name"
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           placeholder="John Doe"
+                          required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
+                        <Label htmlFor="location">
+                          Location <span className="text-purple-500">*</span>
+                        </Label>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
@@ -467,12 +531,15 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                             placeholder="San Francisco, CA"
                             className="pl-10"
+                            required
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
+                        <Label htmlFor="phone">
+                          Phone Number <span className="text-muted-foreground text-xs">(Optional)</span>
+                        </Label>
                         <Input
                           id="phone"
                           value={formData.phone}
@@ -501,7 +568,7 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="space-y-6"
+                    className="space-y-4"
                   >
                     <div className="text-center space-y-2">
                       <h3 className="text-2xl font-bold">Set Your Job Preferences</h3>
@@ -512,7 +579,9 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="jobTitle">Desired Job Title</Label>
+                        <Label htmlFor="jobTitle">
+                          Desired Job Title <span className="text-purple-500">*</span>
+                        </Label>
                         <div className="relative">
                           <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
@@ -521,12 +590,15 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                             onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                             placeholder="e.g., Full Stack Developer"
                             className="pl-10"
+                            required
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="experienceLevel">Experience Level</Label>
+                        <Label htmlFor="experienceLevel">
+                          Experience Level <span className="text-purple-500">*</span>
+                        </Label>
                         <Select
                           value={formData.experienceLevel}
                           onValueChange={(value: any) => setFormData({ ...formData, experienceLevel: value })}
@@ -549,7 +621,9 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="salaryMin">Minimum Salary (USD)</Label>
+                        <Label htmlFor="salaryMin">
+                          Minimum Salary (USD) <span className="text-muted-foreground text-xs">(Optional)</span>
+                        </Label>
                         <div className="relative">
                           <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
@@ -559,12 +633,15 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                             onChange={(e) => setFormData({ ...formData, salaryMin: e.target.value })}
                             placeholder="50000"
                             className="pl-10"
+                            min="0"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="salaryMax">Maximum Salary (USD)</Label>
+                        <Label htmlFor="salaryMax">
+                          Maximum Salary (USD) <span className="text-muted-foreground text-xs">(Optional)</span>
+                        </Label>
                         <div className="relative">
                           <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
@@ -574,12 +651,15 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                             onChange={(e) => setFormData({ ...formData, salaryMax: e.target.value })}
                             placeholder="120000"
                             className="pl-10"
+                            min="0"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="workType">Work Type Preference</Label>
+                        <Label htmlFor="workType">
+                          Work Type Preference <span className="text-purple-500">*</span>
+                        </Label>
                         <Select
                           value={formData.workType}
                           onValueChange={(value: any) => setFormData({ ...formData, workType: value })}
@@ -602,7 +682,9 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="industries">Preferred Industries</Label>
+                        <Label htmlFor="industries">
+                          Preferred Industries <span className="text-muted-foreground text-xs">(Optional)</span>
+                        </Label>
                         <Input
                           id="industries"
                           value={formData.industries}
@@ -612,7 +694,9 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                       </div>
 
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="skills">Key Skills</Label>
+                        <Label htmlFor="skills">
+                          Key Skills <span className="text-purple-500">*</span>
+                        </Label>
                         <div className="relative">
                           <Award className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                           <Textarea
@@ -622,6 +706,7 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                             placeholder="e.g., Python, React, Node.js, AWS"
                             rows={2}
                             className="pl-10"
+                            required
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -706,7 +791,7 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
                   variant="outline"
                   onClick={handleBack}
                   disabled={currentStep === 1 || isUploading}
-                  className="gap-2 border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/50"
+                  className="gap-2 hover:border-purple-600 hover:text-purple-600 hover:bg-purple-50 dark:hover:border-purple-500 dark:hover:text-purple-400 dark:hover:bg-purple-900/50"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back
@@ -714,8 +799,8 @@ export function ProfileOnboarding({ onComplete, onSkip }: ProfileOnboardingProps
 
                 <Button
                   onClick={handleNext}
-                  disabled={isUploading || (currentStep === 1 && !uploadedResume)}
-                  className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                  disabled={isUploading}
+                  className="gap-2 bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {currentStep === steps.length ? 'Start Exploring' : 'Continue'}
                   <ArrowRight className="w-4 h-4" />
