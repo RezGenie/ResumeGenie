@@ -375,13 +375,8 @@ async def delete_account(
         
         logger.info(f"Starting account deletion for user: {user_email} (ID: {user_id})")
         
-        # Refresh the user object to ensure all relationships are loaded
-        await db.refresh(current_user, attribute_names=[
-            'resumes', 'job_comparisons', 'genie_wishes', 'daily_wish_counts',
-            'preferences', 'job_swipes', 'saved_jobs', 'subscription'
-        ])
-        
         # Delete the user account - cascade will handle all related records
+        # Note: We don't refresh relationships to avoid issues with missing columns during migration
         await db.delete(current_user)
         await db.commit()
         
