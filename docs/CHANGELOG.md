@@ -2,7 +2,7 @@
 
 All notable changes to the RezGenie project will be documented in this file.
 
-## [0.19.0] - 2025-01-12
+## [0.19.0] - 2025-11-12
 
 ### CP-66 - Add Subscription Management Features
 
