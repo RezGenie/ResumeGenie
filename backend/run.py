@@ -18,11 +18,11 @@ def main():
 
     # 2. Fix missing columns
     print("Fixing missing columns (if needed)...")
-    run_command("cd /app && python scripts/fix_embedding_column.py", continue_on_error=True)
+    run_command("PYTHONPATH=/app python scripts/fix_embedding_column.py", continue_on_error=True, cwd="/app")
 
     # 3. Auto ingest jobs
     print("Checking for jobs and running initial ingestion if needed...")
-    run_command("cd /app && python scripts/auto_ingest_jobs.py", continue_on_error=True)
+    run_command("PYTHONPATH=/app python scripts/auto_ingest_jobs.py", continue_on_error=True, cwd="/app")
 
     # 4. Start application
     print("Starting application...")
