@@ -2,10 +2,10 @@ import subprocess
 import sys
 import os
 
-def run_command(command, continue_on_error=False):
+def run_command(command, continue_on_error=False, cwd=None):
     try:
         print(f"Running: {command}")
-        subprocess.check_call(command, shell=True)
+        subprocess.check_call(command, shell=True, cwd=cwd)
     except subprocess.CalledProcessError as e:
         print(f"Error running command: {command}")
         if not continue_on_error:
@@ -18,11 +18,11 @@ def main():
 
     # 2. Fix missing columns
     print("Fixing missing columns (if needed)...")
-    run_command("python scripts/fix_embedding_column.py", continue_on_error=True)
+    run_command("cd /app && python scripts/fix_embedding_column.py", continue_on_error=True)
 
     # 3. Auto ingest jobs
     print("Checking for jobs and running initial ingestion if needed...")
-    run_command("python scripts/auto_ingest_jobs.py", continue_on_error=True)
+    run_command("cd /app && python scripts/auto_ingest_jobs.py", continue_on_error=True)
 
     # 4. Start application
     print("Starting application...")
