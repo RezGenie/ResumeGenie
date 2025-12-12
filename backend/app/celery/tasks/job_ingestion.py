@@ -175,11 +175,11 @@ def cleanup_old_jobs(self, days_old: int = 90) -> Dict[str, Any]:
 def setup_periodic_tasks(sender, **kwargs):
     """Configure periodic task schedules"""
     
-    # Ingest jobs every 6 hours
+    # Ingest jobs every 4 hours (more frequent for fresher jobs)
     sender.add_periodic_task(
-        21600.0,  # 6 hours in seconds
-        ingest_jobs_from_adzuna.s(pages_per_query=3),
-        name='ingest_jobs_every_6_hours',
+        14400.0,  # 4 hours in seconds
+        ingest_jobs_from_adzuna.s(pages_per_query=5),  # Increased to 5 pages
+        name='ingest_jobs_every_4_hours',
     )
     
     # Generate embeddings every 2 hours (for new jobs)
@@ -189,11 +189,11 @@ def setup_periodic_tasks(sender, **kwargs):
         name='generate_embeddings_every_2_hours',
     )
     
-    # Cleanup old jobs weekly (every Sunday at 2 AM)
+    # Cleanup old jobs daily (more aggressive cleanup)
     sender.add_periodic_task(
-        crontab(hour=2, minute=0, day_of_week=0),
-        cleanup_old_jobs.s(days_old=90),
-        name='cleanup_old_jobs_weekly',
+        crontab(hour=3, minute=0),  # Every day at 3 AM
+        cleanup_old_jobs.s(days_old=30),  # Changed from 90 to 30 days
+        name='cleanup_old_jobs_daily',
     )
 
 

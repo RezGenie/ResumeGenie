@@ -59,13 +59,18 @@ async def auto_ingest_jobs():
         
         logger.info("🔄 No jobs found in database. Running initial job ingestion...")
         logger.info(f"Using Adzuna API for {settings.adzuna_country.upper()}")
+        logger.info(f"Processing {len(adzuna_provider.seed_queries)} diverse seed queries for inclusivity")
         
-        # Run ingestion with default queries (3 pages per query)
+        # Run ingestion with ALL seed queries for maximum diversity (5 pages per query)
         total_saved = 0
-        for query in adzuna_provider.seed_queries[:3]:  # Use first 3 queries only
+        successful_queries = 0
+        failed_queries = 0
+        
+        for query in adzuna_provider.seed_queries:  # Use ALL queries for diversity
             logger.info(f"📥 Fetching jobs for: {query}")
+            query_saved = 0
             
-            for page in range(1, 4):  # 3 pages per query
+            for page in range(1, 6):  # 5 pages per query for better coverage
                 try:
                     async with AsyncSessionLocal() as db:
                         saved_count = await adzuna_provider.ingest_and_save(
@@ -73,6 +78,7 @@ async def auto_ingest_jobs():
                             what=query,
                             page=page
                         )
+                        query_saved += saved_count
                         total_saved += saved_count
                         logger.info(f"  ✓ Page {page}: Saved {saved_count} jobs")
                         
@@ -83,10 +89,20 @@ async def auto_ingest_jobs():
                     logger.error(f"  ✗ Error on page {page}: {e}")
                     break
                 
-                # Rate limiting
+                # Rate limiting - be respectful to API
                 await asyncio.sleep(1)
+            
+            if query_saved > 0:
+                successful_queries += 1
+                logger.info(f"  ✅ Query '{query}' complete: {query_saved} jobs")
+            else:
+                failed_queries += 1
+                logger.warning(f"  ⚠️  Query '{query}' returned no jobs")
         
-        logger.info(f"✅ Initial job ingestion complete! Total jobs: {total_saved}")
+        logger.info(f"✅ Initial job ingestion complete!")
+        logger.info(f"   Total jobs saved: {total_saved}")
+        logger.info(f"   Successful queries: {successful_queries}/{len(adzuna_provider.seed_queries)}")
+        logger.info(f"   Failed queries: {failed_queries}")
         
     except Exception as e:
         logger.error(f"❌ Auto-ingestion failed: {e}")

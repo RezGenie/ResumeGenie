@@ -1,85 +1,105 @@
-# RezGenie Backend Scripts
+# Backend Scripts
 
-This directory contains operational scripts for managing the RezGenie backend.
+Operational scripts for managing RezGenie backend - job ingestion, database maintenance, and diagnostics.
 
-## Job Ingestion Script (`jobs_ingest.py`)
+## Job Management
 
-Script for manually ingesting job data from external providers (currently Adzuna).
-
-### Prerequisites
-
-1. Set up Adzuna API credentials:
-
-   ```bash
-   export ADZUNA_APP_ID="your_app_id"
-   export ADZUNA_APP_KEY="your_app_key"
-   ```
-
-2. Ensure database is running and migrations are applied.
-
-### Usage Examples
-
+### `diagnose_job_ingestion.py`
+Comprehensive diagnostics for job ingestion system.
 ```bash
-# Test API connection
-python scripts/jobs_ingest.py --test-connection
+python scripts/diagnose_job_ingestion.py
+```
 
-# Default ingestion (3 pages per seed query)
+### `test_adzuna_connection.py`
+Test Adzuna API credentials and connectivity.
+```bash
+python scripts/test_adzuna_connection.py
+```
+
+### `jobs_ingest.py`
+Manual job ingestion with full control.
+```bash
+# Default ingestion
 python scripts/jobs_ingest.py
 
-# Dry run to see what would be ingested
-python scripts/jobs_ingest.py --dry-run
+# Custom queries
+python scripts/jobs_ingest.py --queries "software developer" "nurse" --pages 5
 
-# Custom search queries
-python scripts/jobs_ingest.py --queries "python developer" "data scientist" "product manager"
-
-# Fetch more pages per query
-python scripts/jobs_ingest.py --pages 5
-
-# Generate embeddings for existing jobs
-python scripts/jobs_ingest.py --generate-embeddings
-
-# Verbose output for debugging
-python scripts/jobs_ingest.py --verbose
+# Generate embeddings
+python scripts/jobs_ingest.py --generate-embeddings --batch-size 100
 ```
 
-### Options
+### `auto_ingest_jobs.py`
+Automatic ingestion on startup (runs if jobs are stale).
+```bash
+python scripts/auto_ingest_jobs.py
+```
 
-- `--queries`: Custom search queries (overrides default seed queries)
-- `--pages`: Number of pages to fetch per query (default: 3)
-- `--dry-run`: Fetch and normalize data without saving to database
-- `--generate-embeddings`: Generate embeddings for jobs without them
-- `--test-connection`: Test API connection and configuration
-- `--batch-size`: Batch size for embedding generation (default: 50)
-- `--verbose`: Enable detailed logging
+### `cleanup_jobs_database.py`
+Remove outdated and invalid jobs.
+```bash
+# Preview changes
+python scripts/cleanup_jobs_database.py --dry-run
 
-### Seed Queries
+# Clean jobs older than 30 days
+python scripts/cleanup_jobs_database.py --days 30
+```
 
-Default seed queries for Canadian tech jobs:
+### `validate_job_quality.py`
+Validate all jobs and generate quality report.
+```bash
+python scripts/validate_job_quality.py
+```
 
-- "software engineer"
-- "full stack developer"
-- "frontend developer"
-- "data analyst"
-- "product designer"
+## Other Scripts
 
-### Logging
+### `check_stripe_config.py`
+Verify Stripe payment configuration.
 
-The script logs to both console and `job_ingestion.log` file.
+### `fix_embedding_column.py`
+Fix embedding column issues (one-time migration).
 
-### Error Handling
+### `add_industries_column.py`
+Add industries column to database (one-time migration).
 
-- API rate limiting with 1-second delays between requests
-- Automatic retries on transient failures
-- Graceful handling of malformed job data
-- Detailed error logging for debugging
+### `backfill_user_preferences.py`
+Backfill user preferences from resumes.
 
-### Scheduling
+### `reextract_prefs.py`
+Re-extract preferences from existing resumes.
 
-For production use, consider scheduling this script to run every 6 hours:
+### `check_prefs.py` / `debug_prefs.py`
+Debug user preference extraction.
+
+## Configuration
+
+Set in `.env`:
+```bash
+ADZUNA_APP_ID=your_app_id
+ADZUNA_APP_KEY=your_app_key
+ADZUNA_COUNTRY=ca
+JOB_CLEANUP_DAYS=30
+```
+
+## Automated Tasks
+
+Celery handles periodic tasks:
+- Job ingestion: Every 4 hours
+- Embedding generation: Every 2 hours
+- Database cleanup: Daily at 3 AM
+
+## Quick Start
 
 ```bash
-# Add to crontab for automated ingestion
-0 */6 * * * cd /path/to/rezgenie/backend && python scripts/jobs_ingest.py >> /var/log/job_ingestion.log 2>&1
-```
+# 1. Test API
+python scripts/test_adzuna_connection.py
 
-Alternatively, use the Celery periodic task which is automatically configured.
+# 2. Run diagnostics
+python scripts/diagnose_job_ingestion.py
+
+# 3. Ingest jobs
+python scripts/jobs_ingest.py --pages 5
+
+# 4. Validate quality
+python scripts/validate_job_quality.py
+```

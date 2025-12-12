@@ -2849,7 +2849,7 @@ export default function StudioPage() {
                   exit="exit"
                   variants={modalVariants}
                 >
-                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm max-h-[90vh] overflow-hidden flex flex-col hover:border-purple-300 dark:hover:bg-purple-950/30 hover:shadow-3xl dark:hover:border-purple-600 transition-all">
+                  <div className="bg-card rounded-lg p-6 shadow-2xl border backdrop-blur-sm max-h-[90vh] overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div

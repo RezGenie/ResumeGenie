@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.job import Job
 from app.services.openai_service import OpenAIService
+from app.services.job_validator import job_validator
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +274,7 @@ class AdzunaProvider:
 
     async def upsert_jobs(self, jobs_data: List[Dict[str, Any]], db: AsyncSession) -> int:
         """
-        Upsert normalized job data into database
+        Upsert normalized job data into database with validation
         
         Args:
             jobs_data: List of normalized job data dicts
@@ -286,9 +287,22 @@ class AdzunaProvider:
             return 0
             
         processed_count = 0
+        skipped_count = 0
         
         for job_data in jobs_data:
             try:
+                # Validate job data quality
+                is_valid, errors, warnings = job_validator.validate_job(job_data)
+                
+                if not is_valid:
+                    logger.warning(f"Skipping invalid job {job_data.get('provider_job_id')}: {errors}")
+                    skipped_count += 1
+                    continue
+                
+                # Log warnings but still process
+                if warnings:
+                    logger.debug(f"Job {job_data.get('provider_job_id')} warnings: {warnings}")
+                
                 # Check if job already exists
                 stmt = select(Job).where(
                     and_(
@@ -319,7 +333,7 @@ class AdzunaProvider:
                 
         try:
             await db.commit()
-            logger.info(f"Successfully processed {processed_count} jobs")
+            logger.info(f"Successfully processed {processed_count} jobs (skipped {skipped_count} invalid)")
         except Exception as e:
             await db.rollback()
             logger.error(f"Failed to commit job data: {e}")
