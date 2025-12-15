@@ -1,12 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Turbopack disabled for production builds (Netlify compatibility)
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   // Output standalone for better performance
   output: 'standalone',
+  
+  // TypeScript and ESLint errors won't block production builds
+  typescript: {
+    ignoreBuildErrors: false,
+  },
 };
 
 export default nextConfig;
