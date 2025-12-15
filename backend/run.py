@@ -26,9 +26,11 @@ def main():
 
     # 4. Start application
     print("Starting application...")
+    # Get port from environment variable (Render uses PORT, default to 8000 for local)
+    port = os.getenv("PORT", "8000")
     # We use os.execvp to replace the current process with uvicorn, similar to 'exec' in bash
     # This ensures signals are passed correctly to the application
-    os.execvp("uvicorn", ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])
+    os.execvp("uvicorn", ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", port])
 
 if __name__ == "__main__":
     main()
