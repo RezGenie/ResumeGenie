@@ -4,6 +4,8 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import logging
 import time
+import os
+import json
 
 from app.core.config import settings
 from app.core import database as db
@@ -25,9 +27,19 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug else None,
 )
 
-# Configure CORS origins based on environment
-if settings.environment == "production":
-    # Production: Only allow Netlify frontend domain
+# Configure CORS origins from environment variable or defaults
+backend_cors_origins = os.getenv("BACKEND_CORS_ORIGINS")
+
+if backend_cors_origins:
+    # Parse JSON array from environment variable
+    import json
+    try:
+        cors_origins = json.loads(backend_cors_origins)
+    except json.JSONDecodeError:
+        # Fallback if not valid JSON
+        cors_origins = [backend_cors_origins]
+elif settings.environment == "production":
+    # Production default: Netlify frontend domain
     cors_origins = [
         "https://rezgenie.netlify.app",
     ]
@@ -43,6 +55,9 @@ else:
         "http://localhost:5173",  # Vite dev server
         "http://127.0.0.1:5173",
     ]
+
+# Log CORS configuration
+logger.info(f"CORS origins configured: {cors_origins}")
 
 # Add CORS middleware
 app.add_middleware(
