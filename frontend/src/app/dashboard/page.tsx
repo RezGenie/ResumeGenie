@@ -492,10 +492,13 @@ export default function Dashboard() {
           setShowOnboarding(true);
         }
 
+        // Get avatar from localStorage (same as sidebar)
+        const userProfile = userProfileService.getProfile();
+        
         setDashboardUser({
           ...authUser,
           name: displayName,
-          profilePicture: undefined, // TODO: Add avatar support to backend
+          profilePicture: userProfile.avatar || undefined,
           memberSince,
           profileCompleteness,
           title: preferences.jobTitle || 'Job Seeker',
